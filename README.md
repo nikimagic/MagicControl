@@ -2,6 +2,8 @@
 
 Управление ноутбуком и аппаратный мониторинг для Windows и Linux.
 
+![MagicControl — вкладка FANs в Windows](magiccontrol-fans-windows.png)
+
 **Автор: NikiMagic · Версия: 0.1.0 · Portable preview**
 
 ## Скачать
