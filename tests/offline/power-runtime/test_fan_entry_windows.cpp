@@ -5,6 +5,7 @@
 #include "MagicControl/Logging.h"
 #include <windows.h>
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -100,6 +101,60 @@ int main(){try{
         restore.suspend();operation.reset();context.operation.reset();
         std::this_thread::sleep_for(300ms);
         check(ec.writeCount()==before,"cancelled pre-sleep restore wrote to fake EC");
+    }
+    // Restore the saved Manual/Custom through the actual configuration owner.
+    // Accepted-limit bytes are controlled separately by this simulated EC;
+    // they are not an SMU measurement and must not be inferred from overrides.
+    {
+        const auto config=portableSettingsPath("device-settings.ini");
+        const auto fanFile=portableSettingsPath("fan-curves.csv");
+        check(!std::filesystem::exists(config)&&!std::filesystem::exists(fanFile),"sleep fixture requires isolated settings");
+        struct CleanupFiles{std::filesystem::path a,b;~CleanupFiles(){std::error_code e;std::filesystem::remove(a,e);std::filesystem::remove(b,e);}} cleanupFiles{config,fanFile};
+        DevicePreferences saved;saved[DeviceSetting::ApuMode]=4;saved[DeviceSetting::ManualStapm]=15;
+        saved[DeviceSetting::ManualSlow]=25;saved[DeviceSetting::ManualFast]=45;
+        std::string error;check(rememberDevicePreferences(saved,error,config),"fake Custom settings were not saved");
+        FanCurveProfiles intent;intent.ecManual=true;intent.linked=true;intent.restoreSelected=true;
+        intent.selected.fill(FanCurvePreset::Manual);intent.curves[static_cast<unsigned>(FanCurvePreset::Manual)][0]=curve;intent.curves[static_cast<unsigned>(FanCurvePreset::Manual)][1]=curve;
+        check(saveFanCurveProfiles(fanFile,intent,error),"fake Manual settings were not saved");
+        check(initializeLogging(true,portableSettingsPath("fake-restore-logs"),false),"fixture journal could not be opened");
+        {std::lock_guard lock(memory->gate);memory->bytes[0x49f]|=2;memory->bytes[0x727]&=0x7f;
+            memory->bytes[0x7c3]=7;memory->bytes[0x770]=0xff;
+            // Invalid charge byte prevents migration from inventing a saved
+            // battery intent and entering the real Windows battery WMI path.
+            memory->bytes[0x7b9]=101;
+            memory->bytes[ec::kKeyboardCapability]|=ec::kKeyboardRgbBit;
+            memory->bytes[0x783]=0;memory->bytes[0x784]=0;memory->bytes[0x785]=0;
+            memory->bytes[0x46a]=10;memory->bytes[0x46b]=10;memory->bytes[0x46f]=20;}
+        auto sharedController=std::shared_ptr<FanController>(&controller,[](FanController*){});
+        ConfigurationRestore restore(ec,sharedController);restore.suspend();restore.request("power_resume");
+        const auto until=std::chrono::steady_clock::now()+15s;bool restored{};
+        while(std::chrono::steady_clock::now()<until){
+            {std::lock_guard lock(memory->gate);restored=memory->bytes[0x783]==15&&memory->bytes[0x784]==25&&memory->bytes[0x785]==45;}
+            const auto status=controller.status();if(restored&&status.ecManual&&status.owned)break;
+            std::this_thread::sleep_for(50ms);
+        }
+        const auto status=controller.status();check(restored&&status.ecManual&&status.owned,"fake EC did not restore Manual and Custom after wake");
+        bool completed{};const auto completeBy=std::chrono::steady_clock::now()+10s;
+        while(std::chrono::steady_clock::now()<completeBy){
+            std::ifstream input(currentLogPath(),std::ios::binary);
+            const std::string log{std::istreambuf_iterator<char>(input),{}};
+            if(log.find("RESTORE settings confirmed: reason=power_resume")!=std::string::npos){completed=true;break;}
+            if(log.find("RESTORE settings incomplete: reason=power_resume")!=std::string::npos)break;
+            std::this_thread::sleep_for(50ms);
+        }
+        check(completed,"fake EC restore did not reach full settings confirmation");
+        auto observed=readEcPerformance(ec);
+        check(observed.acceptedValid&&observed.accepted.sustained==10&&observed.accepted.shortBoost==10&&observed.accepted.peak==20,
+            "old accepted limits were confused with Custom request");
+        {std::lock_guard lock(memory->gate);memory->bytes[0x46a]=15;memory->bytes[0x46b]=25;memory->bytes[0x46f]=45;}
+        observed=readEcPerformance(ec);
+        check(observed.acceptedValid&&observed.accepted.sustained==15&&observed.accepted.shortBoost==25&&observed.accepted.peak==45,
+            "updated fake EC accepted limits were not observed");
+        {std::lock_guard lock(memory->gate);memory->bytes[0x46a]=0;}
+        check(!readEcPerformance(ec).acceptedValid,"unavailable accepted limit was falsely confirmed");
+        {std::lock_guard lock(memory->gate);memory->bytes[0x46a]=15;memory->bytes[ec::kBoardProjectId]=25;}
+        check(!readEcPerformance(ec).acceptedValid,"foreign EC identity produced confirmed Wujie limits");
+        {std::lock_guard lock(memory->gate);memory->bytes[ec::kBoardProjectId]=26;}
     }
     tests::resetTestBoard();
     std::cout<<"PASS: Native ownership/readback/failures/draft, Wujie Manual/Online/Max/Default lease and "<<absent<<" missing-backend declarations; memory only\n";

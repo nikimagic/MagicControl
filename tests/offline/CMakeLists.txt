@@ -169,6 +169,16 @@ set_tests_properties(process_storage_concurrency PROPERTIES LABELS "offline;stor
 add_subdirectory(firmware)
 add_subdirectory(lenovo)
 
+# Real Wujie power codec and memory-only EC transport on both host OSes.
+add_executable(wujie_power_fake_ec wujie-power/TransportChecks.cpp "${MC_REPO}/src/protocols/uniwill/x5sp4nag/Performance.cpp")
+target_compile_features(wujie_power_fake_ec PRIVATE cxx_std_20)
+target_include_directories(wujie_power_fake_ec PRIVATE "${MC_REPO}" "${MC_REPO}/src/core/include")
+if(MSVC)
+    target_compile_options(wujie_power_fake_ec PRIVATE /utf-8 /W4)
+endif()
+add_test(NAME wujie_power_fake_ec COMMAND wujie_power_fake_ec)
+set_tests_properties(wujie_power_fake_ec PROPERTIES LABELS "offline;power;fake-ec" TIMEOUT 20)
+
 # Real shared FAN/restore owner with an in-memory Wujie EC. This target never
 # creates an OS EC backend or accesses hardware; isolate its portable settings.
 if(WIN32)
