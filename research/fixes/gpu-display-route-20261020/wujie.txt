@@ -1,0 +1,35 @@
+GPU display-route GUI integration — Wujie agent
+Date: 2026-10-20
+
+Owned production files frozen:
+- src/gui/windows/FansPage.cpp
+- src/gui/linux/FansPage.cpp
+No new production headers, no Ui.cpp/Ui.h changes.
+
+Agreed Honor API: ui::processorCard(sample, fan, channel, fanSource, const std::string& displayDevice = {}). Shared GPU catalog/loader owns exact display-device -> adapter matching and hybrid presentation. No second routing type was introduced.
+
+Windows:
+- gpuDisplayDevice(HWND) is called on the GUI thread from processorText.
+- MonitorFromWindow(view, MONITOR_DEFAULTTONULL) -> GetMonitorInfoW(MONITORINFOEXW) -> copied UTF-8 szDevice string.
+- Invalid/missing window, monitor or monitor info gives empty hint, allowing the shared loader's qualified default/unknown handling.
+- No QueryDisplayConfig duplication in GUI: Honor backend owns active route -> canonical LUID matching.
+- Existing sensor completion invalidates the visible view each poll, so moving to another monitor does not require GPU utilization changes to repaint.
+
+Linux:
+- Main-thread map/timer reads gtk_widget_get_native -> gtk_native_get_surface -> gdk_display_get_monitor_at_surface -> gdk_monitor_get_connector.
+- Connector is copied to FansState::displayDevice, used consistently by common processorCard in measurement and painting.
+- Changed connector requests the existing resize/redraw path even when telemetry is equal. No geometry constants or rendering mechanisms were changed.
+- GDK objects never enter the monitoring worker. No new lifetime callback or raw state pointer is stored elsewhere.
+- Missing native surface/monitor/connector gives empty hint. GUI never guesses output ownership from boot_vga, compositor render GPU, GPU usage, vendor/model names, activity or EC data. Backend owns exact connected/enabled DRM route mapping.
+
+Isolation:
+- MonitoringSnapshot and processors[1] are not modified by GUI route hints. Existing fan RPM/PWM/control source remains available independently of selected presentation adapter.
+- No FAN, battery, power, display-mode, adapter-enable or lighting writes added.
+- No card, font, color, scrollbar or numeric geometry changes.
+- No tests, builds, applications or hardware probes executed, as instructed. Source-diff inspection only; shared header API is being added by Honor in parallel.
+
+GPU catalog opt-in: only GUI FANs instances request collectGpuPresentation=true. Windows constructor monitoringReader(access,false,true); Linux member monitoringReader{nullptr,false,true}. All default/controller/diagnostic instances remain opt-out through the shared constructor default. No control-thread adapter/IGCL catalog added by these GUI changes.
+
+SHA256 snapshot:
+src/gui/windows/FansPage.cpp 7D4730938EE59DA07AC6B58CE77030D22C7C0BA2BE307FC055DFD681BA5ABE25
+src/gui/linux/FansPage.cpp C9EB63D27897C24C65CB76EA3462F7271A03DB1D36CC8E85D81A95DDFB58A6BF

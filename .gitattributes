@@ -1,0 +1,156 @@
+# Normalise line endings so the repository stays consistent across the two
+# platforms this project targets: Windows uses CRLF, Linux uses LF.
+* text=auto
+
+# Source and build files are text and get normalised on commit.
+*.c      text
+*.cpp    text
+*.h      text
+*.hpp    text
+*.inc    text
+*.txt    text
+*.md     text
+*.cmake  text
+CMakeLists.txt text
+*.ps1    text
+*.cmd    text
+*.bat    text
+*.json   text
+# Owner-provided ready CSV is shipped byte-for-byte to both platforms.
+/packaging/fan-curves.csv -text whitespace=cr-at-eol
+/packaging/app-settings.ini -text whitespace=cr-at-eol
+*.xml    text
+*.manifest text
+
+# Shell scripts must keep LF or they will not run on Linux.
+*.sh     text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.cmd    text eol=crlf
+*.bat    text eol=crlf
+
+# Binary artefacts are never normalised.
+*.png    binary
+*.ico    binary
+*.jpg    binary
+*.exe    binary
+*.dll    binary
+*.lib    binary
+*.sys    binary
+*.bin    binary
+*.qm     binary
+*.ttf    binary
+# Keep the upstream OFL bytes, including its intentional trailing space.
+**/fonts/OFL-NotoSansTC.txt -text whitespace=-blank-at-eol
+
+# Signed portable OEM packages must retain the exact catalogue-covered bytes.
+/MagicControl/windows/drivers/** -text
+
+# Generated or third-party content.
+build/   export-ignore
+
+# Preserve extracted OEM evidence (INF/catalog hashes and obfuscated metadata).
+/research/devices/hydroc-16-g2/oem-5.23.51.56/** -text
+
+# Prepared packages must retain the bytes recorded in package-manifest.json.
+/GitHub_Releases/MagicControl-0.1.67-*/** -text
+/GitHub_Releases/MagicControl-0.1.69-*/** -text
+/GitHub_Releases/MagicControl-0.1.90-*/** -text
+/GitHub_Releases/MagicControl-0.1.102-*/** -text
+/GitHub_Releases/MagicControl-0.1.105-*/** -text
+# Preserve manifest-covered bytes, including upstream license whitespace/CRLF.
+/GitHub_Releases/MagicControl-0.1.118-*/** -text -whitespace
+# Published sidecar assets retain the exact uploaded bytes as well.
+/GitHub_Releases/RELEASE-NOTES-0.1.118.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.118.txt -text -whitespace
+
+# Frozen battery evidence and fixtures: preserve hashes across checkout on both OSes.
+/research/analysis-20261020/wujie-charge-current/** -text -whitespace
+/research/analysis-20261020/wujie-ec-firmware/** -text -whitespace
+/research/battery-evidence-20261021/** -text -whitespace
+/research/verification/battery-contract-20261021/** -text -whitespace
+/research/verification/brightness-buttons-20261021/** -text -whitespace
+/tests/offline/fixtures/** -text -whitespace
+/docs/history/BATTERY-20261021-before-contract.md -text -whitespace
+
+# Frozen discharge evidence explicitly versioned with the battery regression suite.
+"/MagicControl/windows/логи батареи/Wujie-2026-10-21-разряд-84-5/**" -text -whitespace
+
+# Release 0.1.129 assets preserve manifest/upload bytes.
+/GitHub_Releases/MagicControl-0.1.129-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.129.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.129.txt -text -whitespace
+
+# Release0.1.152 assets preserve exact manifest/upload bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.152-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.152.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.152.txt -text -whitespace
+
+# Release0.1.153 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.153-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.153.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.153.txt -text -whitespace
+
+# Frozen static GM6 EC disassembly and saved-log evidence.
+/research/gm6-current-idle-20261022/** -text -whitespace
+/research/gm6-power-apply-20261022/** -text -whitespace
+
+# Release0.1.154 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.154-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.154.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.154.txt -text -whitespace
+
+# Release0.1.155 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.155-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.155.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.155.txt -text -whitespace
+
+# Release0.1.157 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.157-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.157.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.157.txt -text -whitespace
+
+# Release0.1.158 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.158-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.158.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.158.txt -text -whitespace
+
+# Release0.1.159 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.159-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.159.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.159.txt -text -whitespace
+
+# Release0.1.160 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.160-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.160.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.160.txt -text -whitespace
+
+# Release0.1.162 assets preserve exact manifest bytes and vendor notices.
+/GitHub_Releases/MagicControl-0.1.162-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.162.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.162.txt -text -whitespace
+
+# Local release 0.1.167 must retain exact manifest-covered bytes in Git.
+/GitHub_Releases/MagicControl-0.1.167-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.167.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.167.txt -text -whitespace
+
+# Release 0.1.176 preserves exact manifest and uploaded sidecar bytes.
+/GitHub_Releases/MagicControl-0.1.176-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.176.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.176.txt -text -whitespace
+
+# Release 0.1.177 preserves exact manifest and uploaded sidecar bytes.
+/GitHub_Releases/MagicControl-0.1.177-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.177.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.177.txt -text -whitespace
+
+# Local release 0.1.178 preserves exact manifest and sidecar bytes.
+/GitHub_Releases/MagicControl-0.1.178-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.178.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.178.txt -text -whitespace
+
+# Local release0.1.182 preserves exact manifest and sidecar bytes.
+/GitHub_Releases/MagicControl-0.1.182-*/** -text -whitespace
+/GitHub_Releases/RELEASE-NOTES-0.1.182.txt -text -whitespace
+/GitHub_Releases/SHA256SUMS-0.1.182.txt -text -whitespace

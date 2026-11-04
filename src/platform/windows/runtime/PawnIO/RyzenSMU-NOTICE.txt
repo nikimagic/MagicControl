@@ -1,0 +1,10 @@
+RyzenSMU.bin: official signed PawnIO Modules 0.2.11 module, unmodified.
+SHA256: 301D9CA397108E09F31BFBD5AC4C9BB4F352A5DE68532C32DB3BA7DDCDE93450
+Copyright (C) 2025 namazso <admin@namazso.eu>
+License: LGPL-2.1-or-later; see COPYING in this directory.
+Source: https://github.com/namazso/PawnIO.Modules
+Local source retained in build/release-compliance/PawnIO.Modules-0.2.11/.
+MagicControl telemetry uses resolve/update/read PM-table commands.
+Explicit HLYL-WXX9/Renoir user actions additionally use read/write SMU-register
+IOCTLs for the Renoir MP1 mailbox and the three power limits, with PM readback.
+No limit setters run from passive polling. The signed module remains unmodified.

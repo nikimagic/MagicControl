@@ -1,0 +1,147 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\IntelFpt19-driver-reference.sys
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha256): 52FA63A7AB20869CE52987F6588A832692C0904A3E0184B83A2FC99E8000ECDA
+
+Signing Certificate Chain:
+    Issued to: Sectigo Public Code Signing Root R46
+
+    Issued by: Sectigo Public Code Signing Root R46
+
+    Expires:   Thu Mar 22 02:59:59 2046
+
+    SHA1 hash: CCBBF9E1485AF63CE47ABF8E9E648C2504FC319D
+
+
+        Issued to: Sectigo Public Code Signing CA EV R36
+
+        Issued by: Sectigo Public Code Signing Root R46
+
+        Expires:   Sat Mar 22 02:59:59 2036
+
+        SHA1 hash: 0185FF9961FF0AA2E431817948C28E83D3F3EC70
+
+
+            Issued to: Intel Corporation
+
+            Issued by: Sectigo Public Code Signing CA EV R36
+
+            Expires:   Thu Aug 28 02:59:59 2025
+
+            SHA1 hash: FFE87E7F07B54CC88DFABD53558A92A30D7760B7
+
+
+The signature is timestamped: Sun Feb 16 14:07:13 2025
+
+Timestamp Verified by:
+    Issued to: USERTrust RSA Certification Authority
+
+    Issued by: USERTrust RSA Certification Authority
+
+    Expires:   Tue Jan 19 02:59:59 2038
+
+    SHA1 hash: 2B8F1B57330DBBA2D07A6C51F70EE90DDAB9AD8E
+
+
+        Issued to: Sectigo Public Time Stamping Root R46
+
+        Issued by: USERTrust RSA Certification Authority
+
+        Expires:   Tue Jan 19 02:59:59 2038
+
+        SHA1 hash: 853D632D938282617CD09035C491DE92C142DAC7
+
+
+            Issued to: Sectigo Public Time Stamping CA R36
+
+            Issued by: Sectigo Public Time Stamping Root R46
+
+            Expires:   Sat Mar 22 02:59:59 2036
+
+            SHA1 hash: C6AE54E47886F17C3D5512488C69C34A7AF9C2DD
+
+
+                Issued to: Sectigo Public Time Stamping Signer R35
+
+                Issued by: Sectigo Public Time Stamping CA R36
+
+                Expires:   Sun Apr 15 02:59:59 2035
+
+                SHA1 hash: F8609819A6FB882CF7E85297F2A119521A16775F
+
+
+
+Signature Index: 1
+Hash of file (sha256): 52FA63A7AB20869CE52987F6588A832692C0904A3E0184B83A2FC99E8000ECDA
+
+Signing Certificate Chain:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Windows Third Party Component CA 2014
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Oct 15 23:41:27 2029
+
+        SHA1 hash: 1906DCF62629B563252C826FDD874EFCEB6856C6
+
+
+            Issued to: Microsoft Windows Hardware Compatibility Publisher
+
+            Issued by: Microsoft Windows Third Party Component CA 2014
+
+            Expires:   Wed Oct 08 22:04:53 2025
+
+            SHA1 hash: A5D13378E659DDC05C03EE71B432DD667A302999
+
+
+The signature is timestamped: Sun Feb 16 16:17:57 2025
+
+Timestamp Verified by:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Time-Stamp PCA 2010
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Sep 30 21:32:25 2030
+
+        SHA1 hash: 36056A5662DCADECF82CC14C8B80EC5E0BCC59A6
+
+
+            Issued to: Microsoft Time-Stamp Service
+
+            Issued by: Microsoft Time-Stamp PCA 2010
+
+            Expires:   Wed Mar 05 21:45:22 2025
+
+            SHA1 hash: 8C246E2F8348EE30E567D81B8A00252F3FCD05BA
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\IntelFpt19-driver-reference.sys
+
+
+Number of signatures successfully Verified: 2
+
+Number of warnings: 0
+
+Number of errors: 0
+

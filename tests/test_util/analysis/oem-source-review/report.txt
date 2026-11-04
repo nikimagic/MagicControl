@@ -1,0 +1,100 @@
+Ревизия максимальной полезности OEM/Uniwill/скачанных исходников
+Дата: 16.10.2026. Анализ локальных файлов и сохранённых данных, без новых
+аппаратных вызовов, изменения EC/SMU/BIOS, запуска чужих программ и тестов.
+
+Важная граница доказательств
+- DefaultTool и эталон w568w содержат доступные тела части OEM-методов.
+- GCUService_Current/FanManager/FanTableManager частично обфусцированы:
+  многие методы представлены throw Runtime exception. Имя метода не раскрывает
+  реальный протокол, единицы, условия применения или поддержку текущей платой.
+- Ранее снятый JIT-код раскрывает отдельные fan-table операции, но не все
+  методы мощности/температурных ограничений.
+- OEM ECSpec содержит перекрывающиеся адреса для разных поколений. Например,
+  0x786/0x787 в одном определении означают TCC/ramp, в другом уровни PWM;
+  область 0x743..0x746 может быть старой fan-таблицей или NVIDIA TGP/DB.
+- Нельзя включать функции только по совпадению project ID 0x1A: у нашей платы
+  дополнительно подтверждаются SMBIOS X5SP4NAG и байты 0x454/0x456/0x740.
+- Методы с именем IsSupport могут делать записи! Например IsSupportLC_HWOC_ADL
+  инициирует OEM mailbox-команду. Не исполнять все функции поддержки как чтение.
+
+Приоритеты реализации
+A. Полезно прежде всего
+1. Диагностика фактических лимитов APU: профиль/Windows policy/зарядка/SMU.
+   Рабочий read-only SMU-путь уже проверялся в PowerAbProbe: PM 0x5D0009,
+   STAPM/PPT FAST/PPT SLOW. Отдельно показать запрос, подтверждение EC и
+   реально прочитанный лимит SMU. Это полезнее ещё одного непрозрачного профиля.
+2. Карта возможностей каждой модели и версии протокола, с доказательствами.
+   Для каждой функции: источник, чтение/запись, маска, диапазон, масштаб,
+   поддержка и результат реального опыта. Не переносить чужие конфликты FAN/APU.
+3. Здоровье батареи/энергия из Battery IOCTL, без подмены отсутствующих данных.
+
+B. Самые интересные аппаратные исследования
+4. SmartAPC table: OEM явно разделяет 0xBB чтение и 0xAA запись. В структуре
+   перечислены CPU PL1/2/4, TccOffset, ConfigurableTGP, DynamicBoost,
+   TargetTemperature, DefaultTGP, DynamicBoostCpuTdp. Есть read wrapper,
+   возвращающий 4 байта по offset, и транспорт драйвера 0x9C40A500.
+   Сначала ограниченный read-only разбор; список полей не доказывает, что
+   весь набор поддерживается AMD APU или нашим EC.
+5. CPU PL1/2/4: OEM пишет 0x783/784/785. Для PL4 проверяет 0x727 bit7 и
+   на некоторых платформах делит значение на 2. До записи проверить масштаб
+   и реальный отклик SMU; пустой override не означает нулевой лимит.
+6. CPU thermal target/TCC и скорость реакции вентиляторов: кандидаты
+   0x786/787 и default 0x7D8/7D9/7DA. На нашей машине 0x786/787=0,
+   defaults=90/80/98 в 130 старых кадрах. Тела методов пока заглушки;
+   эти значения нельзя уверенно объявить TCC-offset или температурной целью.
+7. Зарядный гистерезис: верхний 0x7B9 и нижний 0x7D0, реальное тело метода
+   нижнего порога в BatteryProtection2 есть. Нужна проверка старта и остановки
+   зарядки. В наших сохранённых кадрах нижний байт=0.
+8. Диагностика thermal-protection 0x7C8 bit4 и кандидатов VRM current
+   0x753/754. В старых кадрах thermal bit выключен, VRM bytes=0.
+   Эти нули не означают отсутствие защиты и допустимый ток 0 A.
+9. Чтение таблиц: 1.4..1.75 s текущего сканирования нельзя целиком приписывать
+   драйверу. Ранее полученные одиночные чтения низких регистров были ~0.05 ms.
+   Измерять отдельно адресный диапазон таблиц, ожидание mutex, повторные
+   stable-read и время IOCTL. Пакетный протокол EC пока не подтверждён.
+
+C. Для других ноутбуков / дополнительных функций
+10. NVIDIA TGP/Dynamic Boost, Intel Arc, UEFI MUX, per-key RGB/lightbar,
+    три вентилятора/RamFan2. На текущем 880M не считать это доступным по наличию
+    соответствующих классов. Наш исторический 0x7D2=0.
+11. Автоматические 60 Hz на батарее, отдельные AC/DC lighting policies,
+    штатные уведомления питания и Fn. В OEM есть реализации, но подключать
+    как независимые пользовательские функции; не менять FANs из SETs.
+
+Температуры: новых подтверждённых каналов не обнаружено
+CPU PawnIO Tctl/Tdie 0x59800 + EC 0x43E, GPU AMD ADL/ADLX, SoC ADL и два
+DDR5 SPD hub через SMBus уже реализованы. Нового DIMM/NPU-канала в четырёх
+проектах нет. TMPREAD1/2/3 вызывает ACPI DR1T/DR2T/DR3T, которых нет в
+сохранённых ACPI нашей платформы; 10 текущих опросов дали нули.
+ADL TEMPERATURE_MEM, ADLX GPUMemoryTemperature/Hotspot не поддерживаются
+во всех 130 исторических кадрах. Не путать GPU VRAM и DIMM SPD hub.
+
+Что не переносить
+- Сброс таблиц/режима при выходе из FanSlider.
+- Переприменение вентиляторов вместе с профилем APU из другого OEM пути.
+- NUCtool fallback 65/100/130 при нулевых PL и чужие 0x72D/72E как GPU limits:
+  у нас DSDT называет их EYER/EMON, а значения всегда 38/16.
+- Переключатель Type-C приоритета: поддержку OEM возвращает false, доказанного
+  соответствия registry preference биту 0x7CC.7 нет.
+- Метод/константу как подтверждённую возможность без тела и проверки модели.
+
+Источники
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/MyECIO/MyEcCtrl.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/MyECIO/AcpiCtrl.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/Define/ECSpec.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/Define/RamFan1p5_ECSpec.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/Define/RamFan2_ECSpec.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/Define/NvramVariableInfo.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Reference_w568w/GCUService/MyControlCenter/MyFanManager.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Reference_w568w/GCUService/MySystem/BatteryProtection2.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Reference_w568w/GCUService/Utility/SMAPCTABLE_STRUCT.cs
+C:/Users/admin/Documents/mechrevo/Decompiled/FanManager/MyControlCenter.MyFan.MyFanManager_RamFan1p5.decompiled.cs
+C:/Users/admin/Documents/mechrevo/EC-WritePath/GCU-Jit/
+C:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/FanSlider/repository/
+C:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/NUCtool/repository/src-tauri/src/acpi/
+C:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/LumaDesk/repository/src/core/
+C:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/OpenRevo/repository/README_en.md
+
+Смежные отчёты: ../tmp-power-research/report.txt,
+temperature-code-review.txt, power-source-review.txt.
+Машиночитаемая подборка: capability-candidates.json.

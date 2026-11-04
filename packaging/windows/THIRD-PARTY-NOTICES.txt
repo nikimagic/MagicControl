@@ -1,0 +1,99 @@
+MagicControl — сторонние компоненты / Third-party notices
+Собственные компоненты MagicControl: Copyright (c) 2026 NikiMagic.
+
+Noto Sans SC — SIL Open Font License 1.1.
+Copyright 2014-2021 Adobe; Reserved Font Name: Source.
+Полный текст: fonts/OFL-NotoSansSC.txt. Шрифт не изменён.
+https://github.com/google/fonts/tree/main/ofl/notosanssc
+
+Noto Sans TC — SIL Open Font License 1.1.
+Copyright 2014-2021 Adobe; Reserved Font Name: Source.
+Полный текст: fonts/OFL-NotoSansTC.txt. Шрифт не изменён.
+https://github.com/google/fonts/tree/main/ofl/notosanstc
+SC/TC загружаются приватно для UI; системная установка не выполняется.
+
+AMD ADL ABI references — AMD MIT notice included conservatively:
+licenses/AMD-ADL-MIT.txt.
+https://github.com/GPUOpen-LibrariesAndSDKs/display-library
+Драйверы AMD/Intel/NVIDIA и их установщики не включены.
+OEM ACPI-комплекты Uniwill встроены в ресурсы MagicControl.exe без изменений.
+Используемые установленные драйверы остаются под лицензиями их правообладателей.
+
+PawnIOLib.dll 2.2.0 — LGPL-2.1-or-later.
+LpcIO.bin, PawnIO.Modules 0.2.10 — LGPL-2.1-or-later, unchanged signed module.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.10
+Provenance and SHA256: licenses/PawnIO/LpcIO-NOTICE.txt.
+Copyright (C) 2026 namazso <admin@namazso.eu>.
+PawnIO modules AMDFamily17.bin / SmbusPIIX4.bin / RyzenSMU.bin, release 0.2.11 —
+LGPL-2.1-or-later.
+AMDFamily17: Copyright (C) 2025 namazso <admin@namazso.eu>.
+SmbusPIIX4: Copyright (C) 2025 Steve-Tech <me@stevetech.au>.
+Компоненты включены в ресурсы MagicControl.exe без изменений; загружаются
+через проверенный защищённый кэш %ProgramData%/MagicControlRuntime/<bundle-hash>/.
+Полный текст: licenses/PawnIO/COPYING и licenses/LGPL-2.1.txt.
+Предложение соответствующих исходников этих компонентов: SOURCE_OFFER.txt.
+https://github.com/namazso/PawnIO/tree/2.2.0
+https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+Оригинальный установщик PawnIO2.2.0 включён в EXE. Драйвер устанавливается
+только через явный запуск его мастера на INFO. Оригинальный источник:
+https://pawnio.eu/
+
+Uniwill OEM ACPI Driver10.48.11.331 (Wujie/GM6) и11.2.18.347 (HYDROC-16 G2).
+Точные SYS/INF/CAT встроены в EXE. Список, хэши и происхождение PACKAGES.json
+и PROVENANCE.json каждого пакета входят в те же ресурсы; при извлечении —
+%ProgramData%/MagicControlRuntime/<bundle-hash>/Uniwill/. Сторонние OEM-компоненты; автоматической установки нет.
+Лицензия NikiMagic не предоставляет прав на его распространение.
+Отдельное разрешение на публичное распространение не установлено; подробнее
+см. встроенные сведения о происхождении OEM-комплекта.
+
+RyzenSMU.bin: Copyright (C) 2025 namazso <admin@namazso.eu>.
+LGPL-2.1-or-later. Подписанный модуль поставляется без изменений.
+Происхождение и SHA256: licenses/PawnIO/RyzenSMU-NOTICE.txt.
+MagicControl использует его для чтения телеметрии PM/SMU; явная настройка лимитов
+HLYL/Renoir дополнительно использует SMU-register IOCTL для MP1 с проверкой PM.
+Пассивное чтение не выставляет лимиты. Подписанный модуль не изменён.
+
+IntelMSR.bin, PawnIO.Modules0.2.11 — LGPL-2.1-or-later, unchanged signed module.
+Copyright (C) 2025 namazso <admin@namazso.eu>.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+Provenance and SHA256: licenses/PawnIO/IntelMSR-NOTICE.txt.
+Corresponding source is covered by SOURCE_OFFER.txt.
+
+SmbusI801.bin: PawnIO.Modules0.2.11, LGPL-2.1-or-later, Copyright (C) 2025 Steve-Tech.
+Corresponding source and build interfaces are covered by the offer above.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+SHA256: a0f7d066e7efda28c0e754c1f52dbd8dc280d388ba8575b514a80cb67490530c
+
+AMD Radeon ADLX component: official AMD ADLX SDK interface declarations, copyright AMD.
+Terms: licenses/ADLX-SDK-LICENSE.txt. This component is used only with AMD hardware.
+No AMD runtime or driver DLL is included.
+
+Intel Graphics Control Library SDK interface header
+Copyright (C) 2025 Intel Corporation. Used only for Intel GPU telemetry.
+Source: https://github.com/intel/drivers.gpu.control-library
+License and conditions: licenses/IGCL-SDK-LICENSE.txt.
+Intel runtime/graphics driver binaries are not redistributed.
+
+IntelPCHThermal.bin: unmodified signed PawnIO.Modules0.2.11 module.
+Copyright (C) 2026 M-Control Contributors; LGPL-2.1-or-later.
+Corresponding module source is included as встроенный ресурс PawnIO/IntelPCHThermal.p.
+licenses/PawnIO/COPYING and licenses/PawnIO/IntelPCHThermal-NOTICE.txt provide license/provenance.
+Complete build interfaces and scripts are covered by the source offer above.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+SHA256: 478500ae78aebef3ae7a0b5fe4848d2d5737e8f7c5d51200c284a61c21d7865d
+
+NVIDIA NVAPI: minimal C ABI declarations for dynamically querying the installed
+Windows NVIDIA driver. No NVIDIA SDK headers, libraries or driver DLLs included.
+Public ABI: https://github.com/NVIDIA/nvapi
+Optional GetThermalSensors ABI interoperability reference:
+https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/master/LibreHardwareMonitorLib/Interop/NvApi.cs
+
+AMI AFUWIN x64 5.17.00.0153 and amigendrv64.sys
+Copyright AMI and its suppliers. Original Windows files are embedded in the
+application and extracted only for the explicit BIOS SAVE /O action.
+Terms and original provenance: licenses/AMI-AFU/LICENSE.txt,
+licenses/AMI-AFU/readme.txt and licenses/AMI-AFU/PROVENANCE.json.
+Official source: https://www.ami.com/resource-type/support-docs/
+The MagicControl licence does not grant additional rights to AMI software.
+
+Insyde H2OFFT6.76 OEM read component: Insyde Software Corp.; signed SYS3.0.0.3/catalog from official Lenovo KSCN43WW. Only current-ROM read-g is exposed for reviewed HLYL1.09. See licenses/Insyde-H2OFFT. No OEM firmware image, Intel FWUpdLcl or flash scripts are distributed.

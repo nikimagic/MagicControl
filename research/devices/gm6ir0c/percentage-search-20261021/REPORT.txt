@@ -1,0 +1,204 @@
+GM6IR0C: как реализован процентный предел в проверенных исходниках
+21.10.2026. Агент «Поиск». Только статический разбор.
+
+ИТОГ
+Полный применимый механизм физических100/95/85% для точного GM6IR0C
+N.1.05MRO09 / Project25 не найден. Найдено несколько РАЗНЫХ host-интерфейсов,
+и у каждого установлена граница применимости. Наличие числа7B9 или слова
+Uniwill в проекте не доказывает наличие одинакового firmware consumer.
+Производственная батарея, EC, GUI, INI, portable и build inputs не менялись.
+Аппаратных вызовов, запуска OEM/исследуемой DLL, тестов или сборок не было.
+
+Что новое относительно прежнего INDEX
+1. Реально разобрана NUCtoolV2.dll из текущего Reference_Projects: найден
+   WCF контракт IUniwillService с отдельными percentage/mode/rate API.
+2. Сопоставлены его явно заявленные NUC-модели с теми DMI, где Linux
+   действительно включает percentage feature. GM6 этой цепочкой не покрыт.
+3. В exact OEM дополнительно проверен feature gate отдельной QC-ветки
+   и отсутствие выбора этой ветки в текущем MyFanCtrl.
+4. Прочитан сырой threshold60-stopped.json HydroControl: остановка есть,
+   но Reached и Enabled не установлены. Это уточняет прежний текстовый lead.
+5. Свежая загрузка pinned upstream Linux совпала побайтно с нашим14.10
+   snapshot. Отдельного нового GM6 gate в ней не появилось.
+
+ВОСПРОИЗВОДИМОСТЬ
+collect.py читает только сохранённые исходники и metadata; сохраняет SHA256,
+выдержки с номерами строк, результаты ограниченного поиска active C#,
+provenance четырёх проектов и значения чужого capture.
+Команда: Python collect.py из этой папки. Это НЕ тест продукта и не аппаратный
+probe. Скрипт не импортирует и не выполняет код исследуемых проектов.
+Результат: evidence.json,27 исходных файлов/выдержек,5 bounded searches.
+
+1. NUCTOOL: найден дополнительный service API, но другой target
+
+Reference_Projects/NUCtool/repository
+commit20834aac0f8c733f7298b0205c4d8d67950548d8.
+README_en-US.md:25–30 явно заявляет IntelNUCX15 LAPAC71H/LAPKC71F.
+Это не GM6IR0C и не просто один из названий JiguangX.
+
+src-tauri/src/lib.rs:714–730:
+set_battery_charging_level(level) ->UniwillWcfEc::new()->connect()
+->battery_set_charging_level(level)->OSD->disconnect().
+Возврат battery_set_charging_level не используется для подтверждения эффекта.
+Даже успешная отправка этой команды не является измерением остановки зарядки.
+
+src-tauri/src/acpi/uniwillwcf.rs:184–204:
+загружает NUCToolV2.dll с обязательной проверкой собственного expected SHA.
+:329–342 вызывает exports wcf_get/set_battery_charging_level и отдельные
+wcf_get/set_battery_mode. В uniwillacpi.rs:395–403 прямой EC battery setter
+закомментирован. Поэтому описывать NUCtool как ещё одну активную запись7B9
+в нынешних исходниках было бы неверно.
+
+Локальная DLL:
+src-tauri/dll/NUCToolV2.dll,251392байта,
+SHA256838e83709f1e2c45a470868f210eef1a3a48eae10e13dba896905e6daa387497.
+Двоичный файл НЕ запускался и не загружался как библиотека. Существующий
+локальный ilspycmd использован только как статический parser.
+
+Полученный metadata contract:
+IUniwillService.GetSupportedFeatures();
+GetBatteryChargingLevel()->int;
+SetBatteryChargingLevel(int Level)->void, OperationContract(IsOneWay=true);
+Get/SetDefaultChargeRate(int Rate);
+Get/SetSecondaryChargeRate(ChargeSetting);
+Get/SetBatteryMode(BatteryMode).
+FeatureType разделяет BatteryChargeLimit и BatteryChargeRate.
+BatteryMode enum: AcMode, Custom, BestBattery — это НЕ GM6 native0/1/2
+HighCapacity/Balanced/Stationary автоматически.
+
+Граница: DLL содержит WCF proxy/контракты, не полученный implementation
+OEM-службы. ILSpy завершился exit1 с четырьмя errors; у многих method bodies
+invalid header/obfuscated IL. Поэтому metadata доказаны, но endpoint и тело
+SetBatteryChargingLevel до firmware не восстановлены. Не выдавать список
+методов за найденный регистровый механизм или безопасный ready backend.
+
+В полном exact GM6 all-active нет IUniwillService и SetBatteryChargingLevel.
+Его реально выбранная цепочка — GCUService BatteryProtection2/MQTT/EC window,
+а не этот NUC WCF service. Новая библиотека не предлагается к установке.
+
+2. LINUX: совпадающие адреса, но явные разные capabilities
+
+Наш14.10 snapshot:
+C:/Users/admin/Documents/mechrevo/Research/Uniwill-Pulsation-20261014/uniwill-acpi.c
+SHA256914d876fa3255e6ad8f8669162eaa844b23eaf9f41fd181113447c49c3ecc2a7.
+21.10 повторно прочитан primary upstream по последнему file commit
+ e6137bbef0fe23feaf19e4714892457853064eb6
+ https://github.com/torvalds/linux/commit/e6137bbef0fe23feaf19e4714892457853064eb6
+Файл сохранён в sources/linux-uniwill-acpi.c с ТЕМ ЖЕ SHA.
+Этот commit21.07.2026 добавляет AvellA60MUV, не GM6.
+
+:2680–2712 charge-limit feature включена для LAPQC71A/B,LAPAC71H,LAPKC71F.
+Совпадение LAPAC71H/LAPKC71F с target NUCtool конкретно связывает две
+действующие процентные реализации с поколением NUC, а не со всеми Uniwill.
+Modern Tux featuresets используют BATTERY_CHARGE_MODES вместо CHARGE_LIMIT.
+GM6IR0C/JiguangX exact DMI в этом файле не найден. Даже force исключает
+BATTERY_CHARGE_LIMIT(:3351–3353), а не открывает её для произвольной платы.
+
+:1995–2018 setter percentage пишет ТОЛЬКО7B9.low7, диапазон0..100
+(ноль приводится к1; readraw0 санитизируется в100).
+:2121–2145 init нормализует uninitialized0/invalid к100 на поддержанных
+моделях. Комментарий «take control» не скрывает дополнительный platform gate:
+код не пишет7C3,770,87F или7D0.
+:2424–2434 suspend сохраняет7B9; resume возвращает толькоlow7.
+Это восстановление параметра, не отдельная персистентная NVRAM команда.
+Реального restart threshold в этой реализации нет.
+
+Второй downloaded fork uniwill-laptop-dkms-main/uniwill-acpi.c:
+SHA5fddb820ded83b5b20890a0665e761f3a5260d6fae983e346f9a1002490f21e1.
+:2632–2660 read clamp0..100 и write1..100 в7B9.low7.
+:2686–2704 регистрация battery property; :2733 guard FEATURE_BATTERY.
+:3195–3252 DMI описывает LAPQC71A/B,LAPKC71E/F. Снова не GM6.
+Простое имя sysfs charge_control_end_threshold не доказывает исполнение
+параметра на Project25, тем более уже опровергнутое зарядным током.
+
+Tuxedo native profile setter в uniwill_keyboard.h делает masked7A6.bits4/5,
+сохраняет выбор и восстанавливает после сна. Это отдельная voltage-protection
+политика, не произвольный верхний процент и не новый путь100/95/85.
+
+3. EXACT GM6 OEM: проверен дополнительный QC gate
+
+Активная сборка GCUService1.0.2.70, SHA указан в соседнем Healthy report.
+MyFanManager_QC.SetBatteryChargingLimit(:1808) действительно пишет7B9.low7,
+100 кодирует0. Receive/UserSet(:548) допускает60/70/80/90/100 лишь при
+SMBIOSINFO.m_bSupportBatteryLifeExtension. Нижнего порога/7C3/87F setter
+в этом методе нет. Сохранение/CheckFirstTime(:867) повторяет только upper.
+
+CustomizeCtrl.cs:259–316 вычисляет m_bSupportBatteryLifeExtension только
+после IsQCRefreshBIOS. Проверяются структура Win32_BIOS.BIOSVersion и
+реверсированная OEM SMBIOS string(type11,string18), index4. Пустая строка
+в этой отдельной QC-ветке включает feature по default. Это BIOS feature
+metadata другой платформы, не register gate742/741 для нашего GM6.
+
+Критично: по полному all-active поиск MyFanManager_QC дал только объявление
+класса. MyFanCtrl.cs:27–72 выбирает RamFan1p5 по IsSuportRamFan1p5 и
+commercial ProjectID; на exact GM6 это MyFanManager_RamFan1p5. В его
+dispatcher нет нового QC percentage command. Наличие QC-класса внутри DLL
+не означает, что GM6 является выбранной/поддержанной QC-моделью.
+
+BatteryProtection2 private SetBatteryChargingLimit_Up/Down остаются без
+caller в полном all-active; CHARGING_UP_LIMIT enum не создаёт dispatch.
+Native Healthy chain, default100/95 полей и UEFI cached writer уже разобраны
+соседним battery-healthy-20261021; сейчас проверены снова по файлам.
+Ни SettingName, ни registry/cache не заменяют missing consumer.
+
+4. LUMADESK / FANSLIDER / OPENREVO: что реально проверено
+
+LumaDesk commit196349a373e4da941e022668f84f4016d30fc436:
+windows.rs:442–478 пишет770,7B9,7D0,7A6 четырьмя whole-byte writes.
+Дляlimit<95 пишет ROMID770=4, down=limit-5, а7A6мешаетprofilebits
+с другими битами. Это не masked standalone percent API для GM6.
+reverse/native/REPORT.md:3 target耀世15Air/project0x1A, не GM6/project25.
+scripts/verify-controls.py:125–132 assert только7B9==limit,
+7D0==limit-5 и softwarestatus.limit. Нет интеграции тока, cutoff/restart.
+Более того src/core/hal/mod.rs заявляет Windows+mock, не Linux provider;
+mock.rs:212–225 сам останавливает моделируемый SOC уlimit. Эффект mock
+не является независимым физическим доказательством.
+
+FanSlider commitc6665cfc15b7ceb0d08111ea317d9ceccc2feb2e:
+Program.cs:914–936 пишет7A6=09 лишь в broad optional OEM experiment,
+одновременно с GPU/PL/VRM/fan/customer полями. Percentage pair не реализована.
+Комментарий health protection не является proof enable sequence.
+
+OpenRevo commit51f1d917183758e65ce5d3ebe70294e6157a79f1:
+README_en:9–15 прямо исключает proprietary device mappings/hardware
+reverse data из публичного дерева. Публичные100/80/60 описания не содержат
+нужного implementation. В закрытые материалы не обращались.
+
+5. HYDROCONTROL: новый сырой контрпример текстовому выводу
+
+Локальный полный snapshot HydroControl-fc4024ce теперь содержит
+threshold60-stopped.json, а не только ранее прочитанные статьи.
+В нём upper7B9=60(0x3C), Reachedbit7=0;742=34(0x22),Enabledbit2=0;
+platform7C3=13,RSOC4AB=47; current0434/35=0; voltage0438/39=15575мВ.
+Это согласуется с остановленным током, но не подтверждает выполнение
+описанного в статье gated CGLM/reached consumer. В позднем тексте60→80
+возобновляет зарядку; полный эксперимент не делает чужойplatform/gate
+универсальным и не доказывает causal path до EC chargeIC.
+
+В том же repository ec_disasm.py docstring ещё пишет староеbank*10000,
+но реально BANK_SIZE=8000 и последующий комментарий исправляет mapping.
+Нельзя механически копировать prose или старые offsets без проверки байтов.
+Полного exact GM6 EC image здесь всё равно нет; G1/G2 тоже разные target.
+
+6. ЧТО МОЖНО СЧИТАТЬ ПРАВИЛЬНОЙ АРХИТЕКТУРОЙ ДЛЯ GM6
+
+Только после получения применимого consumer:
+- Exact identity/capability отдельно от transport availability.
+- Upper requested, configured/readback, enabled и physical stopped — разные поля.
+- Healthy7A6 сохраняется отдельным native API, не переименовывается в85/95.
+- Shared transactional transport с fresh masked RMW и owned rollback.
+- Restart/persistence/resume определяются доказанным GM6 consumer, не именем
+  OEM private Down и не совпадением с Wujie80 или NUC100raw.
+- Для пробы нужны нативный SOC/remaining/full, ток/напряжение, источник AC,
+  firmware gate/reached и контекст до/после; OS SOC может быть remapped.
+
+Сейчас недостаёт exact EC/BIOS/SMM кода, который потребляет7B9 и задаёт
+chargeIC stop/restart. Драйвер и AML дают дверцу чтения/записи; они не содержат
+этого алгоритма. Существующая пара85/80 уже держалась при положительном токе.
+Объявлять её рабочей или добавлять неподтверждённый platform4/ROMID/stored
+writer по совпадению адресов оснований нет.
+
+Интернет21.10: primary Linux дополнительно закреплён commit/SHA. Exact
+GM6IR0C+charge/7B9/JiguangX запросы не дали нового технического первичного
+consumer; сторонние driver-scan страницы не использованы как алгоритм.
+CAPTCHA/HTML от OEM BIOS не повторно выдавалась за firmware, доступ не обходился.

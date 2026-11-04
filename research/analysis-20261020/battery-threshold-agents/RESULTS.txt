@@ -1,0 +1,95 @@
+Единые пороги батареи — сводка пяти модельных агентов
+20.10.2026. Пользовательский контракт: stop100/95/85%, restart80%.
+
+ЗАДАНИЕ ВЫПОЛНЕНО КАК ИССЛЕДОВАНИЕ ПЯТИ МОДЕЛЕЙ
+Отдельные агенты Wujie, GM6IR0C, HYDROC-16 G2, Honor и Unknown прочитали
+точные исходники/OEM/имеющиеся журналы и первичные спецификации. Каждый
+оставил собственный TXT+JSON. Из-за лимита рабочих мест запускались двумя
+очередями. Hardware/OEM/GUI/CLI/тесты не запускались; их отчёты относятся
+к baseline237e520/portable0.1.86. Корень интегрирует лишь проверенные правки.
+
+ОБЩИЙ КОНТРАКТ
+Кнопки задают верхний предел100/95/85. Нижний80 — фиксированный запрос,
+не новое поле интерфейса и не обещание точного физического компаратора.
+Отдельно учитывать requested/saved, command, fresh readback, active policy,
+реальный cutoff и реальный restart. Ни native High Capacity/Balanced/Stationary,
+ни наличие драйвера, ни прочитанное число85 не заменяют исполнение85%.
+
+WUJIE X5SP4NAG — СУЩЕСТВУЮЩИЙ ЭТАЛОН
+Upper7B9/7F, restart7D0/7F=80, WMI87F, exact platform4/7+ROMFF.
+В прежних физических данных stop85 подтверждён около отображаемых85;
+stop95 — приSOC98, без подхода к95 снизу. Старый вариант100/platform7
+возобновлял заряд приSOC98; current100/platform4 отдельно не подтверждён.
+Restart80 лишь записан/прочитан; отдельного физического цикла нет. Сообщение
+о возможном старте84 сохранено в комментариях, а не в новом измерении.
+DSDT alias7D0=DBD1 и generic имяDown не восстанавливают exact EC consumer.
+
+Прямые правки корня по этому отчёту:
+- WMI baseline low7>100 отклоняется до первой записи/создания platform pin;
+  invalid127 не отправляется в rollback как известный исходный процент.
+- После трёх live совпадений WMI87F читается заново вместе с live полями
+  под общей transaction. Changed threshold/context не получает success.
+- Лог явно разделяет restart_configured=80% и restart_execution=unverified.
+Порог/платформа/карточки/скролл не менялись. Существующие readback/ownership
+guards и masked rollback сохранены; новые аппаратные пробы не выполнялись.
+
+HONOR HLYL-WXX9 — ПРОЦЕНТНЫЙ ABI ЕСТЬ
+Точный SBTT1003 передаёт lower,upper;80/100,80/95,80/85 допустимы и не
+попадают в особую0/100 normalization. Нынешний GUI использует upper-5,
+поэтому fixed80 требует общей замены caller preset и проверки обеих границ.
+Оригинальный BIOS1.09 показывает: SmartCharge modes4/6 могут вместо stored
+пары применять effective0/100 в зависимости от counter/DTTS/флага. Один GBTT
+не доказывает исполнение. Restricted путь: fresh GBCM1603+GBTT, наблюдённые
+mode2/DTTS72, стабильное согласование пары; послеSBTT подтвердить оба getter
+и неизменный context. Mode/DTTS самовольно не переключать.0/0 — specialreset,
+после которого EC может поставить mode4/40/70, а не стабильный disable.
+Для физического restart80/трёх полных циклов новых измерений нет.
+Этот restricted backend и caller80 описаны для следующей интеграции;
+production Honor в данной ревизии не переименован в готовое исполнение80.
+
+GM6IR0C — FORMAT ЕСТЬ, ENFORCEMENT НЕ УСТАНОВЛЕН
+Private upper7B9 и lower7D0 имеют нужный codec. Exact DSDT независимо
+определяет CGLM=7B9.bits0..6 и OR'ит _BST.bit3 для значений1..99.
+Этот AML индикатор основан на числе, не на токе; physical cutoff не доказан.
+7C3 названCTID и участвует graphics ветке: Wujie4/7 не переносится.
+Native UEFI DLL — generic UniWillVariable storage, не battery activation.
+Unsupported Battery* SetFwVars keys всё равно вызывают wholecachedwrite;
+использовать их как готовый setter нельзя. Для продолжения нужен точный
+consumer/activation из BIOS/EC либо доказанный работающий OEM threshold path.
+Точное старое имя BIOS вreport.json — N.1.05MRO09 (букваO, не догадкаMR009).
+
+HYDROC-16 G2 — FORMAT/UEFI FIELDS ЕСТЬ, ENFORCEMENT НЕ УСТАНОВЛЕН
+Upper7B9/lower7D0 private setters без direct IL callers. Поля UEFI0x30/31/32
+существуют в marshalled struct, но SetFwVars battery keys не обрабатывает и
+переписывает старую структуру. DLL —512byte genericvariable wrapper, есть
+inclusive-end особенность и отсутствует надёжный финальный write ack.
+Нельзя буквально обернуть его в новый процентный writer.
+Точного G2 исполняемого EC/BIOS payload нет;4096-byte ec.bin — RAM.
+Нужен exact N.1.13ELU11/EC1.12 образ либо точные AML+UEFI свидетельства.
+HYDROC G1/117.ELUK — другой аппаратный источник, не разрешение для G2.
+
+UNKNOWN — ТОЛЬКО РЕАЛЬНЫЙ НАТИВНЫЙ ИНТЕРФЕЙС
+Linux power_supply start/end threshold sysfs пригоден при наличии обоих
+атрибутов, действительных прав и точном actual readback80/{100,95,85}.
+Драйвер может округлять значения;80/90 не подтверждает запрос80/95.
+End-only не даёт гарантии fixedrestart80. Модельную карту EC не заимствовать.
+Среди рассмотренных Windows BatteryClass/SDK/WinRT/PowerPolicy/ACPI API
+универсальная SOC pair setter/getter не установлена. OEM extension требует
+своего проверенного контракта. Charge/current commands не задаютSOCпорог.
+ACPI_BST.bit3=BCL и WindowsBATTERY_STATUS.PowerState0x8=CRITICAL — разные
+контракты; копирование номера бита создало бы ложный статус.
+
+ОЧЕРЕДНОСТЬ ДАЛЬНЕЙШЕГО ПОДКЛЮЧЕНИЯ
+1. Общий набор пресетов100/95/85 с fixed80 и проверкой полной пары.
+2. Honor: restricted SmartCharge context, codecSBTT и fresh getter checks;
+   Linux context availability отдельно от простого sysfs readback.
+3. Wujie: реальный restart-цикл и current100/platform4; существующие верхние
+   измерения не распространять на нижний80 или другую platform combination.
+4. GM6/HYDROC: сначала восстановить consumer/активацию точной прошивки;
+   half-implementation с одним WriteEC7B9 не подключать как рабочий лимит.
+5. Unknown: model-neutral native API, только когда он фактически доступен.
+
+Оригинальные BIOS/EC пакеты GM6/HYDROC запрошены у пользователя отдельно.
+Это запрос недостающих исходных материалов, не разрешение на прошивку.
+Новый универсальный backend100/95/85 для всех пяти ещё не объявлен готовым.
+Все source/evidence/scope ссылки находятся в пяти соседних модельных отчётах.

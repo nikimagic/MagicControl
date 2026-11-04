@@ -1,0 +1,74 @@
+Независимая статическая проверка единой карточки батареи
+20.10.2026. База ce11d1f / 0.1.89; проверен готовый root diff для 0.1.90.
+Проверяющий агент GM6IR0C. Production/UI/INI этим агентом не редактировались.
+Аппаратные действия, GUI/CLI, тесты и сборки не запускались.
+
+ВЫВОД
+Блокирующих ошибок в проверенном узком UI diff не выявлено.
+Одна карточка с100% /95% /85% возвращена для Windows/Linux/preview.
+Native protection modes0/1/2 не превращаются в проценты.
+Это исправление стандарта отображения, не реализация percentage cutoff
+для GM6/HYDROC. Их процентные кнопки остаются disabled до доказанного backend.
+
+ПРОВЕРЕННЫЕ ТРИ ФАЙЛА
+1. src/gui/common/BatteryPolicy.h:4–12:
+   batteryPolicyNames() больше не принимает модельный аргумент и всегда
+   возвращает единственный batteryThresholdNames100/95/85. Массив native
+   названий/переключатель nativeProtection удалены. Общий заголовок прежний.
+2. src/gui/windows/SettingsPage.cpp:
+   - создание всех трёх кнопок:277–281 использует общий список;
+   - batteryIndex:709–721 первым делом возвращает-1 при nativeBattery,
+     независимо от mode0/1/2, raw0 или доступности EC;
+   - updateButtons:1150 и1190 оставляет GM6/HYDROC native-route кнопки
+     disabled, не выдаёт readback именованного профиля за percentage capability;
+   - renderSelection:1255–1264 использует этот индекс. При no-controller/
+     --no-ec/preview ветка выбирает-1, а не трактует пустой State как100%;
+   - notice больше не подставляет названия native профилей;
+   - writeBattery:1366–1386 явно отвергает nativeBattery и отсутствие EC.
+     Вызов nativeBattery->set из GUI удалён; индекс95/85 не может стать mode1/2;
+   - сообщение подтверждения native profile из battery command пути удалено.
+3. src/gui/linux/SettingsPage.cpp:146–149:
+   nativeBatteryUi() удалён, подписи всегда общие. GM6/HYDROC/preview не
+   получают setter из-за смены подписей; исходная disabled доступность осталась.
+
+СУЩЕСТВУЮЩИЕ ПРОЦЕНТНЫЕ ПУТИ
+- Windows Wujie: прежний applyBatteryChargeLimit/Auto с platform/WMI/readback
+  остался без изменений. Никакого применения чужого native mode0/1/2 нет.
+- Windows Honor: прежний typed setChargeThresholds(end-5,end)100/95/85 и
+  chargeEnd observation сохранены. Неизвестный/нулевой chargeEnd не выделяется
+  как100% (batteryIndex ранняя проверка оemControl chargeEnd).
+- Linux Honor: существующий sysfs typed путь, upper100/95/85, chargeWritable
+  и highlighting по фактическому chargeEnd остаются без изменений.
+- Linux Wujie/GM6/HYDROC не получают неподтверждённых writers.
+
+ЗАВИСИМОСТИ / ГЕОМЕТРИЯ
+Удаление BatteryProtection include из BatteryPolicy.h не оставило
+зависимых ссылок: Windows SettingsPage прямо включает NativeBatteryWindows.h,
+а тот прямо включает MagicControl/BatteryProtection.h. Linux удалённый
+nativeBatteryUi был единственным соответствующим потребителем.
+Поиск src/gui: больше нет batteryProtectionNames/nativeBattery->set,
+оба оставшихся вызова batteryPolicyNames имеют новую нулевую arity.
+
+В diff не менялись общий setsGeometry, размеры/позиции карточек, количество
+кнопок, palette/paint controls, scroll mechanics, numeric renderer или Canvas.
+Меняются подписи/доступность/источник выделения, а не отдельный дизайн модели.
+Wujie остаётся внешним эталоном для всех моделей и preview.
+
+Native backend/его restore и модельные старые INI этой UI правкой не менялись:
+они могут продолжить отдельную ранее сохранённую native policy, но GUI
+не объявляет её установленным процентом. Старые настройки не переименовываются
+и не удаляются ради новой подписи кнопки.
+
+ПРОВЕРКА
+Выполнен только просмотр готового git diff, точных call sites/includes и
+git diff --check трёх UI файлов. Ошибок whitespace не получено.
+Компиляция, реальный UI вид, оборудование/отсечка зарядки не проверялись.
+Фактический выпуск/portable/коммит0.1.90 выполняет root после интеграции.
+Поставка корня:
+Windows/Linux GUI+CLI portable0.1.90 успешно обновлены. Все4 пары SHA256
+build/portable совпали,425 application inputs проверены. Все6 личных INI/CSV
+сохранены. Report: research/ui/battery-card-standard-20261020.json.
+Первый stager встретил занятый EXE; владелец закрыл приложение через трей,
+Build-All -Resume завершил тот же0.1.90. Геометрия/paint/скролл не менялись.
+Новые UI runtime/батарейные аппаратные пробы не запускались; отдельный HID
+тест полосы запрошен владельцем и выполняется в другой модельной задаче.

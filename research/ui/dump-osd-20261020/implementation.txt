@@ -1,0 +1,35 @@
+Diagnostic dump lifecycle OSD — 2026-10-20
+
+Common DiagnosticDumpOsd.h defines start/completion messages and converts the
+actual DiagnosticDumpResult.directory into logs_<board>/dumps/<dump> display text.
+This performs path formatting only: no filesystem queries, EC reads or writes.
+No guessed folder, selected preview model or newly created diagnostic session is
+used by notification rendering.
+
+Windows INFO receives the existing main-window OsdPopup. Start is emitted only
+for an admitted dump, after launching its existing worker. Job retains the full
+result; completion is read after the done release/acquire barrier in the UI timer,
+then passed to the existing popup. The worker never captures the window/OSD.
+Linux INFO receives the existing OsdService; the GTK click callback and completion
+timeout use exactly the same common message functions. Page-close cancellation
+and timer/worker lifetime remain unchanged. Tab/tray visibility does not cancel
+the existing completion timer. No new independent OSD renderer/window is created.
+
+Ordinary transient messages use key diagnostic-dump: start does not pin a card
+for the whole minute, and completion is a fresh event rather than a stale long-
+running operation result that a newer Fn event could suppress. Global OSD-disabled
+preference remains respected. Completion contains the actual saved folder. A
+cancelled saved package is explicitly partial; unsaved failure points to INFO;
+unconfirmed hardware return is a warning/error, not a clean successful collection.
+Existing INFO status retains the full absolute path and detailed diagnostics.
+Long paths use the existing OSD wrap/ellipsis behavior; geometry is unchanged.
+
+Ten new complete message/template entries cover RU/EN/Simplified/Traditional.
+Opaque {path} stays literal. Static catalog/font inspection:931 entries, no empty
+fields, duplicate source keys, placeholder mismatches or missing font glyphs.
+No translated header tab names, card layout, fonts, scrollbar, OSD timing,
+rendering, hardware/probe sequence or diagnostic data format was changed.
+
+Root performs the common Windows/Linux build, portable SHA/version/settings
+verification and detailed local commit. Tests, GUI and hardware collection are
+not run; visual/runtime OSD delivery is not claimed from static inspection.

@@ -1,0 +1,161 @@
+УТОЧНЕНИЕ27.10.2026: вывод ниже о невосстановленном точном WUJIE5.57
+относился к старому декомпилу и был неполным. Обнаружен точный восстановленный
+research/ec-platform-catalogue-20261023/managed-provenance/GCUService-readable-strings.cs
+SHA25679f53a23e8c64b2601c200c8fed0937bedfd033bc7625c41611701e8e2a4361a.
+Его исходный сервис побайтно совпадает с Installed-5.57.1.2.
+Актуальный анализ: ../all-cc-mode-matrix-20261027/REPORT.txt.
+В нём разобраны IDG IsAC=true, SwitchModePowerChange, настоящая FAN цепочка
+и отдельная ветка5.56. Предыдущий текст сохранён как история проверки.
+
+Родные CPU/FAN режимы WUJIE, GM5HG0A, GM6IR0C — 27.10.2026
+ТОЛЬКО анализ сохранённых декомпиляций/файлов. Аппаратных запусков нет.
+
+ГРАНИЦЫ ИСТОЧНИКОВ
+GM5: собственный пакет владельца9.ControlCenter_5.52.49.6.zip;
+внутри installer ControlCenter_5.52.50.0_MBB.exe. Папка исследования названа
+oem-5.52.49.6. Методы RamFan1.5 восстановлены, это не пакет WUJIE/GM6.
+GM6: активный GCUService-active.exe, FileVersion1.0.2.70, точный сохранённый
+декомпил all-active. Версия сервиса не подменяется версией UI пакета.
+WUJIE: установленный ранее CC5.57.1.2, сохранённые UserPofiles и exact
+FanManager. В exact5.57 тела SetUserProfile/SetFanMode/PowerStatusChange
+содержат Runtime exception stubs; это НЕ восстановленная реализация.
+Доступен рабочий reference GCUService_Reference_w568w1.0.2.70. Ниже R
+обозначает только эту reference-реализацию, НЕ доказательство точного5.57.
+Нельзя переписать весь reference на WUJIE и назвать это точным клоном OEM.
+
+1. СРАВНЕНИЕ
+Вопрос | WUJIE X5SP4NAG | GM5HG0A | GM6IR0C
+Названия | Office/Gaming/Turbo/Custom в сохранённых5.57 профилях и R | Office/Gaming/Turbo/Custom | Office/Gaming/Turbo/Custom
+OperatingMode | R:0/1/2/3; exact исполняющий код защищён |0/1/2/3 |0/1/2/3
+Minimal | Нет такого штатного режима в рассмотренной схеме | Нет | Нет
+Auto как пятый OperatingMode | Не найден в рассмотренной схеме; наши Auto не OEM индекс | Нет в RamFan1.5 enum/switch | Нет в RamFan1.5 enum/switch
+Количество Custom | В сохранённых5.57 файлах Mode4_Profile1..5 |5 профилей |5 профилей
+CPU stock | R и сохранённые профили: нулевые overrides; реальный бюджет firmware | AmdSPL/SPPT/FPPT overrides=0 | IntelPL1/PL2/PL4 overrides=0
+CPU Custom | R: AmdSPL/SPPT/FPPT из выбранного профиля | AmdSPL/SPPT/FPPT из профиля | PL1/PL2/PL4 из профиля
+FAN stock | R: заводская таблица соответствующего режима в RAM; exact5.57 НЕ подтверждён | Таблица выбранного stock профиля в RAM | Таблица выбранного stock профиля в RAM
+FAN Custom | R: своя таблица выбранного профиля; exact5.57 НЕ подтверждён | Своя таблица Custom | Своя таблица Custom
+Общий размер RAM | R:2x16 логических точек |2x16 точек |2x16 точек
+Сеть/батарея | R PowerModeEvent: Windows Online/Offline; exact5.57 неизвестен | Windows+TypeC mask7CC&36 | Windows+TypeC mask7CC&36
+Подключён Type-C | R читает, но не понижает Online по18/36decimal; exact5.57 неизвестен | При masked0x12/0x24 включаетDC policy | Такое же правило
+Turbo capability | R:49F.bit1, customization override; exact5.57 неизвестен |49F.bit1, customization override |49F.bit1, customization override
+При AC/DC событии | R:Init(false), повтор текущего системного профиля |Init(false) |Init(false)
+Зарядный режим | Отдельный battery module; автоматически менять из CPU метода не найдено | Отдельный BatteryProtection2 | Отдельный BatteryProtection2
+Platform7C3/ROM770 | Переключение внутри рассмотренных CPU profile методов не найдено | Не переключаются в рассмотренной цепочке UserSet_Mode | Не переключаются в рассмотренной цепочке UserSet_Mode
+
+ТОЧНОЕ Type-C ПРАВИЛО GM5/GM6:
+GetTypeCsatusFromEC читает7CC и возвращает raw &0x36.
+Если Windows Offline -> g_ACLineStatus=0.
+Если Windows Online и masked value==18 decimal(0x12) ИЛИ36 decimal(0x24)
+-> g_ACLineStatus=0. В остальных Online случаях ->1.
+18 и36 здесь НЕ ватты и НЕ проценты батареи. Смысл конкретной мощности
+адаптера эти две проверки сами по себе не устанавливают.
+R PowerModeEvent читает тот же Type-C status, но проверяет только Windows
+Online/Offline. Перенос этого различия на exact5.57 без тела метода запрещён.
+
+2. ПОЛЯ ПЕРЕКЛЮЧЕНИЯ GM5/GM6 И REFERENCE R
+Ниже обычная ветка. AppType3 меняет UserSet_Mode1 на Turbo; CustomId и
+BIOS_PROJECT_ID меняют состав физического цикла. Это не универсальный
+список доступных кнопок любой OEM-конфигурации.
+Режим | OperatingMode | User handler |751 без FanBoost |726.7 |727.6 | CPU overrides | FAN
+Office |0 |UserSet_Mode2 |A0 |0 |0 |0/0/0 |Mode2 Profile1/2 FAN.TableName
+Gaming |1 |UserSet_Mode1 |00 |0 |0 |0/0/0 |Mode1 Profile1/2 FAN.TableName
+Turbo |2 |UserSet_Mode3 |10 |0 |0 |0/0/0 |Mode3 Profile1/2 FAN.TableName
+Custom |3 |UserSet_Mode4 |00 либо10 при OverClockingEnabled |1 |1 |выбранный профиль |Mode4 Profile1..5 FAN.TableName
+Нулевые overrides не равны0Вт. Это возврат к firmware policy.
+CPU записи зависят также от m_OcSupport; AMD/Intel ветвь выбирается отдельно.
+Custom PL4/FPPT byte и показанные реальные Вт различаются при Double codec.
+Обычные UserSet_Mode1/2/3 снимают FanBoost через UserSet_FanBoost(0).
+Custom сохраняет текущий FanBoostEnable: к751 может добавляться0x40.
+Fan Boost и Turbo — разные механизмы, не синонимы.
+
+3. КАК CC ДЕЙСТВИТЕЛЬНО УПРАВЛЯЕТ FAN
+Шаг | Действие OEM
+Выбор | SetUserProfile вызывает SetFanMode, выбирает currentProfile.FAN.TableName.
+Безопасность | При7A5.bit3 FanSafetyProtect=1 вместо пользовательской таблицы
+            | берёт DefaultFanTable_Office/Gaming/Turbo; дляCustom — Gaming.
+Жидкостный блок | MyFanTableCtrl при IsLCConnect не отправляет обычную таблицу,
+               | при IsLCDisconnect возвращается к запомненному имени.
+Подготовка | В backgroundQueue снимает7C6.bit2.
+Таблица | Пишет CPU F00/F10/F20, GPU F30/F40/F50;16точек каждого канала,
+        | Up shifted by1, Down0 пропущен, Duty*2. Split/common —7C5.bit7.
+Активация | Ставит7C6.bit2, если первые два Up байтаCPU не оба нулевые.
+Custom light |727.bit6, отдельно от APP741.bit0 и Custom726.bit7.
+
+КРИТИЧЕСКОЕ ОТЛИЧИЕ ОТ MagicControl Default:
+Родной DefaultFanTable_* означает заводскую КРИВУЮ, которую CC загружает
+в RAM и активирует. Это не эквивалент нашей команде Default с отключением
+RAM/custom/override gates. Штатный CPU профиль нельзя автоматически
+приравнять к7C6.bit2=0. И наоборот, RAM active не означает только Custom.
+SetFanTable асинхронен: queue disable/write/enable; SetUserProfile продолжает
+остальные настройки. Здесь не доказана общая атомарная транзакция OEM.
+UpdateStatusToTray вызывается рано, до завершения queued FAN write;
+это не аппаратный readback и не образец для подтверждения успеха у нас.
+
+4. СЕТЬ, БАТАРЕЯ, TURBO
+Условие | Что доказано кодом
+AC/DC | Windows StatusChange -> RefreshACLineStatus -> MyFan.PowerStatusChange
+      | -> RamFan1.5.Init(false) -> RefreshCurrentProfile -> SetUserProfile.
+Turbo gate | EnableByService читает49F.bit1; CustomId42 принудительно0.
+Fallback | LoadProfileAll при g_TurboModeSupport=0 и сохранённомTurbo заменяет
+         | OperatingMode на m_DefaultMode.
+m_DefaultMode | Читает782.bit4:0 -> Office0,1 -> Gaming1. Это НЕ Platform7C3.
+Важный предел | Init(false) в этих методах не доказывает повторное чтение
+              | TurboSupport при каждом AC/DC событии.
+Custom на DC | В рассмотренном SetUserProfile нет общего if(!AC) reject для
+             | CPU Custom: он пишет профильную тройку. Наш AC-only guard
+             | не следует объявлять точной копией этой OEM функции.
+Клиент UI | Полная матрица disabled/hidden кнопок exact UI для всех версий
+          | здесь НЕ восстановлена. Нельзя из наличия handler объявить,
+          | что его кнопка всегда доступна на батарее.
+GPU | На AC разрешённая DynamicBoost политика зависит от support и режима;
+    | Turbo имеет специальные CTGP/DynamicBoost действия. На DC часть GPU
+    | действий меняется. Число115 в вызове TGP не доказывает фактические115Вт.
+
+5. РАЗНЫЕ ИДЕНТИФИКАТОРЫ И НАЗВАНИЯ
+Имя | Значение/роль
+Project ID |740, аппаратный проект; GM6 сохранён25, WUJIE26.
+Platform ID |7C3, параметр ветвления EC. Это не индекс Office/Gaming/Turbo.
+ROM ID |770..77D,14байт;77E..77F служебный хвост. Не индекс OperatingMode.
+IsAMDPlatform | Выбор AMD/Intel реализации; не равен Platform ID7C3.
+OperatingMode |0Office/1Gaming/2Turbo/3Custom, состояние приложения.
+PowerMode в Fan/Status |0DC/1AC, эффективная классификация питания приложения.
+UEFI PowerMode |Режим0..3 сохраняется UserSet_Mode через NvramVariable;
+               | одинаковое имя НЕ означает тот же0/1AC field.
+7/FF,7/04,4/FF |Таких CPU-mode кнопок в рассмотренном OEM switch нет.
+Заводская пара |Не выводится из наличия этих методов. Исходный ID должен
+              | определяться по раннему дампу, а не по нынешним нашим кнопкам.
+
+6. ЗАРЯДКА — ОТДЕЛЬНАЯ ПОДСИСТЕМА
+BatteryProtection2 SetHealthProtectionHigh/Middle/Low используют маску7A6[5:4]:
+Performance/FullCapacity=00, Balanced=01(bit4), Healthy=10(bit5).
+Это не CPU Office/Gaming/Turbo. Из рассмотренной цепочки CPU профиля
+не следует автоматическая смена battery mode, Platform ID или ROM ID.
+В найденных CPU methods не вызывается BatteryProtection2.
+7A6 имеет другие соседние биты; перенос названия одного бита на весь байт
+или на другую модель недопустим. Наше согласованное задание не меняет зарядку/ID.
+
+7. WUJIE: СОХРАНЁННЫЕ ИЗМЕРЕНИЯ, НЕ ДЕКОМПИЛ И НЕ НОВЫЙ ТЕСТ
+16.10.2026, Platform7/ROMFF, Fast/Slow/STAPM, Вт:
+Режим | Батарея |AC65Вт |AC100Вт
+Office |30/25/25 |30/25/25 |30/25/25
+Gaming(в старом отчёте Balanced) |40/35/35 |35/30/30 |50/45/45
+Turbo |60/54/54 |40/35/35 |70/65/65
+При Platform4 на батарее все три давали45/40/40; AC100 Gaming/Turbo
+оба55/50/50. Это исторические показания владельца, не универсальные OEM
+константы. Доказывают, почему нельзя задавать единую тройку для любого питания.
+В тех samples7A5=0,7A6=0:70/65/65 не требовали HIGH_POWER/OVERBOOST.
+
+ИТОГ ДЛЯ ДАЛЬНЕЙШЕЙ РЕАЛИЗАЦИИ
+Нужно различать штатную factory RAM curve, пользовательскую Manual RAM
+curve и отключение host RAM (наша Default). Нельзя исправить зависимость
+Minimal/Custom простым EnableWindow или объявлением Fan Default всем stock.
+Наш Minimal и Auto нужно явно описать как расширения, не выдавать за OEM
+OperatingMode. ДляWUJIE exact5.57 есть защищённый участок, его нельзя
+закрывать предположением по соседнему CC. Honor/миниПК в этот анализ не входят.
+
+Доказательства: EVIDENCE.json — абсолютные пути, SHA256 и номера методов.
+*_MANAGER.txt, *_FAN_TABLE.txt, *_POWER.txt, *_EC.txt, *_BATTERY.txt —
+полные нумерованные копии сохранённых исходников. WUJIE_EXACT_PROTECTED.txt
+фиксирует stubs, REFERENCE_* отдельно помечены reference.
+Никаких новых EC/ACPI/firmware вызовов, билдов или правок product writers
+при подготовке этой таблицы не выполнялось.

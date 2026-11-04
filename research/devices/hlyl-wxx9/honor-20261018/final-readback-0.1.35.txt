@@ -1,0 +1,15 @@
+MagicControl 0.1.35
+built for windows (, MSVC 1951)
+keyboard_level=0 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания
+Keyboard level not confirmed
+строка:1 знак:307
++ ... ;if($LASTEXITCODE -ne 0){throw "Keyboard level not confirmed"};Start- ...
++                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Keyboard level not confirmed:String) [], RuntimeException
+    + FullyQualifiedErrorId : Keyboard level not confirmed
+ 
+keyboard_level=2 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания
+flags=0 period=200 duty0=0 duty1=0 candidate_target0=0 candidate_target1=0 writes=0
+stapm=31.500000 slow=37.800003 fast=54.000004 pm=3604483 stale=0 status=PawnIO / SMU
+charge_start=70 charge_end=90 writable=1 status=Honor · HWMI/I2EC · фактические показания
+[{"Path":"C:\\Users\\aniki\\Documents\\MagicControl-Diagnostics\\native-0.1.35\\MagicControl.exe","Hash":"2AAEB0E7E0911F86FDDFB04F615673EC3622800D1BAC039B7487540B3CD88FBC"},{"Path":"C:\\Users\\aniki\\Documents\\MagicControl-Diagnostics\\native-0.1.35\\mctl.exe","Hash":"14E1168AC24D77DCEE216696B9F09C3862C18FE07ED407A5D7FB75A976A2CA65"}]

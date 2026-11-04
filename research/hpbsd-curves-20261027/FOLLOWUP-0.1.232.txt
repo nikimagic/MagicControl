@@ -1,0 +1,37 @@
+MagicControl0.1.232 — owner contract for fan inputs,27.10.2026
+
+ALL devices, Windows and Linux:
+- temperature fields20..100C INCLUSIVE;
+- PWM / nominal RPM percentage fields5..100 INCLUSIVE.
+The common header FanControlLimits.h has an explicit owner comment and a
+static_assert. Do not change/remove these without a new direct owner request.
+GUI creation, refresh, wheel/arrows and committed input use these constants.
+HPBSD captions derive their bounds from those same constants.
+
+The generic validator accepts stored100C points, including a user85C/PWM5
+point. Wujie autonomous85C/100% protection is encoded separately. HPBSD keeps
+requested20..100C points in its draft, while its native MAX row remains active
+no later than the original94C CPU /83C System. Requested values are not changed
+to the effective EC boundaries; the graph shows the actual EC projection.
+Other devices' hardware transports/writers and platform/ROM/APU policies are
+unchanged. Existing30/80 user points are retained; only input bounds change.
+
+Validation so far:
+- HPBSD7456 interrupted restoration prefixes, bothB1/B2,20/100/5/100 edges;
+- actual shared input codec:15checks,0failures, no EC/controller instantiated;
+- high requested native points100C remain saved, and independent MAX stays.
+
+Legacy full simulated Wujie-controller harness limitation:
+its backend fixture lacked the required transport identity (corrected only in
+that fixture). Its old automatic recommit-after-external-gate-reset assertion
+then failed. The SAME two reset-phase assertions also fail against the original
+ab66460 FanCurve.cpp and original test with only the transport fixture fixed.
+Thus this is not introduced by expanding the input range; product ownership/
+recovery code was not modified to force this unrelated legacy test to pass.
+Baseline sources/binary are isolated under build/fan-input-baseline[-src].
+The input-only mode exercises the REAL current codec linked from product libs.
+
+Final portable/build hashes and live mini-PC GUI evidence will be recorded in
+build-0.1.232.json / activation-0.1.232.json and gui-curves-0.1.232/report.json.
+No physical low-speed5% or hot-load test is part of this input-field change.
+Completed0.1.232: both portable GUI+CLI verified; inputcodec15/0; HPBSD7456prefixes WindowsANDLinux. Mini-PC GUI confirmed inclusive20/100C and5/100percent typed+saved, originalcurve draft SHArestored, Default restored and finalManual applied.9settings/backups and33assets matched duringupdate. Userthen requestedfullunificationof16pointeditor/Honor/Mini; thatisnextbuild, notpartof0.1.232.

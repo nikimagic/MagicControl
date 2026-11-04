@@ -1,0 +1,498 @@
+HYDROC-16 G2 — полная статическая ревизия MagicControl 0.1.75
+19.10.2026
+
+Корень относительных ссылок:
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl
+
+ОБЪЁМ И ГРАНИЦЫ
+================
+Прочитаны текущие исходники, реальные восстановленные тела точного OEM,
+существующие дампы/логи 0.1.59 и 0.1.69, proof/audit и runtime-файлы.
+Изменён только этот отчёт. Исходники, настройки и UI не менялись.
+Сборки, тесты, GUI, EC/HID-записи, драйверы, SSH и OEM-программы не запускались.
+Wujie остаётся эталоном карточек, геометрии и скролла для всех моделей.
+Статически найденный setter, readback и физическое исполнение разделены.
+
+1. ТОЧНАЯ ИДЕНТИФИКАЦИЯ И ИСТОЧНИКИ
+===================================
+SMBIOS: Eluktronics Inc. / HYDROC-16 / HYDROC-16 G2.
+BIOS экземпляра: N.1.13ELU11; EC(SMBIOS): 1.12.
+Intel Core Ultra 9 275HX, NVIDIA RTX 5090 Laptop, два DDR5 SO-DIMM,
+CT1000P3PSSD8 и KINGSTON SNV2S2000G. Это отдельный профиль, не GM6IR0C/X5.
+Профиль: src/devices/eluktronics/hydroc-16-g2/Profile.cpp:5–14.
+Протокол: src/protocols/uniwill/hydroc16g2/Diagnostics.h:5–14.
+
+Точный пакет пользователя: ControlCenter_5.23.51.56_Eluktronics_V4.zip.
+SHA256: 55f28ce14493ac678a7d5cf59050e34279ce0539172cbda16bce71d4e4f1b1b7.
+Точный GCUService.exe 1.0.2.70 повторно хэширован в этой ревизии:
+build/research-hydroc16g2/installer/app/AiStoneService/MyControlCenter/GCUService.exe
+SHA256: e5d388b45515d06567c2e71e4c2b882a1fa9313704d70785f19aec960e361003.
+
+Ниже OEM/ означает:
+research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019/readable-csharp/
+Raw-копии, proof/, audit.json и source-manifest.json находятся рядом.
+Ранние decompiled-gcu/gcu-by-token с Runtime exception не использовались.
+Все 5512 зашифрованных тел прошли VBPD; раскрыты 6 DynamicIL-слоёв;
+1424 типа, 0 ошибок декомпиляции. Proxy annotations взяты из точной таблицы
+импортов. audit.json:4,28–30 содержит исходный SHA и exact-all-layers image:
+0eae0c212901efd6afcd65a97340229c705c236e0160f89c65ea3d96a69d2b5d.
+
+Родной SYS из пакета, повторно хэширован:
+build/research-hydroc16g2/drivers/UWACPIDriver/UWACPIDriver.sys
+11.2.18.347, 49096 байт,
+SHA256: e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2.
+
+Точные UWP-описания: research/devices/hydroc-16-g2/oem-5.23.51.56/
+BATTERY-UI-STRINGS-20261019.json:1–28.
+resources.pri SHA256:
+6ba528d226248656db508cf36696ec20768023f6e63baa49a88867ca8b6f474b.
+
+Проверка существующих portable файлов, без запуска:
+Windows build-version.txt = 0.1.75; EXE совпадает с build/windows/bin/Release:
+7f55881e552e60200edf9c311d8b81d2c39135f91835c5b2f8bd601c9cd43cb4.
+Linux build-version.txt = 0.1.75; бинарник совпадает с build/linux/bin:
+431364267fd36bc1693e2c4dc5379197659fca76ec762d888504f8ef614e07c2.
+Это проверка поставки, не новый аппаратный запуск 0.1.75.
+
+2. МАТРИЦА ПЯТИ ОБЛАСТЕЙ
+========================
+SYS/EC:
+  Реализовано: отдельная read-only диагностика 000–FFF; exact SMBIOS/PnP/
+  service/SYS hash; узкий battery-only writer 7A6.4–5.
+  Подтверждено на экземпляре: 4096/4096 байт, стабильные identity probes,
+  установленный родной SYS совпал с pin. Это EC RAM, не образ firmware/flash.
+
+Датчики CPU/GPU/RAM/SSD/АКБ:
+  Реализовано: DTS/RAPL, IGCL, NVML/NVAPI, SPD5118, Windows Storage/NVMe,
+  Battery Class, ACPI zones; независимые raw/status/null.
+  Подтверждено: CPU, GPU, оба RAM hub и оба SSD читались в 0.1.69.
+  Неизвестно: PCH module load failed; температура АКБ Windows не предоставлена;
+  не заявляется, что найдены все физически существующие датчики.
+
+FANs:
+  В OEM: RAM Fan 1.5, режимы, boost, factory mailbox, LC.
+  У нас: HYDROC fan getter/setter/Default/Max/mailbox не подключены.
+  Подтверждено: native путь следует из реальной фабрики OEM и EC identity.
+  Физическое управление MagicControl на этой модели не подтверждено.
+
+Native battery protection:
+  Реализовано: общий NativeBatteryController для GM6/HYDROC, отдельные guards
+  и INI, read/set/readback, masked rollback, save, startup/resume queue.
+  Подтверждено: адрес/маски/enum восстановлены из точного OEM.
+  Не подтверждено: наш setter на экземпляре и физическая остановка заряда.
+
+Подсветка:
+  В OEM: ITE HID-first, затем guarded EC SingleZone fallback.
+  У нас: общая SETs-карточка, но HYDROC RGB getter/setter ещё отсутствуют.
+  Неизвестно: точные VID/PID/usage/page/FW клавиатуры этого экземпляра.
+
+3. SYS, ABI, PNP И ОГРАНИЧЕНИЯ ДОСТУПА
+=====================================
+DiagnosticsWindows.cpp в src/devices/eluktronics/hydroc-16-g2/:
+:25–28 проверяет profile/protocol и три точные SMBIOS-строки;
+:49–75 требует единственный present ACPI\INOU0000\*, service UWACPIDriver,
+читает INF/version/ImagePath и сверяет установленный SYS hash;
+:37–47 разворачивает SystemRoot/env, запрещает UNC и canonical path вне Windows;
+:29–35 ограничивает SYS размером 1 МиБ и проверяет полное чтение.
+Hash подтверждает файл на диске, не Authenticode и не байты загруженного kernel
+image. Данные последнего пользовательского дампа совпали с ожидаемым pin.
+
+src/platform/windows/uniwill-acpi/BackendWindows.cpp:
+:19–30 — device \\.\ACPIDriver, read 0x9C40A488, write 0x9C40A48C;
+:104–129 — RW handle нужен access mask IOCTL; общий recursive named mutex
+Global\MagicControl.EcTransactions.v2 сериализует наши процессы/сеансы;
+:163–204 — diagnostic read: DWORD address, input4/output16, returned проверяется;
+write: два DWORD addr/value, input8/output16.
+OEM-сопоставление: OEM/020000FA-MyECIO.AcpiCtrl.cs:69–71,251–274,391–457.
+Большой входной OEM-буфер буквально не переносится; output16 защищает ширину
+ACPI integer, которую возвращает изученный SYS.
+
+Diagnostic backend запрещает write и адреса >FFF. Battery-вариант разрешает
+только 7A6 и значения маски30 = 00/10/20; повторяет fresh masked RMW на последней
+транспортной границе (:145–153,169). Записи FANs/PL/threshold/RGB не разрешены.
+NativeBattery apply держит EC transaction. Общая фабрика не даёт HYDROC в legacy
+X5 EcAccess: src/platform/windows/BackendFactoryWindows.cpp:8–12;
+MainWindow.cpp:686–715. Preview/Unknown не меняют actual SMBIOS-выбор.
+
+Diagnostic session проверяет две стабильные выборки 740/74C/78E/7C8, отвергает
+полностью нулевой/FF набор, но не каждый отдельный ноль. Снимок поблочный,
+не атомарный. Успешный WDF ответ не доказывает внутренний успех ACPI для каждого
+байта — ограничение явно сохраняется в ec-interface.txt.
+
+Linux не получает Windows writer: src/platform/linux/DiagnosticDumpLinux.cpp:
+9–26. Полный EC/Default/Max недоступны; 256 байт ec_sys не выдаются за 4096.
+Native battery writer на Linux также не подключён, кнопки недоступны.
+
+4. ДАТЧИКИ: ЧТО РЕАЛЬНО ЕСТЬ В ДАННЫХ
+======================================
+Последний доступный HYDROC bundle, далее D69/:
+build/audit-logs-20261019/logs_HYDROC-16-ca5dbd707263/logs_HYDROC-16/
+dumps/dump-20261019-151330-0/
+Это 0.1.69, 19.10.2026 15:13:30–15:13:37 UTC, не свежий дамп 0.1.75.
+Ранний 0.1.59: build/audit-hydroc16g2-20261019/ — EC ещё не был подключён,
+часть CPU/RAM была недоступна. Старые отказы не описывают нынешнюю реализацию.
+
+D69 report.txt/ec-interface.txt: один PnP, тот же pinned SYS, N.1.13ELU11,
+стабильные probes1A/C6/FC/60, EC3953мс,4096 valid,0 retries/waits.
+EC: 740=1A,741=80,74C=C6,78E=FC,7C8=60,73C=18,766=93,726=00,
+727=80,751=00,7C5=40,7C6=00,7A6=08,7B9=00,7D0=00.
+
+Наблюдения sensor-summary.json (четыре fast samples):
+- CPU: 55–62°C DTS; 15.990–23.243Вт RAPL (три двухточечных результата),
+  1764.08–1862.17МГц ProcessorInformation,14.92–20.36% GetSystemTimes.
+- RTX5090: 45–46°C,12.889–17.635Вт,180–210МГц,0% в коротком окне.
+  nvidia.json:25651314688байт памяти,fan_count0. Это не отсутствие EC fan.
+  GetPowerManagementLimit Not Supported; Enforced/Default/Constraints читаются;
+  setter не вызывался. NVML fan index не объявляется EC GPU-каналом.
+- RAM: SPD5118 0x50=46°C,0x52=45.75°C. Это hub-адреса, не доказанное
+  соответствие SMBIOS serial/физическому SO-DIMM. Обычный опрос5с,
+  diagnostic до8hub на0x50–0x57, без переключения SPD NVM pages.
+- SSD CT1000P3PSSD8: Storage36°C, NVMe composite35.85°C, sensor1=35.85°C.
+  KingstonNV2: Storage39–40°C, composite38.85°C; дополнительные raw0
+  означают not reported. Разные каналы и округления сами по себе не ошибка.
+- АКБ:100%,idle0Вт,16.842В,health82.8125%; cycles/temperature=null.
+  BatteryTemperature Win32=1 (ERROR_INVALID_FUNCTION), не ошибка конвертации.
+  Это не доказывает отсутствия датчика внутри батареи/EC. 7A6=08 даёт policy0,
+  но при100%/idle нельзя доказать физическую остановку выбранным режимом.
+- ACPI ECTZ/TZ00=69.05°C по одному optional sample. По имени нельзя назвать
+  это PCH/CPU/АКБ; два алиаса не равны двум независимым датчикам.
+- PCH value/raw=null, «retry delayed; PawnIO: не загружен модуль датчиков».
+  dependencies.json: PawnIO installed/running/state4, runtime присутствует.
+  Наличие файла не доказывает успешную загрузку модуля.
+- Intel IGCL: ctlPowerTelemetryGet success0,550МГц; energy/time/activity
+  поддержаны, gpu_temperature/VRAM temperature unsupported. Не подставляется
+  выдуманная температура. Ранний INVALID_ARGUMENT в этом bundle не повторён.
+  Одиночный intel.json не вычисляет двухточечную мощность; timeline независим.
+
+Текущие guards/ограничения:
+IntelTelemetryWindows.cpp:25–29: family6/B7/BA/BF/C5/C6; :57–86: DTS valid bit,
+TjTarget, RAPL units/two samples/time interval/500Вт ceiling.
+IntelMemoryWindows.cpp:10–13: Intel + exactboard; :25–53: общий SMBus mutex,
+hash I801, vendor8086, SPDtype1851/capability/config; ошибки не превращаются в0°C.
+MonitoringWindows.cpp:296–310: battery0.1K decoder и точный Win32 status;
+:313–315: X5 EC battery metadata только через реально имеющийся verified
+EcAccess, которого у HYDROC нет. Карта батареи X5 не переносится.
+:375: diagnostic Storage до64PhysicalDrive, обычный UI ограничен двумя дисками;
+:408–447: property51/52 и SMART composite/sensor1..8 сохраняются раздельно.
+NvidiaSensorsWindows.cpp:117–122: Ada hotspot/memory mapping только RTX40;
+RTX5090 raw channels не получают ложных Ada-имён. Общий NvidiaGpu.cpp фильтрует
+невозможную мощность с сохранением raw/status.
+
+Минутный минимум исправлен после D69: DiagnosticDump.cpp:178–213,272–307,
+523–525. Считается span между записанными fast samples; sampling-window.json,
+incomplete/cancelled различаются. Старый7секундный dump не проверяет исправление.
+Свежего0.1.75 HYDROC bundle в предоставленных данных нет.
+
+Portable/runtime hashes совпали с исходными контролируемыми модулями:
+IntelMSR: d6ed85d65ab17a22f813ef98207d6d537155ee2ded5976a21cb48413c9b92e5f;
+I801: a0f7d066e7efda28c0e754c1f52dbd8dc280d388ba8575b514a80cb67490530c;
+PCH:478500ae78aebef3ae7a0b5fe4848d2d5737e8f7c5d51200c284a61c21d7865d.
+StagePortableWindows.cmake:13–18 сохраняет пользовательскиеCSV/INI,
+:45–48 копирует полный PawnIO список. Родной SYS stager не устанавливает.
+В src/platform/windows/runtime/Uniwill есть другой SYS с SHA
+6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235.
+Его нельзя выдавать за pinned HYDROC11.2.18.347; текущий guard такой hash
+отвергнет, проверенный stager его автоматически не устанавливает.
+
+5. FANs: РЕАЛЬНЫЙ OEM ПУТЬ И НАША НЕПОДКЛЮЧЁННОСТЬ
+==================================================
+OEM/020002D6-MyControlCenter.MyFanCtrl.cs:173–219:
+78E.6 + nonCommercial выбирает MyFanManager_RamFan1p5.
+OEM/020000FC-MyECIO.MyEcCtrl.cs:329–341: RAM1.5/LC capabilities;
+:621–629: расширяется толькоProject23/24,Project26 остаётся26.
+OEM/0200011B-Utility.ProjectIdExtensions.cs:11–40 не содержит26 в Commercial.
+По D69 Project26/78EFC путь RAM1.5 доказан фабрикой, не аналогией с GM6.
+Это статическое следствие, а не трасса запущенного OEM на экземпляре.
+
+OEM/02000427-MyControlCenter.MyFan.MyFanManager_RamFan1p5.cs:
+:7055–7144: Gaming00,OfficeA0,Turbo10,Custom00+726.7 и727.6 indicator;
+:7158–7166: FanBoost masked751.6. SetFanMode пишет весь751 — переносить
+буквально нельзя; соседние поля принадлежат другим функциям.
+727.6 — CustomerModeLight FAN, не разрешение keyboard RGB.
+
+OEM/02000456-MyControlCenter.MyFan.FanTable.MyFanTableCtrl.cs:234–254:
+7C6.2 commit, при включении проверяются непустые F00/F01. Перед записью
+таблицы commit снимается, после устанавливается.
+OEM/0200044A-MyControlCenter.MyFan.FanTable.FanTable_Manager1p5.cs:
+:1302–1449: CPUF00/F10/F20 Up/Down/Duty; GPUF30/F40/F50;16точек,
+rawDuty=2*%, сдвиг Up/Down, первая Up0, конечная rawUpFF, Down[0] особый;
+:2971–2980: respective7C5.7. LC capability7C8.5 установлен в D69;
+жидкостный режим может подставлять другие таблицы.
+По raw RPM: CPU464:465=0A94→2708, GPU46C:46B=0A55→2645;
+75B/75C=99→49.5% по OEM scale. Это не измеренный максимум.
+
+Заводские таблицы требуют активного mailbox, не flash read:
+OEM/0200044A-...FanTable_Manager1p5.cs:2446–2505 снимает APP presence741.0
+(бит в OEM/020000FC-MyECIO.MyEcCtrl.cs:409–415), запрашивает Gaming2/Office3/
+Turbo1: F5F=mode,F5D=FD,F5E=C9; каждые500мс до10раз ждёт изменения ОБОИХ
+маркеров, читает RAM, возвращает APP presence. Простая неактивная RAM не
+доказывает заводскую кривую. Нужен scope/rollback исходного APP bit, таблиц,
+commit/LC ownership и readback, а не слепое копирование returntrue OEM.
+
+Наш HYDROC fan path: Profile.cpp:13 Fans=false; FansPage.cpp:923–935 явно
+показывает диагностику; MainWindow не открывает legacy transport;
+DiagnosticDump.cpp:388 принудительно ReadOnly; DiagnosticDumpWindows.cpp:
+26–51 Default не включает HYDROC; :170–180 fan getter также без HYDROC.
+Управление, Max30с и factory mailbox НЕ подключены. Это намеренная граница,
+не заявление о готовой функции. Следующее подключение — через общий RAM1.5
+механизм с отдельными HYDROC guards, без нового renderer/копии GM6 controller.
+
+6. БАТАРЕЯ: НАТИВНЫЕ РЕЖИМЫ И НАШ КОНТРОЛЛЕР
+=============================================
+OEM/020001D1-GCUService.MySystem.BatteryProtection2.cs:522–571:
+Performance0:7A6&30→00; Balanced1→10; Healthy2→20; остальные биты сохраняются.
+:424–426 Resume повторяет SetHealthProtectionStatus;
+:442–472 default1 дляCustomizeTarget17/56, для остальных0. Это не разрешение
+MagicControl автоматически включать OEM default без сохранённого выбора.
+Private7B9/7D0 setters не имеют обнаруженных прямых IL callers в audit9151
+методов. Численные100/95/85 и Wujie platform4/7 этому API не приписываются.
+UWP: High Capacity Mode — длительная автономность; Balanced — иногда вне сети;
+Stationary Mode — постоянный адаптер и ресурс батареи; защита от высокого
+напряжения. Ни voltage, ни точные stop/restart проценты не указаны.
+
+Наш src/platform/windows/NativeBatteryWindows.cpp:
+:35–37 — отдельный HYDROC id/INI;
+:64–82 — exact SMBIOS/capability/Project26/78E.6;
+:77 — SYS до initial open и каждого apply;
+:91–102 — enum/oldmode, transaction, OEM ownership, fresh RMW/readback,
+save только после успеха;
+:104–108 — rollback своих битов, только пока actual равен нашему mode;
+внешняя policy/появившийся OEM запрещают слепой откат; ошибка логируется;
+:116–126 — read actual enum, unknown11→null, OEM присутствует→read-only;
+:129 — explicit set очищает pending только после успеха;
+:40–55 — startup/resume worker применяет лишь явный сохранённый ключ;
+:115 — выход ничего не сбрасывает. Нет записей FANs/PL/threshold/HID.
+Исходный D69 7A6=08: соседний bit3 должен сохраниться при режимах10/20.
+
+OEM owner ищется по GCUService.exe/AiStoneService.exe среди всех процессов;
+сервисы не останавливаются. Это snapshot, не эксклюзивная аренда OEM:
+наш named mutex не мешает родному сервису стартовать после проверки.
+UI start держит DeviceOperation; setter выполняется worker-ом;
+SettingsPage.cpp:920–951 повторно сверяет фактический enum после apply.
+MainWindow.cpp:440–443 — resume queue; :867–869 — startup/sleepclock.
+SETs удерживает shared controller с создания (:250); weak factory не теряет
+worker сразу после вызова. Пассивный refresh только читает, не повторяет setter.
+Linux writer не подключён. Физическое исполнение требует отдельной проверки.
+
+7. ПОДСВЕТКА: ТОЧНЫЙ ПРОТОКОЛ И НЕИЗВЕСТНЫЕ
+===========================================
+OEM/020000D7-LightingModel.LM_Manager.cs:28–85: ITE-first, затем EC fallback.
+OEM/020000DD-LightingModel.ITE_SPEC.cs:10–24: VID048D, keyboardPID
+CE00/6000/6001/6002/6003/6004/6006/6007/600A/600B, Usage1;
+PageFF12=4zone,FF02=1st per-key,FF03=new per-key. Lightbar PID отдельно
+7001/7000/6005/6008/6010 — не путать с keyboard по одному VID.
+OEM/020000C9-UsbHidModel.HIDManager.cs:35–98: HID interfaces,
+HidD_GetAttributes/HidP_GetCaps, UsagePage и FeatureReportByteLength.
+
+OEM/020000DF-LightingModel.LM_ITE_RGB.cs:
+:1217–1244:08H=[0,08,Control,Effect,Speed,Light,ColorIndex,Direction,Save],
+09H=[0,09,02,Light,0,0,0,0,0]. Значимы9байт; наш backend должен брать реальную
+FeatureReport длину caps и проверять результат/размер/command;
+:1250–1303 FW80 getter; :1325–1339 effect88 getter. Native код игнорирует
+часть результатов и возвращает true — буквально копировать нельзя;
+:3862–3924 Single1/Breathing2/Wave3/Rainbow5, уровни0..4→0/8/22/36/50;
+:3928–3940 speed0..4→10/7/5/3/1. RGB14 зависит от KBtype/FW/calibration;
+GM6 EC writer не является готовым HYDROC HID writer;
+:3738–3765 welcome timeout пишет также UEFI RGBKeyboard1A/SmartLightbar1A;
+:1307–1321 HID1A=[0,1A,Control,Enable,Time,0,0,0,Save]. Единицы Time и
+эквивалент «АвтоВыкл,сек» не установлены; подключать это поле вслепую нельзя.
+
+OEM/020000DB-LightingModel.LM_EC_RGB.cs:49–65: fallback требует766.2 и
+IsSingleColorKeyboardDetection()!=1; D69 766=93,bit2=0 — он не заявлен.
+73C=18 — subtype, не готовый RGBKB_Type/PID. В inventory нет HID caps/FW.
+У нас HYDROC HID getter/setter отсутствует, SETs controls disabled;
+пульсация/6цветный цикл на этом устройстве не подключены. Следующий шаг:
+точная HID metadata, затем строго типизированные getter80/88 и только потом
+обратимый effect setter. UWACPI SYS не заменяет HID transport клавиатуры.
+
+8. РЕАЛЬНЫЕ ДЕФЕКТЫ
+====================
+P1: в проверенной HYDROC ветке не найдено доказанного произвольного EC/HID
+writer или переноса чужой карты. Это статический результат, не гарантия всегоПО.
+
+[P2-HYD-01] Дамп теряет собственный сохранённый BatteryProtection HYDROC.
+src/platform/common/DiagnosticDump.cpp:526–532 копирует фиксированный список,
+в нём gm6ir0c-device-settings.ini, но нет hydroc16g2-device-settings.ini.
+HYDROC пишет именно второй файл: NativeBatteryWindows.cpp:37,101–102.
+Следствие: actual7A6 есть в EC, saved/requested из прошлого запуска в bundle
+нет; нельзя сопоставить выбор и фактическое состояние/restore после сна.
+Предложение: общий реестр профильных файлов; сохранять оба вида данных раздельно.
+OEM:020001D1-...BatteryProtection2.cs:424–426,442–472,506–518 различает
+хранимый HealthProtectionStatus, применение и resume.
+
+[P2-HYD-02] Единичный transient отказ после resume поглощает restore.
+NativeBatteryWindows.cpp:48 сбрасывает pending до open/apply; :55 лишь логирует
+catch. Если driver/device/EC gate временно не готовы после сна, поздний
+успешный пассивный read не повторяет saved apply. До нового resume/startup/
+клика сохранённый профиль может остаться неприменённым.
+Это доказанный статический путь ошибки; на экземпляре не воспроизводился.
+Предложение: bounded retry только типизированных transient not-ready/busy,
+с deadline/backoff, новой identity/ownership проверкой и отменой явным действием.
+НЕ повторять OEM-owner отказ, неизвестный mode/INI, сменившийся SYS/identity.
+Намеренно работающий OEM — политика владения, а не основание для takeover.
+OEM:020001D1-...BatteryProtection2.cs:424–426 — resume setter. Retry предлагается
+для нашей надёжности, не приписывается OEM как уже доказанный алгоритм.
+
+[P2-HYD-03] «Общий EC counter0→0» в отчёте — константа, не измерение.
+DiagnosticDumpWindows.cpp:120,122 выставляет writesBefore/After=0;
+DiagnosticDump.cpp:452 подписывает это общим счётчиком, включающим независимый
+контроллер. NativeBatteryController использует другой IEcBackend; его записи
+не учитываются. Capture reservation освобождается после снимка, queued restore
+может выполниться в последующие60с телеметрии. Сам dump backend действительно
+read-only, но эти цифры не доказывают отсутствия всех записей приложения/OEM.
+Предложение: явно scope=diagnostic_backend и writes_requested=0; global=unknown
+либо общий реальный transport counter с phase/time. Полностью пассивный режим
+требует отдельной политики pending restore, если пользователь её согласует.
+OEM:020000FA-AcpiCtrl.cs:251–274 различает Read/Write, но не доказывает наш counter.
+D69 уже печатает этот текст, хотя нового battery worker тогда ещё не было.
+
+[P3-HYD-04] Неверный provenance primary disk reading в diagnostic sensors.jsonl.
+MonitoringWindows.cpp:425 принимает Storage property; :450 сохраняет её value
+при уже известной температуре, а :451 переименовывает source в NVMe SMART.
+D69 CT1000P3PSSD8:36°C property против35.85°C composite. Разница корректна,
+ошибка только в подписи источника выбранного primary record.
+Ограничение вывода: обычный reader при уже известном property-value не вызывает
+SMART (:429), поэтому это не доказанная ошибка обычной UI-карточки.
+Предложение: сохранять source выбранного значения либо явно выбирать composite
+вместе с value; независимые дополнительные каналы не объединять.
+OEM reference неприменим: это наши Windows Storage/NVMe API, не OEM команда.
+
+[P3-HYD-05] Intel HYDROC подписан в SETs как AMD/APU/SMU.
+src/gui/windows/SettingsPage.cpp:200 определяет intelUi только по GM6;
+:824,:873,:882 выбирает APU/SMU Fast для HYDROC. Linux SettingsPage.cpp:
+43,115,132–135 повторяет fallback. У275HX Intel, не AMD SMU.
+Последствие: неверная модель мощности/источника; writers при этом disabled,
+неправильная аппаратная запись этой находкой не доказана.
+Предложение: общая карточка выбирает подписи по CPU vendor/telemetry, отдельно
+от возможностей профильного writer; не подключать HYDROC к gm6Controller.
+Геометрию/скролл/палитру Wujie не менять.
+Identity: D69 inventory/CPU; OEM MyFanCtrl:173–219 выбирает FAN, не AMD APU API.
+
+[P3-HYD-06] Load ошибки PawnIO теряют точный HRESULT и имя модуля.
+src/platform/windows/pawnio/SensorModuleWindows.h:72 проверяет FAILED(load),
+но выбрасывает лишь «не загружен модуль датчиков». IntelPchWindows.cpp:29
+сбрасывает модуль/ждёт30с. D69 PCH имеет именно эту ошибку при running PawnIO,
+существующем правильном файле и работающих других модулях.
+Нельзя отличить неподдерживаемый PCI/module init от ошибки драйвера/signature.
+Предложение: сохранить HRESULT, moduleName/hash в диагностике; fail-closed
+guard не обходить. Из этих данных не следует, что этот PCH обязан поддерживаться.
+OEM reference неприменим: PawnIO PCH — отдельный источник MagicControl.
+
+9. ЧТО ОСТАЁТСЯ ГИПОТЕЗОЙ / СЛЕДУЮЩИЕ ПРОВЕРКИ
+===============================================
+- FANs/RGB не подключены намеренно. Восстановленные тела дают план реализации,
+  но не доказательство работоспособности нашего управления на экземпляре.
+- Battery enum/readback не доказывает физическое прекращение заряда. Нужно
+  отдельное согласованное временное наблюдение saved/actual,AC/DC,SOC,current,
+  voltage/chargeflow. Не назначать native режимам100/95/85 по аналогии с Wujie.
+- Для PCH сначала точные load HRESULT/PCI identity. Не подменять его ACPI zone.
+- Для клавиатуры нужны path/VID/PID/usage/page/reportlength/FW/subtype;
+  не брать первый похожий ITE и не путать lightbar с клавиатурой.
+- Factory mailbox потребует полного rollback flags/table/LC и ownership.
+  Native SetFanMode целым байтом не переносится буквально. Max30с позже —
+  native Boost/100%duty с реальным RPM feedback, не выдуманная цель15000RPM.
+- Свежего минутного дампа0.1.75 на HYDROC нет. Исправить полноту/provenance,
+  затем получить новый bundle и отдельно проверить новую реализацию батареи.
+- Disk hash не аутентифицирует загруженный kernel image. Противодействие
+  злонамеренному kernel hook не было задачей этой ревизии.
+
+ИТОГ
+====
+Read-only EC в пользовательском HYDROC работает; CPU/GPU/RAM/оба SSD уже имели
+live данные. Native battery API подключён и ограничен отдельными guards,
+но физический эффект ещё не подтверждён. FANs/RGB исследованы, не подключены.
+Найдены дефекты полноты дампа, transient restore, write-counter, provenance,
+подписей и диагностической причины PCH. Исправлять общие механизмы с сохранением
+внешнего вида Wujie; исходники этой ревизией не менялись.
+
+10. ДОПОЛНЕНИЕ ДЛЯ УПАКОВКИ РОДНОГО ДРАЙВЕРА HYDROC
+====================================================
+Повторная статическая проверка19.10.2026. Установка/запуск драйверов,
+OEM, GUI и обращения к EC/HID не выполнялись. Выполнены чтение INF,
+SHA256 и проверка Authenticode/catalog membership файлами Windows SDK SignTool.
+
+Цепочка происхождения:
+1) Пользовательский ControlCenter_5.23.51.56_Eluktronics_V4.zip:
+   282561277байт,
+   SHA25655f28ce14493ac678a7d5cf59050e34279ce0539172cbda16bce71d4e4f1b1b7.
+2) ControlCenter_5.23.51.56_Eluktronics_V4/
+   ControlCenter_5.23.51.56_Eluktronics.exe (Inno Setup, распакован, не запускался):
+   178896424байт,
+   SHA2564bc157ea71fede63bf2fd2250d25c22b20872bca1a729d3ad40cb816fe4ac62d.
+3) Inno app/ZipFiles/UWACPIDriver.zip:
+   34756байт,
+   SHA256a478886ab26d1190e8e15ccda1e80a1ac66d39da6b7a940a787a3db4b2418dad.
+4) Архив содержит ровно три файла внутри UWACPIDriver/:
+   UWACPIDriver.sys 49096байт
+   e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2
+   UWACPIDriver.inf 2033байта
+   265df0a2913627328365661867776db7e6331b99eacc27abd66fd5ae700b9b86
+   uwacpidriver.cat 11324байта
+   97df04eab235f33e21e9a44b5c55a1c8b17b245d658664a3a8aa7b5e1c577444
+
+INF:
+DriverVer=08/27/2024,11.2.18.347; Provider=%ManufacturerName%=Uniwill;
+Signature=$WINDOWS NT$; Class=System;
+ClassGuid={4d36e97d-e325-11ce-bfc1-08002be10318}; PnpLockdown=1;
+NTamd64, hardwareID ACPI\INOU0000; CatalogFile=UWACPIDriver.cat;
+service UWACPIDriver, ServiceType1 (kernel), StartType3 (demand),
+ErrorControl1, ServiceBinary=%12%\UWACPIDriver.sys;
+KMDF1.15, DeviceDesc=ACPIDriver, DisplayName=UWACPIDriver Service.
+
+Подписи:
+Get-AuthenticodeSignature SYS=Valid, embedded signer Uniwill Technology Inc.;
+issuer GlobalSign GCC R45 EV CodeSigning CA2020;
+сертификат DA4F6E6AF3FB681A772553E70A90062EADCCA031;
+timestamp signer DigiCert Timestamp2023. Срок сертификата сам по себе не
+заменяет проверку timestamp/цепочки: Windows вернула Signature verified.
+CAT=Valid, Microsoft Windows Hardware Compatibility Publisher;
+issuer Microsoft Windows Third Party Component CA2012;
+сертификат BDC9B8C37C6B71791A584EC19F2069D98042DC0A;
+проверенный timestamp29.08.2024 12:52:57 +03:00, Microsoft Time-Stamp Service.
+INF Get-AuthenticodeSignature отдельно=NotSigned/unsupported subject form,
+но это НЕ означает неподписанный пакет: catalog membership INF доказан.
+
+Повторно выполнено:
+signtool verify /pa /v /c uwacpidriver.cat UWACPIDriver.sys — success,0warnings/errors;
+signtool verify /pa /v /c uwacpidriver.cat UWACPIDriver.inf — success,0warnings/errors;
+signtool verify /kp /c uwacpidriver.cat UWACPIDriver.sys — Successfully verified.
+Это локальная проверка подписи/каталога, не установка и не гарантия загрузки
+при любом наборе HVCI/SecureBoot/WDAC/SAC правил на другом компьютере.
+
+Сравнение с уже имеющимся runtime/Uniwill:
+INF10.48.11.331 от28.10.2025; файлы SYS46352/INF2034/CAT11342байта.
+SYS6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235;
+INFed17fb99b0d9fab6eb116a603ea34a42b8aa38e1978f128c826f8856b13f5e8e;
+CAT27a8c480c1d9cdaa1ce5c4c8c9963c9df519061ce1476e398e8f6cdab2bacf6b.
+Его SYS/INF также успешно проходят verify /pa /c своего CAT.
+INF построчно отличается только DriverVer; Provider/HardwareID/service/KMDF
+и имена файлов совпадают. Дата2025 у10.48 против2024 у11.2 не позволяет
+назвать11.2 универсальным обновлением только по большему номеру.
+Один HardwareID/service/filename создаёт конфликт выбора Windows DriverStore;
+нельзя сваливать тройки разных версий в одну папку или смешивать CAT/INF/SYS.
+Нельзя автоматически ставить все OEM пакеты подряд на каждый ноутбук.
+
+ABI и право применения:
+Точный HYDROC SYS dispatcher знает read0x9C40A488/write0x9C40A48C;
+цепочка GCUService/DefaultTool → AcpiCtrl → \\.\ACPIDriver → ACPI EC.
+DefaultTool reader принимает DWORD address4 и берёт младший байт ответа;
+writer — DWORD addr/value8. Наш read4/output16 и write8/output16 сохраняют
+защитный запас на ширину ACPI integer. Native wrapper4МиБ — не требование
+протокола. Дополнительные MMIO/PCI/IO/custom IOCTL не разрешены нашим HYDROC API.
+Совпадение transport ABI с10.48 не доказывает взаимозаменяемость SYS, карт
+регистров, capabilities или право FANs/RGB записи. Текущий HYDROC pin допускает
+только e984...; SYS6e360... будет отклонён. Защиту не снимать ради комплекта.
+
+Для PROVENANCE/README:
+component=Uniwill OEM ACPI Driver; exact_model=Eluktronics HYDROC-16 G2;
+board=HYDROC-16; inf_version=11.2.18.347; inf_date=2024-08-27;
+hardware_id=ACPI\INOU0000; origin=точный архив пользователя и цепочка выше;
+modified=false; файлы/размеры/SHA — как выше;
+redistribution_permission=not established; magiccontrol_license_applies=false.
+Факт владения пользовательским архивом/подпись не доказывает права публичного
+распространения. Локальная упаковка по поручению владельца не является
+разрешением публиковать сторонние исходники/весь OEM ControlCenter на GitHub.
+README должен разделять «драйвер включён в комплект» и «установлен/запущен»;
+наличие SYS рядом с portable само драйвер не активирует. PawnIO — отдельный
+CPU/MSR/SMBus транспорт; UWACPI — отдельный EC транспорт этой платы.
+Этот агент файлы драйверов в сборку не добавлял: упаковку выполняет родитель.

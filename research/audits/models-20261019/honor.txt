@@ -1,0 +1,369 @@
+HONOR / HUAWEI HLYL-WXX9 — статическая ревизия MagicControl0.1.75
+Дата:19.10.2026. Область: Windows/Linux, профиль, аппаратные адаптеры, общие
+страницы и диагностика. Корень: C:\Users\admin\Documents\mechrevo_dsh\MagicControl.
+
+ГРАНИЦЫ
+Прочитаны реальные методы, сохранённый OEM C-псевдокод, исходная DSDT1.09,
+дизассемблирование EC и исторические журналы. Проверены локальные SHA256.
+Не запускались OEM EXE/DLL, GUI/CLI, тесты, сборки, SSH, драйверы и аппаратные
+команды. Изменён только этот UTF-8 отчёт. Ссылки на прежние аппаратные результаты
+не являются свежей проверкой0.1.75. Wujie — эталон внешнего вида всех карточек;
+никакой отдельный дизайн модели и изменения геометрии/скролла не предлагаются.
+
+1. EXACT IDENTITY И ИСТОЧНИКИ
+
+Рабочий профиль требует manufacturer=HUAWEI, productName=HLYL-WXX9,
+baseBoard=HLYL-WXX9-PCB. Это Honor MagicBook Pro2020, Ryzen5 4600H/Renoir,
+BIOS1.09, EC1.9, IT8987. Варианты с manufacturer=HONOR, BIOS3.xx либо иными
+платами не разрешаются автоматически. Profile.cpp:7–8 и DeviceRegistry.cpp:23–30.
+Raw Uniwill/EcAccess/backend/boardVerified у профиля отсутствует; реализованные
+возможности typed API не означают допуск к чужой карте EC или platform4/7.
+
+Прямые локальные SHA256, пересчитанные в этой ревизии:
+research/devices/hlyl-wxx9/honor-20261019/oem/PCManager/WmiUtil.dll
+  AE4595E83180F4012BCD478730E58DD358AA5190462594532053AF551ED8FC7B
+research/devices/hlyl-wxx9/honor-20261019/oem/PCManager/HardwareHal.dll
+  B8398B5E6C2EB6823BE323BC435B06F7D81E5E5CBBAE915A975A9F912D483B2B
+research/devices/hlyl-wxx9/honor-20261019/oem/PCManager/HwDriverAdapter.dll
+  645CCABE290B2FFC38624A3C63FC6748BFC7F045306E94E4F1B80558AFD819B6
+research/devices/hlyl-wxx9/honor-20261019/oem/PCManager/MateBookService.exe
+  AD0718816B481CE5731533A59A91A7DD122822A12167A3BCE9D044DF3D885A98
+research/devices/hlyl-wxx9/honor-20261018/firmware/HLYL-WXX9_BIOS_1.09_ORIGINAL_16MB.bin
+  38597994DC39ED17D57CEE8331AC107579B6FF186934CDBC873D3C5F363A806E
+
+OEM пакет PC Manager11.1.6.31 содержит модули11.0.0.0; их версии различать.
+Сохранённый manifest.json содержит подписи Valid/Huawei; подписи установленной
+сейчас машины в этой ревизии не проверялись. Копии BasicService имеют другие
+полные хэши, но сравнение PE-секций сохранено в build/honor-oem-analysis/section-hashes.json.
+
+Точные источники и обозначения далее:
+  FACTORY_DSDT = research/devices/hlyl-wxx9/honor-20261018/
+    Honor-diagnostics-20261018-4a4c9e25/acpi/DSDT-001-registry.dsl
+  EC_ASM = build/honor-analysis/ec-original.asm
+  OEM = build/honor-oem-analysis/
+  SRC = src/devices/huawei/hlyl-wxx9/
+В отчёте FACTORY_DSDT и EC_ASM всегда обозначают эти точные файлы.
+SHA256 FACTORY_DSDT (пересчитан):
+  EA5942100AAF8CA301ECCD38AE07898170DBAAD4FA0CD20C00E8EB27850CE3C7.
+research/devices/hlyl-wxx9/hlyl-reference.dsl — изменённая Hackintosh-таблица;
+не подменяет заводскую. Сравнение с HLYL1.8 лежит в
+build/honor-oem-analysis/hlyl-dsdt-comparison.json. C# keyboard-working и
+Probe-HonorFans.ps1 — пользовательские эксперименты, НЕ родной Huawei-код.
+
+2. МАТРИЦА ПЯТИ ОБЛАСТЕЙ
+
+2.1 Identity / драйверы / ABI / упаковка
+РЕАЛИЗОВАНО:
+- HWMI использует Windows ROOT\\WMI/OemWMIMethod.OemWMIfun через Microsoft WmiAcpi,
+  проверяет GUID, тип аргумента u8Input[64]/u64Input, активный однозначный HWMI,
+  SAFEARRAY и status byte0; неизвестный ABI не угадывается.
+  src/platform/windows/huawei-wmi/HuaweiWmi.cpp:38–92;
+  src/protocols/huawei/Hwmi.h:11–28. GUID-проверка пропускается при отсутствии
+  читаемого qualifier; остальные проверки и exact SMBIOS остаются.
+- Собственный HWMI gate Local\\MagicControl.Huawei.HWMI.v1: сессия удерживает его
+  на getter/setter/readback; ожидание5с, отдельный ExecMethod/GetCallStatus5с.
+  Это не общий mutex с PC Manager и не межсессионный Global gate.
+- I2EC: exact SMBIOS + BIOSVersion ровно1.09; SuperIO ID8987 и XRAM-canary2000/2001,
+  SPCTRL1 low2bits2=read-only/3=read-write; mode автоматически не переключается.
+  SRC/I2EcWindows.cpp:33–45. Global Access_ISABUS.HTP.Method, RAII PNPCFG exit.
+  Дамп ограничен RAM0000–0FFF, блок<=16байт, освобождает ISA/PNPCFG между блоками.
+- PawnIO DLL и LpcIO module закреплены SHA и FileShare.Read на всё время загрузки,
+  сторонние OEM SYS не запускаются. LpcIoWindows.cpp:15–29,41–58.
+  Наличие установленного PawnIO отдельно диагностируется через SCM/dependencies,
+  не объявляется подтверждением удачного EC чтения.
+- Portable0.1.75 содержит LpcIO.bin, PawnIOLib.dll, AMDFamily17.bin, RyzenSMU.bin,
+  LGPL COPYING и notices. cmake/PawnIORuntime.cmake проверяет наличие полного
+  списка, SHA LpcIO и согласованность RyzenSMU с provenance. Оба build-version.txt
+  фактически0.1.75. Компоненты не запускались.
+  SHA LpcIO B3896A1CAB0D808FCA31FE2EBCAE045D59DAC690DA87B17C858BB8DA357EB45E;
+  PawnIOLib D71F62627D66983BB9F5B1C269F27BCD8C1B8A46E794377A6330F84C198F4443;
+  AMDFamily17 DAE74615761B78BDF064DFB3E136252DDCC6FC727D88F14738D0E5800D427A91;
+  RyzenSMU301D9CA397108E09F31BFBD5AC4C9BB4F352A5DE68532C32DB3BA7DDCDE93450.
+ПОДТВЕРЖДЕНО ИСТОРИЧЕСКИ:
+- OEM PCManager использует WmiUtil/HardwareHal; сохранённые acpi-bindings.json
+  и loaded-modules.json связывают HWMI с WmiAcpi/Microsoft. WmiUtil RPM0802,
+  temperature0202 и charge1003 совпадают с нашими байтами (см. ниже).
+- OEM/MateBookService/140008250.c:84–147 и1400087d0.c:27–60 содержат HwOs2EcX64,
+  но разобранные функции относятся к BiosLogo, не к полному EC RAM API.
+  В сохранённой инвентаризации os2ec-presence.json этот драйвер не установлен.
+НЕИЗВЕСТНО: совместимость другого BIOS, новые ревизии PawnIO/OEM, поведение
+одновременных разных Windows sessions и внешнего PC Manager. Не переносить
+поддержку только по совпадению имени драйвера.
+
+2.2 CPU/APU/GPU/RAM/SSD/battery telemetry
+РЕАЛИЗОВАНО:
+- CPU Tctl и энергия AMDFamily17/PawnIO, AMD ADL independent sensors;
+  CPU load GetSystemTimes fallback. HWMI GTMP0 — CPU fallback, не Tctl.
+  MonitoringWindows.cpp:498–523; PawnTelemetryWindows.cpp:75–168.
+- Шесть точных OEM GTMP каналов0/5/7/8/11/14 сохраняются как отдельные
+  SensorReading с timestamp/status. Имена CTMP/TSLO/TNTC/CNTC/DNTC/BTMP не
+  подменяются RAM/GPU/SSD. SRC/ControlWindows.cpp:24–27,57–65.
+  FACTORY_DSDT:169–259 подтверждает индексы и возможность virtual VTMM/VTM*;
+  WmiUtil/180002760.c:55–74 подтверждает команду0202/sign/magnitude.
+- BatteryClass temperature — основной системный путь; fresh GTMP14 fallback
+  работает и в battery-only карточке. WindowsBattery failure не означает,
+  что у Honor отсутствует датчик. MonitoringWindows.cpp:531–538.
+- DDR4-плата не запускает DDR5 SMBus сканирование: pawn.smbusAllowed только
+  verified rawEc, которого у Honor нет. Неизвестные термоканалы не выдаются
+  за температуру DIMM. RAM usage есть независимо от температуры.
+- SSD общий Storage property51/52 и NVMe SMART composite/sensor1..8, с raw/error
+  в диагностике; UI имеет два слота. Дополнительный SSD sensor не другой диск,
+  его позиция controller/NAND неизвестна без документации производителя.
+- iGPU AMD: ADLX/ADL и системные GPU counters перечисляются отдельно;
+  NVIDIA/Intel не подключаются по имени CPU. Не придумываются dGPU или VRAM.
+- SMU HLYL: exact board+CPUID17h/60h+PM370000..370005, offsets0/8/C/10,
+  shared Access_PCI. Явные MP1 команды14/16/15 задают STAPM/Slow/Fast,
+  ограниченияAC45/45/54 иDC30/30/35Вт, два PM readback, максимум одна
+  коррекция0.9 после двух совпадений, при неизвестном коэффициенте нет слепого
+  повторного отката. ApuPowerWindows.cpp:112–202,225–247. SETs не пишет FANs.
+- Linux использует реальные sysfs/hwmon/power_supply; белая подсветка только
+  huawei::kbd_backlight/max_brightness2. PawnIO/I2EC не имитируются в Linux.
+ПОДТВЕРЖДЕНО ИСТОРИЧЕСКИ:
+- honor-20261019/oem/dsdt-temperature-observation.json: CPU39,TSLO38,TNTC33,
+  CNTC44,DNTC40,BTMP33°C; все status0. Сеанс не атомарный.
+- build/honor-deep-0.1.58/results/logs/dumps/dump-20261019-065345-0/report.txt:
+  4096/4096EC,4033мс;13sensor rows, около10с весь старый пакет. Его summary
+  содержит CPU34–36°C,BTMP32°C,SSD36–37°C,AMD edge34–36°C. Это старый0.1.58,
+  не доказательство короткого окна текущего0.1.75.
+- honor-20261018/smu-native-roundtrip-0.1.34.txt подтверждает20/25/30Вт и
+  возврат31.5/37.8/54Вт; прежние0.1.31/32 неудачные пробы не скрыты.
+НЕИЗВЕСТНО: физическое расположение четырёх NTC/TSLO, DIMM temperature,
+полный диапазон iGPU sensors на Linux и стабильность всех providers0.1.75.
+Ошибки одиночных HWMI getters теряются — H5; SSD provenance — shared S3 ниже.
+
+2.3 FANs Auto/Manual/Max/ownership/exit/resume/probes
+РЕАЛИЗОВАНО:
+- Свой HlylFanController, не RAM Fan1.5/16точек MECHREVO. Фиксированные targets
+ 0532/053C (0..200), manual042C.bit1, actual PWM1808/1809, period1801=200.
+  SRC/FanControlWindows.cpp:20–25,74–89; allowlist I2EcWindows.cpp:72–78.
+  EC_ASM:46237–46277 (file13A50) точно выполняет min(target,period) в1808/1809.
+- RPM0802 index0/1 LE16 без дополнительного множителя. OEM HardwareHal
+  1800262e0.c:9–12/180026310.c:9–12 и WmiUtil180002a90.c:60–67;
+  FACTORY_DSDT:470–505. Это два вентилятора системы, не доказанная отдельная
+  пара CPU/iGPU. Одинаковый PWM не означает одинаковые физические RPM.
+- Default очищает только manual bit и подтверждает Auto. Explicit Default
+  не требует нашего владения. Watchdog/exit снимают manual только при обоих
+  targets==requested*2; внешние изменения не перетирают. Normal cleanup
+  восстанавливает захваченные targets только при принадлежности операции.
+  FanControlWindows.cpp:31–54. При частично failed rollback releasePending
+  требует полное совпадение attempted pair, а не вслепую присваивает targets.
+- Раз в1с watchdog проверяет владение и HWMI CPU;80°C/ошибка требуют Auto.
+  Последовательность bounded setter: temperature→guards→target0→target1→manual,
+ 500мс→guards+targets+PWM readback; rollback сохраняет соседние bits042C.
+- На старте сохранённые MECHREVO CSV не активируют Honor; вручную режим не
+  восстанавливается после сна. При сбросе firmware manual/targets watchdog
+  relinquishes ownership. При выходе освобождается только наш fixed manual.
+  Это отдельный контракт Honor, не X5 правило «оставить последнее EC состояние».
+- Страница общая FansPage; рендер/scroll общий. Для Honor нет автономной RAM
+  кривой, Manual online и CPU=GPU: их аппаратная реализация не заявлена.
+ПОДТВЕРЖДЕНО ИСТОРИЧЕСКИ:
+- fan-native-probe-0.1.32.txt:50/50%,RPM≈5586/4053, подтверждён Auto/targets/PWM0.
+- gui-manual-max-rpm-0.1.34.json:50/50≈5458/4037;100/100 достигает8729/6475,
+  затем обороты меняются; это наблюдённые значения, не паспортный предел.
+- Результаты пользовательской PowerShell/C# пробы и native0.1.32 различаются
+  происхождением, хотя оба согласуются с дизассемблированием исходного BIOS.
+НЕИЗВЕСТНО: вся шкала0..100, независимая калибровка тахометра/PPR, предельные
+RPM конкретных моторов; актуальная30с Max проба в общей дампилке отсутствует H6.
+Найдены дефекты статуса/общего operation gate H1/H4, не доказанный отказ термозащиты.
+
+2.4 Батарея / Smart Charge / сохранение
+РЕАЛИЗОВАНО:
+- Windows charge getter1103/setter1003 со start/end, bounded8read×150мс,
+  status+точная пара, попытка вернуть исходную пару и отдельная ошибка отката.
+  SRC/ControlWindows.cpp:16–20,34–39,80–96. Setter0/100 нормализуется в95/100,
+  чтобы не включать disable/SmartCharge. UI100/95/85 задаёт95/100,90/95,80/85.
+- FACTORY_DSDT:713–745: вход0/100 пишетBCCL/BCCH=0/0, остальные пары напрямую;
+  это не travel/full-charge95/100. WmiUtil180002c20.c:57–61 соответствует ABI.
+- Linux выбирает только существующий pair charge_control_thresholds либо
+  power_supply start/end, permission probes и getter. Меняет порядок двух
+  sysfs writes, чтобы не нарушать start<=end; общий mutex только внутри процесса.
+  HuaweiControlLinux.cpp:23–43,66–71. Ошибки rollback не сохранены — H2.
+- Huawei не сохраняет пороги в MECHREVO device-settings.ini и не пишет их
+  самовольно на старте/exit/resume. SettingsPage.cpp:990–993; LaptopControl
+  constructor только создаёт адаптер. Состояние читает firmware, не CSV.
+ПОДТВЕРЖДЕНО ИСТОРИЧЕСКИ:
+- charge-stop-ac-20261018.txt: наAC смена70/90→70/80 при заряде>80 дала
+  ChargeRate20984→16482→0mW/Chargingfalse; исходные70/90 восстановлены.
+- charge-full-mode-ac-0.1.34.txt:95/100,PowerOnline/Chargingtrue,≈4.3Вт и
+  рост RemainingCapacity; возврат70/90. Достижение100% не наблюдалось.
+НЕИЗВЕСТНО: длительный SmartCharge/деградация/полный цикл100%, сохранение OEM
+на всех power transitions. Валидное disable0/0 не может быть прочитано/изменено
+нашим API — H3; транзиентный0/0 и стабильный disabled надо различать.
+
+2.5 Белая подсветка / таймер / отсутствие RGB
+РЕАЛИЗОВАНО:
+- Windows IT8987 runtime02F4level/03FCbitsC0shadow/1804duty. OFF/LOW/HIGH=0/50/100
+  raw при period200; никакого RGB/радуги/цикла6. SRC/BacklightWindows.cpp:16–24,
+  74–80,94–126. Exact BIOS и17hardware+6safety rules, canary, legacy service
+  HuaweiKeyboardLight stopped, два стабильных снимка, PWM mirrorGPIO1661.2.
+- Только03FC[7:6] меняются с fresh read-modify-write; rollback проверяет
+  собственные values/маски и не затирает соседние6бит. I2EcWindows.cpp:63–70;
+  BacklightWindows.cpp:116–125. Состояние не autoplay/restore на старте/exit.
+- EC_ASM:52039–52059 (file1647C) задаёт HIGH=period/2,LOW=period/4;
+  power042C.0/031A.0/GPIOC6 используются дальше:52061–52087. Пользовательский
+  C# путь совпал с последующим native и firmware, но не объявляется OEM.
+- WMI GLIV/SLIV не используются для яркости: прежний SLIV ack не дал света.
+  Таймер отдельно1206/1106 LE16seconds0..3600/readback;
+  OEM WmiUtil180004d70.c:50–56,180004ef0.c:56–60;
+  FACTORY_DSDT:1845–1876 хранит seconds*10 вKBBL/H и при getter делит на10.
+- Linux только существующие huawei::kbd_backlight max2 и kbdlight_timeout,
+  без chmod/установки модуля/эмуляцииI2EC. Цвета/эффекты disabled; три белых
+  уровня используют общие контролы SETs.
+ПОДТВЕРЖДЕНО ИСТОРИЧЕСКИ:
+- native-backlight-0.1.28.txt/readback:0→1→2, повторHIGH.
+- keyboard-cycle-final-0.1.37.txt: окончательная проверка после исключения
+  ошибочных GPIO output-level guards; конфигурационные проверки сохранены.
+- post-dump-log.jsonl19.10: keyboard2,timeout0; это getter, не проба таймера.
+НЕИЗВЕСТНО: аппаратное срабатывание всех ненулевых timeout, пользовательское
+  Fn+brightness вмешательство во время setters, иной BIOS/клавиатура. RGB
+  поддержки нет и её нельзя «добавить» цветными кнопками без аппаратного протокола.
+
+3. КОНКРЕТНЫЕ ЗАМЕЧАНИЯ
+
+H1 [P2] Watchdog ошибочно сообщает «автоматика восстановлена» при отказе от владения.
+  SRC/FanControlWindows.cpp:36–40 возвращает void после owned=false,
+  releasePending=false при несовпадении manual/targets. В catch watch():67–70
+  после automatic() безусловно добавляется текст «автоматика восстановлена».
+  Если внешний writer сменил targets между первым ownership snapshot и ошибкой
+  GTMP/WMI, automatic() правильно не пишет чужое состояние, но статус говорит
+  об успешном Auto. При releasePending после partial failed rollback совпадение
+  обоих attempted targets тоже не гарантировано; автоматический return не
+  доказывает Auto и не должен превращаться в success.
+  Основание: EC_ASM:46239–46277 — manual bit реально удерживает фиксированный
+  режим; чужие targets с bit1=1 остаются Manual. Фактического сценария не запускали.
+  Предложение: typed cleanup result {restored,already_auto,ownership_lost,failed},
+  раздельный readback/status. Не предлагать восстанавливать чужие targets.
+
+H2 [P2] Linux battery rollback скрывает собственную ошибку и не проверяет результат.
+  src/platform/linux/huawei-wmi/HuaweiControlLinux.cpp:70–71:
+  после частичной sysfs write/readback failure catch пытается writeThresholds,
+  проглатывает её исключение и заново выбрасывает исходную ошибку. Нет проверки
+  restored==before, записи журнала или явного «откат не подтверждён».
+  Пара writeThresholds() может менять два файла:39–43. Если end write не прошла
+  после успешной start write, батарея может остаться с частично изменённой парой,
+  а UI сообщает лишь исходную ошибку. Это доказанный пробел error path, не
+  наблюдавшаяся аппаратная потеря данных. Windows уже сообщает обе ошибки.
+  Предложение: общий bounded verify/rollback результата пары с сохранением
+  обоих failure statuses, без слепого повторения и без смены внешнего дизайна.
+  Источник аппаратной семантики: FACTORY_DSDT:713–745, OEM180002c20.c:57–61.
+
+H3 [P2] Стабильное штатное disable0/0 блокирует выход из него через battery API.
+  SRC/ControlWindows.cpp:19 отвергает end<1; read():48 оставляет chargeWritable=false.
+  setChargeThresholds():85 всегда сначала вызывает этот getter, поэтому явная
+ 95/100 из корректного0/0 отклоняется до setter. Linux thresholds():36 и
+  setChargeThresholds():69 имеют ту же границу.
+  FACTORY_DSDT:721–724 штатно пишет0/0 по команде отключения защиты, а GBTT:743–744
+  возвращает именно эти raw поля. Следовательно0/0 бывает допустимым состоянием
+  firmware, хотя в процессе commit оно также может быть транзиентным.
+  Предложение: сохранить raw pair+typed disabled/transient/thresholds state,
+  отличать стабильное0/0 повторным чтением и разрешать явный95/100 с точным
+  rollback-смыслом. Не отображать0/0 как100% и не возвращать его через нормализацию
+ 0/100→95/100. Не включать SmartCharge самовольно.
+
+H4 [P2] Honor FANs обходит общий DeviceOperation gate при применении.
+  src/gui/windows/FansPage.cpp:819–830 не вызывает tryBegin; huawei-ветки
+  selectEcManual():835 иselectPreset():858 возвращаются до общих busy checks
+ 836/859. Проверяется только локальныйbusy/старыйhlylState.writable.
+  В отличие от SETs start():919–920 иGM6apply():798 нет held reservation на worker.
+  Другой запрос SETs/BIOS может стартовать, пока уже запущено явное Honor fixed,
+  и операция не публикует общий busy. ISA mutex защищает одну I2EC транзакцию,
+  поэтому это не доказанный byte-level race, но не сериализует полную цепочку
+  temperature HWMI→I2EC→result и последовательность dumpDefault→snapshot.
+  Диагностический Default создаёт отдельный HlylFanController (DiagnosticDumpWindows:47),
+  поэтому его Impl mutex тоже не совпадает с GUI экземпляром.
+  Предложение: использовать тот же DeviceOperation reservation при dispatch,
+  удерживать до результата; watchdog/cleanup не блокировать бесконечно и не
+  отменять safety release из-за обычной UI операции. Не добавлять отдельный UI.
+
+H5 [P2] Ошибки части HWMI getters исчезают из дампа/статуса.
+  SRC/ControlWindows.cpp:48–56 catch(...){} теряет причины charge/Fn/Turbo/
+  timeout/RPM;67 после этого сообщает «фактические показания». Hwmi.h:27–28
+  ещё до catch сводит status!=0/short response к общему тексту без raw status/opcode.
+  При full session failure температурные SensorReading вообще не создаются:
+  try:47 и цикл:59 расположены в одном outer try. MonitoringWindows.cpp:518–523
+  видит null/общийstatus, но не знает, какой вызов отказал и с каким ответом.
+  Следствие: отсутствие RPM/порога трудно отличить от unsupported/timeout/неверного
+  ABI и проследить по logs; null не выдуман в0, но диагностическое доказательство
+  потеряно. OEM WmiUtil180002a90.c:64–67 и180002760.c:67–74 имеют отдельно
+  transport result/status; наш код может сохранять их без повторных команд.
+  Предложение: per-operation statuses/opcode/raw response/error, unavailable
+  rows для всех ожидаемых GTMP при session failure; значения не заполнять нулями.
+
+H6 [P2, GAP] В общей дампилке Honor нет обещанной30секундной Max пробы.
+  src/platform/windows/DiagnosticDumpWindows.cpp:159–167 допускает только
+  X5 иGM6; Honor попадает «Проба Max...не подключена». readPlatformFans():170–179
+  также не имеет Honor. При этом GUI имеет работавший fixed100 (FansPage:821/826),
+  а общий режим BIOS WithFanProbes пишет сообщение «Max по30сек».
+  Исходный Default Honor уже вызывается:38–48,4096-byteEC RAM сохраняется.
+ 60с датчиков в общей recorder — отдельная функция; наличие минуты не включает
+  отсутствующую fan probe. Нет доказательства30сек Max из текущей дампилки.
+  Источник для будущего пути: EC_ASM:46237–46277 и сохранённый GUI0.1.34
+ 100/100RPM journal, НЕ BIOS SFNM неизвестной семантики.
+  Предложение: отдельный адаптер Honor в общем FanMaximum с fixed100/двумя
+  физическимиfan0/fan1, watchdog и обязательным ownership-aware Auto cleanup;
+  либо честное model-specific «Max не выполняется» в существующем статусе.
+  Не называть10000RPM командой: это PWM100%, реальные RPM измеряются отдельно.
+
+H7 [P3] Resume HIGH проверяет чужие младшие bits03FC как часть brightness guard.
+  SRC/BacklightWindows.cpp:79 допускает resume mismatch level0/duty0 только
+  при value.shadow==0x80, хотя обычная ветка и ownedStateEqual():46 используют
+  маскуC0, а I2EcWindows.cpp:65–67 прямо определяет lower6bits как соседние.
+  Состояние shadow0x81,level0,duty0 проходит логическую brightness-маскуHIGH,
+  но отклоняется как «уровень и shadow не согласованы». Это статически видимая
+  несогласованность допуска; наличие такого snapshot на физическом Honor ещё
+  не подтверждено, поэтому воспроизведение аппаратного дефекта не заявляется.
+  Предложение: после проверки семантики03FC сравнивать толькоownedC0 и сохранять
+  lower6bits; не ослаблять BIOS/ID/power/config/PWM guards. Пользовательский C#
+  эксперимент не является OEM-обоснованием расширения runtime writes.
+
+4. ПРИМЕНИМОСТЬ УЖЕ ОБЩИХ ЗАМЕЧАНИЙ
+
+S1 Unknown U2 [P2] cancellation/deadline fastprovider относится и к Honor:
+  SensorRecorder общий; HWMI имеет bounded GetCallStatus, но PawnIO/ADL/Storage
+  provider calls не принимают stop_token. Исходники DiagnosticDump.cpp:218–296.
+  Не называть60с верхней границей; это минимальное окно фактических samples.
+S2 Unknown U3 [P2] AC unknown=>false относится к Honor системной карточке;
+  batteryPowerStatus общий. OEM Turbo setter сам проверяет ACLineStatus==1,
+  поэтому UI ошибка не означает допуск записи Turbo при неизвестном питании.
+S3 Unknown U6/GM6-03 [P3] SSD source misattribution применимо к WDC Honor:
+  MonitoringWindows.cpp:425,450–456 может оставить value отStorage property,
+  но заменитьsource наSMART. Старый дамп содержит36/37integer dashboard vs
+ 35.85/36.85SMART отдельныеrows; это подтверждает разные способы декодирования,
+  не обязательно ложность температуры и не два диска.
+S4 Unknown U1 Radeon partial-provider coverage [P2] формально касается eGPU/
+  нескольких AMD adapters; у exactHonor известна одна iGPU. Старые ADL adapter
+ 0..3 могут быть разными display/output handles однойiGPU, не четырьмя GPU.
+S5 Unknown U4 read-only OEM/HID/service inventory относится к диагностической
+  полнотеHonor тоже: штатныеSYSTEM/HWMI/ACPI/HID service metadata не собираются
+  общей сетевой/медийнойallowlist. Отдельная старая OEM SSH inventory не заменяет
+  свежую dependencies/inventory пакета. Не требуется запуск OEM/driver.
+S6 Unknown U5 Linux local presets относится к Honor Linux: активные draft
+  Manual/Max не имеют native fan writer. Общий UI должен явно отделять draft
+  иactual, без чужого Uniwill writer или нового дизайна.
+S7 Unknown U7 multiple batteries — общий предел, не подтверждённая проблема
+  этого Honor с одной системнойАКБ. Не маркировать как потерю второго датчика
+  на exactмашине, которой второйАКБ не обнаружено.
+
+5. ГИПОТЕЗЫ И СЛЕДУЮЩИЕ ПРОВЕРКИ (НЕ ВЫПОЛНЯЛИСЬ)
+
+- Статически исправлять H1/H2/H4/H5 можно без изменения внешнего вида.
+  H3 требует typed disabled pair, сохранения raw rollback-смысла и разграничения
+  transient0/0; не менять firmware политику по догадке.
+- Для H6 перед аппаратной пробой нужен общий адаптер, а не одноразовый scripts
+  sweep. Максимум100% с measured RPM и30с observation, Auto/readback/ошибка
+  cleanup отдельно. Не переносить SFND1102/EC0A18 других Honor или RPM scaling.
+- Для H7 получить только свежий read-only snapshot после реального сна;
+  ничего не писать ради доказательства lowerbits гипотезы.
+- Сопоставить watch ownership loss/partial rollback с журналом, но не ломать
+  транспорт/датчик физически ради теста. Проверять состояния модели отдельно.
+- Таймаут ненулевой и выключение по бездействию — отдельная проверка; getter0
+  и успехSKBT не доказывают, что клавиатура реально погасла черезNсекунд.
+- Доведение АКБ до100% и действие resume/sleep SmartCharge требуют долгого
+  наблюдения в согласованном сеансе; сборка/readback не заменяют это.
+
+ИТОГ
+Exact Honor поддержан собственными HWMI/I2EC/SMU адаптерами и общей UI-механикой;
+наиболее конкретные пробелы — falsecleanupstatus, Linux battery rollback,
+валидное0/0, пропущенный DeviceOperation gate, потерянные HWMI ошибки и отсутствие
+30секMax в дампе. P1 аппаратный отказ в ходе статической ревизии не доказан.
+Исходники/настройки/portable не изменялись. Рабочая версия осталась0.1.75.

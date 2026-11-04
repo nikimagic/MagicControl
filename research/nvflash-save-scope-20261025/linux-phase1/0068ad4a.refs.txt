@@ -1,0 +1,8 @@
+From: 00d658c4 To: 0068ad4a Type: INDIRECTION Op: 0 ANALYSIS null
+From: 00ff3660 To: 0068ad4a Type: DATA Op: 0 ANALYSIS null
+From: 010ddeaa To: 0068ad4a Type: DATA Op: 0 ANALYSIS null
+From: 010ddeb5 To: 0068ad4a Type: DATA Op: 0 ANALYSIS null
+From: 010ddec6 To: 0068ad4a Type: DATA Op: 0 ANALYSIS null
+From: 010dded1 To: 0068ad4a Type: DATA Op: 0 ANALYSIS null
+From: 010ddee9 To: 0068ad4a Type: DATA Op: 0 ANALYSIS null
+From: 010ddef5 To: 0068ad4a Type: DATA Op: 0 ANALYSIS null

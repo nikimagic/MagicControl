@@ -1,0 +1,48 @@
+WRITTEN OFFER FOR THIRD-PARTY CORRESPONDING SOURCE
+Issuer: NikiMagic
+Issued: 2026-10-17
+
+For every recipient of this MagicControl Windows binary distribution,
+NikiMagic offers a complete machine-readable copy of the corresponding source
+for the included LGPL components: PawnIOLib.dll 2.2.0 and AMDFamily17.bin / SmbusPIIX4.bin / RyzenSMU.bin from PawnIO.Modules 0.2.11, and LpcIO.bin from PawnIO.Modules 0.2.10, including necessary interfaces and
+build scripts. Electronic delivery is free of charge. This offer remains valid
+for at least three years after the last distribution of this package by NikiMagic
+(and in any event through 2029-10-19).
+
+To request the source, contact NikiMagic through the issue/support channel of
+the official GitHub repository/release page from which this package was obtained,
+or through the same channel by which NikiMagic supplied you this package.
+Specify "LGPL corresponding source, MagicControl, with the package version and date".
+The issuer must maintain an accessible request channel for the offer's duration.
+
+This offer concerns third-party LGPL components only; it does not offer or
+license the proprietary source code of MagicControl. The LGPL rights in the
+third-party components are not restricted by MagicControl's proprietary license.
+
+Upstream source references (additional convenience, not a replacement for
+NikiMagic's obligation under this offer):
+PawnIO 2.2.0 commit 5cdf470831fdfff3f7f1d06363ca6b230f3bf35a
+https://github.com/namazso/PawnIO/tree/2.2.0
+PawnIO.Modules 0.2.11 commit 52a7e536dff3e53c96917a28caac5e0fa6510696
+https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+LpcIO.bin: https://github.com/namazso/PawnIO.Modules/tree/0.2.10
+
+Русский: NikiMagic бесплатно предоставляет получателям соответствующие исходники
+перечисленных сторонних LGPL-компонентов по запросу через канал получения этой
+сборки. Срок — минимум три года после последнего распространения. Предложение
+не распространяется на закрытый исходный код MagicControl.
+
+IntelMSR.bin: PawnIO.Modules0.2.11, IntelMSR.p (unchanged).
+
+SmbusI801.bin: PawnIO.Modules0.2.11, LGPL-2.1-or-later, Copyright (C) 2025 Steve-Tech.
+Corresponding source and build interfaces are covered by the offer above.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+SHA256: a0f7d066e7efda28c0e754c1f52dbd8dc280d388ba8575b514a80cb67490530c
+
+IntelPCHThermal.bin: unmodified signed PawnIO.Modules0.2.11 module.
+Copyright (C) 2026 M-Control Contributors; LGPL-2.1-or-later.
+Corresponding module source is included as embedded resource PawnIO/IntelPCHThermal.p (extracted in the protected runtime cache).
+licenses/PawnIO/COPYING and licenses/PawnIO/IntelPCHThermal-NOTICE.txt provide license/provenance.
+Complete build interfaces and scripts are covered by the source offer above.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+SHA256: 478500ae78aebef3ae7a0b5fe4848d2d5737e8f7c5d51200c284a61c21d7865d

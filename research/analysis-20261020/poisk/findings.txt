@@ -1,0 +1,152 @@
+Агент «Поиск»: результаты целевой проверки
+20.10.2026. Только чтение и статический анализ.
+
+Файлы INDEX.txt и evidence.json содержат 29 источников с SHA-256, а также
+четыре локальных Git HEAD. Production, portable, пользовательские настройки
+и оборудование не менялись. Чужие EXE, скрипты и прошивальщики не запускались.
+
+1. Новые подробные документы HydroControl
+
+Первичный репозиторий: https://github.com/Gumwars/HydroControl
+Проверенный commit: fc4024ce1456b8477313b28db3d41170e6464f4a.
+Pinned raw-файлы сохранены в sources/. Ранее web tool возвращал cache miss;
+публичный GitHub API и raw GET позволили прочитать полный текст.
+
+EC-FIRMWARE-FINDINGS.md:3–29 заявляет сравнение G1 117.ELUK и G2 125.ELUK,
+оба 262144 байта, ITE8850-PD, core {UUITE EC-V14.6, Project25/26.
+На строках42–79 описано сравнение 7B9.low7 с 4AB, guards0490.bits0/2,
+проверки threshold1..100 и выставление firmware-owned7B9.bit7.
+G1 consumer: file0x1C8BA; G2: file0x1CCD1. По автору, различаются только
+адреса двух LCALL и scratch: G1 internal0x087F -> G2 internal0x9164.
+Это НЕ разрешение hostMMIO-записи9164. Internal XRAM, firmware code offset
+и host EC window — разные адресные пространства.
+
+Полных образов в public git нет: *.ELUK и *_ECNNN.zip исключены из git.
+FIRMWARE-118-PLAN.md:224 даёт для125.ELUK лишь byte-sum0x1F2353A, не SHA-256.
+Поэтому consumer пока проверен по первичному отчёту автора, а не лично по
+байтам exact image. Наш HYDROC BIOS N.1.13ELU11 / SMBIOS EC1.12 нельзя
+автоматически считать тем же build, что125.ELUK.
+
+2. Важное исправление старого отрицательного вывода HydroControl
+
+CHARGE-CEILING-TRIGGER-CHAIN.md:425–518 содержит позднюю поправку03.10:
+автор сообщил, что смена threshold80→60 во время заряда остановила ток
+при reported47%, 3.9348V/cell и3054mAh accepted. Возврат60→80 возобновил
+зарядку. Он различает SOC stop и независимый voltage ceiling~4.175V/cell.
+Ранний вывод «7B9 никогда не исполняется» автор отозвал.
+
+Это сообщение о физическом результате на HYDROC G1, а не только readback.
+Но прямой reached-bit capture приstop60 на строках479–485 ещё отсутствует,
+чистый repeat60 до подключения БП предложен, но не выполнен. Gauge remapping,
+voltage ceiling и разные значения SOC не разобраны окончательно.
+
+Не объявлять по этому тексту работу95/85 на GM6 или нашей G2. Особенно
+важно: ранние разделы утверждают, что gate7C3==4 закрыт приnative13, а поздние
+наблюдения показывают реакцию60/80 без описанного изменения этого gate.
+Это итеративный исследовательский текст с противоречиями, не готовая карта
+для интеграции. Нужны exact bytes и связанные runtime captures.
+
+3. Температура батареи: другой mirror и единицы
+
+HydroControl-ec_state_capture.py:68–75 исправляет endianness0502/0503:
+D6 0B ->3030 ->29.85°C, то есть little-endian0.1K на исследуемом G1.
+Это предметный lead, но не direct proof единиц нашего04A2.
+
+В полном active C# GM6 и HYDROC найдена только константа
+Define.ECSpec.ecBt1Temperature=1186=04A2; active conversion caller не найден.
+Агент GM6 отдельно подтвердил в четырёх exact дампах равенство4A2=502=504
+и согласованность соседних SBS-like voltage/current/capacity полей.
+Это усиливает гипотезу SBS mirror, но сам по себе одинаковый rawword ещё
+не доказывает отсутствие преобразования масштаба внутри EC.
+
+Не выдавать PCH/ACPI thermal zone за температуру батареи. Окончательное
+доказательство — consumer SBS command08 ->04A2 без пересчёта либо независимый
+одновременный OEM decoder/измерение на exact GM6.
+
+4. Найден опубликованный пакет той же BIOS-версии GM6
+
+Локальный каталог:
+C:/Users/admin/Documents/mechrevo/Research/BIOS_Driver_Catalog/catalog.json:127–137
+Модель AuroraX/JiguangX, familyGMxIR7x, versionN.1.05MRO09.
+motherboard_marking_confirmed=null: точная совместимость ещё не установлена.
+
+Опубликованная OEM-ссылка:
+https://driver.mechrevo.com/d.mechrevo.com/driver/MECHREVO2024/Test/GMxIR7xN105MRO09_CAP.EXE
+Публикация ссылки: https://tieba.baidu.com/p/9552813086
+
+Попытка20.10: HTTPS HEAD30s иGET90s закончились timeout. HTTP вернул200,
+но Content-Type=text/html, X-Tengine-Error=denied by custom_acl,10369 байт
+Page Verification вместоMZ/PE. Файл честно переименован в
+sources/GMxIR7xN105MRO09_CAP.http-denied.html.
+SHA256=00eb24d33c2b1e34d3430d4ea152a2c794e42dd578ac7e8e6e96b7657bc1d3da.
+Это НЕ скачанный BIOS или EC image. Доступ не обходился.
+
+Агент GM6 нашёл дополнительную публикацию:
+https://bbs.azurekiln.cn/forum.php?mod=viewthread&tid=56
+GMxIR7xN105MRO09_CAP.zip, заявлены10170133байта,
+MD5BC449A4C0A25F9702836FF75647AF669,
+SHA1382EB10281EFA2761ED6A18754DA5C3655C13D93.
+Ссылка скрыта за ответом на форуме, файл не получен. Комментарий23.12.2025
+сообщает об отзыве1.05 и ссылке на1.04. Это lead, не лично проверенный payload.
+
+5. Аналогия с Wujie проверена в действующем коде
+
+Полная таблица: wujie-comparison.txt.
+
+Wujie дополнительно использует WMI logical87F и wholebyte7C3=4, которых
+не было в попытке GM6 thresholds-only. Следовательно механизм действительно
+стоит исследовать, но запись platform4 на Intel по аналогии не разрешена.
+В самом Wujie7C3 влияет на SMU/APU, это подтверждено сохранёнными A/B.
+
+GM6 DSDT независимо показывает широкую роль7C3: field называется CTID,
+PWUP:132294–132309 ветвится поCTID4 и меняет SGOV/NPCF.DBAC сNotify.
+Это graphics/power policy, а не батарейный enable bit.
+
+WMI арифметика: read=(0x0100ULL<<32)|address, selectorbit40.
+Для87F это0x000001000000087F, а не0x010000000000087F.
+GM6 AML AC00/SAC1/SA00 offsets иOEMG dispatch совпадают с такой упаковкой.
+RKBC/WKBC действительно используют address mailbox и два dataбайта; соседний
+байт word при записи обязательно сохранять. Но generic mailbox не доказывает
+одинаковый смыслinternal87F на каждом EC build.
+
+TurboEC в нынешнем Wujie UI — отдельная кнопка, но actual caller
+SettingsPage.cpp ->setBatteryAutomatic ->applyBatteryChargeLimit ->7C3=7/4.
+Старый C# также содержит platform7/4. Независимого TurboEC-bit setter в
+проверенном старом snapshot не найдено. Это не основание менять Wujie;
+не нужно придумывать новый bit или незаметно связывать другие FAN/APU поля.
+
+6. Что уже есть локально и где искать дальше
+
+INDEX.txt содержит точные source paths и hash:
+- Native GM6 all-active и HYDROC gcu-by-token.
+- GM6 DSDT и старый Wujie C# BatteryChargeLimiter/UniwillWmiPwm.
+- Linux Uniwill snapshot, Tuxedo и downloaded Uniwill DKMS.
+- LumaDesk, FanSlider, NUCtool, OpenRevo: origin + commit.
+- BIOS_Driver_Catalog и BIOS_OTA reverse engineering.
+- Прежние китайские и локальные поиски с их ограничениями.
+
+Проверенные старые границы сохраняются: Tuxedo7A6 — native profiles,
+LumaDesk recipe — readback, Leo-stro/W568w — Wujie14XA/15XA,
+losewayy — AMD JIAOLONG EC1.32. Ничто из этого не становится exact Intel
+firmware consumer только из-за одинакового имени Uniwill или Project26.
+
+Старый sources/drivers-all-page1.json обрезан/повреждён: JSON error
+column1410060. Отрицательный поиск в нём нельзя называть полным каталогом.
+Валидные catalog.json/official-firmware-records.json имеют отдельный scope.
+
+7. Интернет: точные запросы и предел результата
+
+Искались GM6IR0C,125.ELUK,HYDROC G2,7B9/7D0/7C3,
+极光X14650HX4060 +充电阈值/电池温度. Большинство китайских результатов —
+обзоры без consumer-кода. Нового exact Intel gate/temperature decoder нет.
+
+https://www.eluktronics.com/hydroc-16-g2-drivers/
+Официальная страница явно относится275HX+5080/5090; содержит drivers/CC,
+но не публичный EC125. G1, AMD G2 и чужие XMG image не подменяют наш build.
+
+Итог
+Новое важное знание — поздняя коррекция физического результата HydroControl,
+G2 consumer/scratch lead и реальная WMI аналогия с Wujie. Готовый безопасный
+enable sequence для двух exact Intel плат пока не доказан. Следующий ценный
+шаг — exact EC payload и handler→stored→gate→charger chain, а не ещё одна
+запись процента или произвольная смена CTID.

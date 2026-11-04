@@ -1,0 +1,25 @@
+Windows policy sources — checked21.10.2026
+
+PowerGetActiveScheme: active base plan GUID.
+https://learn.microsoft.com/en-us/windows/win32/power/managing-power-schemes
+
+PowerReadACValueIndex / PowerReadDCValueIndex: configured values for the
+specified plan/subgroup/setting, separately for external power and battery.
+https://learn.microsoft.com/en-us/windows/win32/api/powrprof/nf-powrprof-powerreadacvalueindex
+https://learn.microsoft.com/en-us/windows/win32/api/powrprof/nf-powrprof-powerreaddcvalueindex
+
+MaxFrequency / PROCFREQMAX: configured maximum processor performance state,
+expressed inMHz. It is not a clock-frequency measurement.
+https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-perf-state-engine-maxfrequency
+
+PerfEnergyPreference / PERFEPP: Windows0..100 preference, mapped to the
+hardware0..255 EPP scale for supported CPPCv2 autonomous systems.
+0 favours performance;100 favours energy saving;20 maps to51,80 to204.
+It is neither a processor power percentage nor a watt limit.
+https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-perf-state-engine-perfenergypreference
+
+Overlays and QoS profiles exist separately from the base plan. The card reads
+base-plan/default processor settings, not effective per-core/QoS/overlay policy
+or a hardware EPP register. Setting provenance cannot be inferred from readback.
+https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options
+https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/configure-processor-power-management-options

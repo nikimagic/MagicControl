@@ -1,0 +1,5 @@
+TRAVEL 95/100
+charge_start=95 charge_end=100 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+charge_start=95 charge_end=100 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+RESTORE 70/90
+charge_start=70 charge_end=90 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL

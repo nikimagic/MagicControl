@@ -1,0 +1,90 @@
+# MagicControl — обязательные инструкции
+
+## Сначала
+
+- Сохранять рабочее управление всех моделей и обеих ОС. Проверенная модель,
+  декларация capability и сохранённая настройка не разрешают аппаратную запись.
+  Точный backend проверяет identity, ownership, маски, диапазоны и readback.
+- Не запускать приложение, hardware-пробы или записи EC ради чтения документа.
+  Не добавлять и не запускать тесты без явного запроса пользователя.
+- Не менять геометрию, шапку и скролл попутно. ScrollModel/PageMechanics и GTK
+  adapter общие; позиции окон отдельные. Без новых gutter/padding/смещений.
+- FAN input для всех моделей/ОС: **20–100°C и5–100% включительно** через
+  FanControlLimits. Константы/static_assert/комментарий владельца сохранять.
+  Изменение input bounds не меняет кривые, число точек и firmware codec.
+- FAN хранит общие16 ячеек на канал. Active point count по умолчанию16/16
+  для ВСЕХ устройств; исключения только в DeviceProfile (HPBSD8/3, Honor10/10
+  штатных ступеней). FanCurveProfiles.setActivePointCount меняет доступную
+  часть редактора/пакета, не пересчитывает и не обрезает значения. Read-only
+  число штатных точек не разрешает их запись. Один Custom и один restore-процесс.
+- Один ресурсный путь GUI/CLI/lifecycle; свежий readback перед сохранением.
+  GUI не владеет worker/очередью/backend callback. Не возвращать старые wrappers,
+  отдельные EC writers, Copilot hooks или thread-per-page. Подробности ниже.
+- **Custom один для всех устройств.** Один редактор, пресеты1/2/3 с мощностью и
+  собственными кривыми, общая библиотека/выбор и executePowerResource для GUI,
+  CLI и restore. Не создавать отдельные Custom-движки, UI, пресеты или вторые
+  пути применения под модель. Backend задаёт команды/кодек, подтверждённые
+  ограничения, readback/rollback; особенности числа native-точек — данные.
+  Потолок старой тестилки не становится ограничением общего Custom. Штатные
+  режимы, Default и Manual также используют общие операции с данными платы.
+- Bluetooth менять только явной командой, не startup/update/resume replay.
+  KEYs используют KeysPreferences/keys-settings.ini, не DevicePreferences.
+- Личные INI/CSV, логи, дампы, evidence и чужие правки сохранять. В коммит
+  добавлять только собственные файлы явно. Исследовательская гипотеза — не факт.
+- Не завершать MagicControl принудительно. Занятый EXE заменять после выхода
+  пользователя через трей → «Выход». Debug не копировать поверх Release.
+
+## Чтение по задаче — до изменения соответствующего поведения
+
+Полные действующие ограничения находятся в [WORKING-RULES](docs/WORKING-RULES.md).
+Читать нужный раздел; ссылки на исходники/тематические контракты там обязательны.
+Пользовательское поручение имеет приоритет; отменённые требования не возвращать.
+
+| Задача | Раздел правил и обязательный контракт |
+|---|---|
+| Runtime, GUI/CLI, restore, новый model/driver | [R1](docs/WORKING-RULES.md#r1-runtime), [R8](docs/WORKING-RULES.md#r8-devices); docs/DEVICE-ARCHITECTURE.md |
+| INFO, dump, установщик | [R2](docs/WORKING-RULES.md#r2-info); docs/DIAGNOSTIC-DUMPS.md, docs/APP-UPDATES.md для installer/update |
+| KEYs, Copilot, mic, Bluetooth | [R3](docs/WORKING-RULES.md#r3-keys); docs/KEYS-PERSISTENCE.md |
+| FANs, sleep/start/exit, Default | [R4](docs/WORKING-RULES.md#r4-fans); src/platform/windows/FAN_MODES.md |
+| CPU/APU/SMU, stock/Custom | [R5](docs/WORKING-RULES.md#r5-power-battery); src/core/src/POWER_MODES.md |
+| Батарея, charge/aging/identity/USB-C | [R5](docs/WORKING-RULES.md#r5-power-battery); src/platform/windows/BATTERY.md |
+| UI, menu, OSD, scroll, labels | [R6](docs/WORKING-RULES.md#r6-ui); docs/LINUX-UI-PARITY.md |
+| Build, portable, release/signing | [R7](docs/WORKING-RULES.md#r7-build-release); docs/APP-UPDATES.md |
+
+Для навигации: [PROJECT-MAP](docs/PROJECT-MAP.md). Открытая работа:
+[WORKLIST](docs/ARCHITECTURE-WORKLIST.md). Датированные отчёты относятся к своему
+commit/устройству/сессии; их старые статусы не заменяют текущий код и контракт.
+
+## Поиск
+
+Рабочий cwd — этот репозиторий MagicControl. Обычно искать в `src`, `docs`,
+`Tools`, `cmake`, `packaging`; добавлять нужные tests. `.ignore` исключает из
+обычного rg evidence/релизы/live portable. Для исследования явно использовать
+`rg --no-ignore ... research/<case>` или `Users_logs/<case>`; файлы доступны,
+не удалены и не исключены из сборки/Git. Не читать все версии декомпила подряд.
+
+## Сборка, portable, коммит
+
+Общий Release — только `Tools/Build-All.ps1` / `Tools/Build-All.cmd`: одна версия
+Windows/Linux GUI+mctl. Незавершённый билд продолжать тем же номером (`-Resume`);
+при изменении исходников пересобрать обе ОС. Номер не править вручную.
+
+Каждый успешный общий билд закрыть: **build → обе рабочие portable → версии и
+четыре SHA-256 → подробный локальный коммит**. Рабочие копии:
+`MagicControl/windows/{MagicControl.exe,mctl.exe}` и `MagicControl/linux/{MagicControl,mctl}`.
+Использовать общие stagers; обновление только build/staging не считается portable.
+Не оставлять завершённый билд незакоммиченным и не объединять несколько билдов
+в один итоговый коммит. В Git включать только исходный код, конфигурацию и
+текстовую документацию. Portable, релизы, бинарные зависимости, шрифты,
+изображения, дампы и логи хранятся локально вне Git. Свежему клону перед
+сборкой нужны эти отдельно предоставленные зависимости. Чужие изменения
+и личные настройки не включать в коммит. В заголовке
+продуктового коммита — версия, в теле — изменения, проверки и границы валидации.
+В ответе — фактическая версия portable и хэш коммита; блокировку замены завершить
+после штатного выхода. Документационная правка сама по себе не требует нового билда.
+
+Релизные архивы и `GitHub_Releases` менять **только по явному запросу** через
+`Tools/Package-Releases.py` и инструкцию упаковщика в docs/APP-UPDATES.md.
+`mctl` — только в рабочих portable владельца, не в публичных архивах.
+Публикация/push/tag/подпись — отдельное поручение; локальный архив не публикация.
+Обновление не перезаписывает личные настройки и не инициализирует EC/GUI из helper.

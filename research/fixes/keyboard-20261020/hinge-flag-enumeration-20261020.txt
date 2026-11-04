@@ -1,0 +1,73 @@
+Wujie X5SP4NAG — controlled EC78E.4 / HID-PnP A/B, 2026-10-20
+
+Scope and authorization
+Owner explicitly requested setting the stripe flag, then clarified the goal:
+check whether HID devices appear while the flag is set. This third trial uses
+a new nonce/fresh snapshot. It is not a command to switch on LEDs. No product
+source, UI, portable, INI, services, installed drivers or firmware were changed.
+Only write address78E, mask10; all fresh neighbour bits are preserved.
+
+Preflight
+Exact SMBIOS: MECHREVO / WUJIE Series-X5SP4NAG / BIOSN.1.20MRO15.
+Live EC identity454=82,456=72,740=26. AC1, no context/sleep change detected.
+GCUBridge/GCUService/AiStoneService absent; reviewed processes empty.
+UWACPIDriver running, pinned installed SYS:
+6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235.
+Fresh Authenticode Valid; Microsoft Windows Hardware Compatibility Publisher.
+Global\MagicControl.EcTransactions.v2 acquired only around individual EC
+read/write transactions; never held during enumeration or30s observation.
+Session: build/research-hinge-20261020/flag-20261020-073603-dd5a97.
+initial.json/recovery.json and write_planned journal flushed before target.
+
+Actual mutation and restoration (Moscow UTC+03)
+Target ACK/readback:10:36:28.9235251; exact records retained in writeJournal.
+Fresh RMW EC->FC, ACK/readback successful; targetAt=10:36:28.9272168.
+100bounded polls; every observed byte FC. No self-revert or neighbour-bit
+change observed. Only other bits of78E are covered by that statement.
+Restored FC->EC with fresh masked owned rollback, confirmed original bit;
+rollback readback=10:36:59.0001514; final guarded check=10:36:59.0221808.
+writeIoctls2: one target, one rollback.
+recoveryPending=false, restorationConfirmed=true, contextLost=false.
+
+Enumeration result
+Nine complete snapshots: before, during~0/2.10/5.00/10.09/20.16/29.73s,
+after rollback~0/5s. All six during passes finished BEFORE rollback.
+Every snapshot:4HID interfaces,23PRESENT USB/HID devnodes; all enum-complete
+flags true; errors[], metadata/attributes/preparsed failures0.
+Compared full interface path / PnP instanceId keys and all corresponding
+metadata/descriptor rows: new0, gone0, changed0 at every sampled point.
+This comparison includes VID/PID/version, usage/page, report lengths/IDs,
+parent, driver metadata, CM devnode status/problem, HWIDs and location.
+All four HID interfaces remain093A:0255 (touchpad collections), not ITE:
+  COL01 page0001 usage2, input/output/feature9/0/0
+  COL02 page000D usage5,30/0/257
+  COL03 page000D usage14,0/0/2
+  COL04 pageFF00 usage1,0/0/257
+ITE048D PRESENT interfaces0 and all-PnP-history matching nodes0 in each pass.
+No feature reports were sent or requested, including to new/unknown nodes;
+HID GetFeature/SetFeature0, other-address EC writes0, forced reenum0.
+USB inventory is SetupAPI/CM metadata, not USB configuration/endpoint traffic.
+
+Meaning and limits
+Setting EC78E.4 alone did NOT cause spontaneous HID/USB enumeration within
+this30s window. The flag held, so absence is not explained by immediate EC
+self-revert. This does not prove physical absence of the hinge LEDs, nor that
+this EC support flag is a HID power/discovery gate. Exact native HIDLB_Init
+is independent of78E.4 and still needs an admitted048D interface.
+Sampling is not continuous event subscription; a device existing only entirely
+between passes could be missed. No forced scan, USB enable/power, OEM init,
+748/RGB writes, firmware edits or driver installation were attempted.
+A separate next command is not inferred from this flag-only result.
+
+Optical correction to earlier reports
+Trial1: NOT_OBSERVED; owner was not watching. This is not a negative result.
+Trial2: OWNER_REPORTED_NO_LIGHT; exact reply: «Нет, не светилась».
+Trial3 here: enumeration purpose only; no optical outcome requested/assumed.
+
+Evidence
+Adjacent hinge-flag-enumeration-20261020.json contains exact times,100samples,
+all nine diff summaries, full baseline inventory, write records, recovery,
+paths/sizes/SHA256 for every session artifact plus helper source/EXE/DLL.
+Each raw snapshot and complete durable journal remains in the session folder.
+Helper build only: .NET10 transient HingeInventory; succeeded0warnings/errors.
+No MagicControl product build, hardware controller construction or git commit.

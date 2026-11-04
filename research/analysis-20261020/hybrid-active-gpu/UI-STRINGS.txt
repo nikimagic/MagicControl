@@ -1,0 +1,18 @@
+New GPU projection UI strings for root TranslationCatalog integration.
+RU | EN | zh-CN | zh-TW
+
+гибрид | hybrid | 混合显卡 | 混合顯示卡
+физический канал 2 | physical cooling channel 2 | 物理散热通道 2 | 實體散熱通道 2
+Выделено | Dedicated | 专用 | 專用
+Вывод изображения: | Display output: | 显示输出： | 顯示輸出：
+Маршрут основного дисплея неизвестен | Primary display route is unknown | 主显示器路由未知 | 主顯示器路由未知
+Маршрут дисплея окна неизвестен | Window display route is unknown | 窗口显示器路由未知 | 視窗顯示器路由未知
+Адаптер маршрута отсутствует в текущем каталоге | Display-route adapter is absent from the current catalog | 当前列表中没有显示路由适配器 | 目前清單中沒有顯示路由配接器
+Прежний источник; маршрут дисплея не установлен | Legacy source; display route is not established | 旧数据源；尚未确定显示路由 | 舊資料來源；尚未確定顯示路由
+Intel GPU: домен мощности не подтверждён | Intel GPU: power domain is unverified | Intel GPU：功耗域未经确认 | Intel GPU：功耗域未經確認
+ОС · выделенная память адаптера | OS · adapter dedicated memory | 操作系统 · 适配器专用内存 | 作業系統 · 配接器專用記憶體
+
+Fragments in code include the existing ' · ' prefix where appropriate. Existing
+GPU/VRAM/NPU/Всего/Нет дополнительных данных/Мощность labels are reused.
+English OS/API diagnostics (QueryDisplayConfig, DRM, source/target mismatch)
+remain source evidence; they are not new dialogs or control-flow labels.

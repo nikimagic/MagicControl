@@ -1,0 +1,179 @@
+Microsoft PnP Utility
+
+Instance ID:                USB\VID_2B7E&PID_B663&MI_02\7&2789a4b1&0&0002
+Device Description:         IR Camera
+Class Name:                 Camera
+Class GUID:                 {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+Manufacturer Name:          ����������
+Status:                     Started
+Driver Name:                usbvideo.inf
+Parent:                     USB\VID_2B7E&PID_B663\01.00.00
+Service:                    usbvideo
+Lower Filters:              WdmCompanionFilter
+Stack:                      ksthunk
+                            usbvideo
+                            ACPI
+                            usbccgp
+Properties:
+    DEVPKEY_Device_DeviceDesc [String]:
+        USB-���������������
+    DEVPKEY_Device_HardwareIds [String List]:
+        USB\VID_2B7E&PID_B663&REV_0008&MI_02
+        USB\VID_2B7E&PID_B663&MI_02
+    DEVPKEY_Device_CompatibleIds [String List]:
+        USB\COMPAT_VID_2b7e&Class_0e&SubClass_03&Prot_00
+        USB\COMPAT_VID_2b7e&Class_0e&SubClass_03
+        USB\COMPAT_VID_2b7e&Class_0e
+        USB\Class_0e&SubClass_03&Prot_00
+        USB\Class_0e&SubClass_03
+        USB\Class_0e
+    DEVPKEY_Device_Service [String]:
+        usbvideo
+    DEVPKEY_Device_Class [String]:
+        Camera
+    DEVPKEY_Device_ClassGuid [GUID]:
+        {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+    DEVPKEY_Device_Driver [String]:
+        {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}\0000
+    DEVPKEY_Device_ConfigFlags [UINT32]:
+        0x00000000 (0)
+    DEVPKEY_Device_Manufacturer [String]:
+        ����������
+    DEVPKEY_Device_FriendlyName [String]:
+        IR Camera
+    DEVPKEY_Device_LocationInfo [String]:
+        0064.0000.0004.001.000.000.000.000.000
+    DEVPKEY_Device_PDOName [String]:
+        \Device\0000010b
+    DEVPKEY_Device_Capabilities [UINT32]:
+        0x000000A4 (164)
+    DEVPKEY_Device_LowerFilters [String List]:
+        WdmCompanionFilter
+    DEVPKEY_Device_BusTypeGuid [GUID]:
+        {9d7debbc-c85d-11d1-9eb4-006008c3a19a}
+    DEVPKEY_Device_LegacyBusType [UINT32]:
+        0x0000000F (15)
+    DEVPKEY_Device_BusNumber [UINT32]:
+        0x00000000 (0)
+    DEVPKEY_Device_EnumeratorName [String]:
+        USB
+    DEVPKEY_Device_Address [UINT32]:
+        0x00000003 (3)
+    DEVPKEY_Device_PowerData [Binary]:
+        38 00 00 00 04 00 00 00 19 00 00 00 00 00 00 00
+        00 00 00 00 20 4E 00 00 00 00 00 00 01 00 00 00
+        04 00 00 00 04 00 00 00 04 00 00 00 04 00 00 00
+        04 00 00 00 01 00 00 00
+    DEVPKEY_Device_RemovalPolicy [UINT32]:
+        0x00000001 (1)
+    DEVPKEY_Device_RemovalPolicyDefault [UINT32]:
+        0x00000001 (1)
+    DEVPKEY_Device_InstallState [UINT32]:
+        0x00000000 (0)
+    DEVPKEY_Device_BaseContainerId [GUID]:
+        {00000000-0000-0000-ffff-ffffffffffff}
+    DEVPKEY_NAME [String]:
+        IR Camera
+    DEVPKEY_Device_InstanceId [String]:
+        USB\VID_2B7E&PID_B663&MI_02\7&2789a4b1&0&0002
+    DEVPKEY_Device_DevNodeStatus [UINT32]:
+        0x0180200A (25174026)
+    DEVPKEY_Device_ProblemCode [UINT32]:
+        0x00000000 (0)
+    DEVPKEY_Device_Parent [String]:
+        USB\VID_2B7E&PID_B663\01.00.00
+    DEVPKEY_Device_Siblings [String List]:
+        USB\VID_2B7E&PID_B663&MI_00\7&2789a4b1&0&0000
+    DEVPKEY_Device_SafeRemovalRequired [Boolean]:
+        FALSE
+    DEVPKEY_Device_ContainerId [GUID]:
+        {00000000-0000-0000-ffff-ffffffffffff}
+    DEVPKEY_Device_IsPresent [Boolean]:
+        TRUE
+    DEVPKEY_Device_HasProblem [Boolean]:
+        FALSE
+    {83da6326-97a6-4088-9453-a1923f573b29}[15] [Boolean]:
+        TRUE
+    DEVPKEY_Device_IsRebootRequired [Boolean]:
+        FALSE
+    DEVPKEY_Device_ReportedDeviceIdsHash [UINT32]:
+        0xE3CD84CB (3821896907)
+    DEVPKEY_Device_InLocalMachineContainer [Boolean]:
+        TRUE
+    DEVPKEY_Device_Stack [String List]:
+        \Driver\ksthunk
+        \Driver\usbvideo
+        \Driver\ACPI
+        \Driver\usbccgp
+    {a8b865dd-2e3d-4094-ad97-e593a70c75d6}[26] [Boolean]:
+        FALSE
+    {83da6326-97a6-4088-9453-a1923f573b29}[23] [String List]:
+        WdmCompanionFilter
+    {3464f7a4-2444-40b1-980a-e0903cb6d912}[10] [UINT32]:
+        0x00000003 (3)
+    DEVPKEY_Device_BusReportedDeviceDesc [String]:
+        IR Camera
+    DEVPKEY_Device_ConfigurationId [String]:
+        usbvideo.inf:USB\Class_0e,USBVideo.NT
+    DEVPKEY_Device_PhysicalDeviceLocation [Binary]:
+        82 00 00 00 00 00 00 00 20 01 00 04 00 00 00 00
+        E1 00 AF 00
+    DEVPKEY_Device_BiosDeviceName [String]:
+        \_SB.PCI0.GPPA.XHC1.RHUB.PRT1.CAM1
+    {80497100-8c73-48b9-aad9-ce387e19c56e}[6] [UINT32]:
+        0x00000000 (0)
+    {83da6326-97a6-4088-9453-a1923f573b29}[3] [String]:
+        usbvideo.inf:db04a16c361f194c:USBVideo.NT:10.0.26100.9818:USB\Class_0e
+    {83da6326-97a6-4088-9453-a1923f573b29}[10] [String]:
+        USB\VID_2B7E&PID_B663\01.00.00
+    DEVPKEY_Device_InstallDate [FILETIME]:
+        26.09.2026 16:59:12
+    DEVPKEY_Device_FirstInstallDate [FILETIME]:
+        26.09.2026 16:59:11
+    DEVPKEY_Device_LastArrivalDate [FILETIME]:
+        30.10.2026 6:25:33
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[2] [String]:
+        {00000000-0000-0000-ffff-ffffffffffff}\0000\5
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[3] [UINT32]:
+        0x00000000 (0)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[4] [UINT32]:
+        0x00000005 (5)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[5] [UINT32]:
+        0x00000000 (0)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[6] [UINT32]:
+        0x00000000 (0)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[8] [UINT32]:
+        0x000000AF (175)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[9] [UINT32]:
+        0x000000E1 (225)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[13] [UINT32]:
+        0x00000000 (0)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[15] [UINT32]:
+        0x00000002 (2)
+    {8dbc9c86-97a9-4bff-9bc6-bfe95d3e6dad}[16] [Boolean]:
+        FALSE
+    DEVPKEY_Device_LocationPaths [String List]:
+        PCIROOT(0)#PCI(0801)#PCI(0004)#USBROOT(0)#USB(1)#USBMI(2)
+        ACPI(_SB_)#ACPI(PCI0)#ACPI(GPPA)#ACPI(XHC1)#ACPI(RHUB)#ACPI(PRT1)#ACPI(CAM1)
+    DEVPKEY_Device_DriverDate [FILETIME]:
+        21.06.2006 0:00:00
+    DEVPKEY_Device_DriverVersion [String]:
+        10.0.26100.9818
+    DEVPKEY_Device_DriverDesc [String]:
+        USB Video Device
+    DEVPKEY_Device_DriverInfPath [String]:
+        usbvideo.inf
+    DEVPKEY_Device_DriverInfSection [String]:
+        USBVideo.NT
+    DEVPKEY_Device_MatchingDeviceId [String]:
+        USB\Class_0e
+    DEVPKEY_Device_DriverProvider [String]:
+        Microsoft
+    DEVPKEY_Device_DriverRank [UINT32]:
+        0x00FF2005 (16719877)
+    {a8b865dd-2e3d-4094-ad97-e593a70c75d6}[16] [String List]:
+        ks.inf
+        kscaptur.inf
+        pci.inf
+    DEVPKEY_Device_GenericDriverInstalled [Boolean]:
+        TRUE

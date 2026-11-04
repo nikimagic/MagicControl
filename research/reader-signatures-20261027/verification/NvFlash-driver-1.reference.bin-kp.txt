@@ -1,0 +1,77 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\NvFlash-driver-1.reference.sys
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha256): C47EC45D0E267E2002694FB912AD39EE2DED71160A017F5FAC24B34ED6F2E056
+
+Signing Certificate Chain:
+    Issued to: NVIDIA DVS Dev Intermediate
+
+    Issued by: NVIDIA DVS Dev Root
+
+    Expires:   Fri May 14 19:20:32 2038
+
+    SHA1 hash: D524D1431254AD5E2814274C53D5B5FFA26A6196
+
+
+        Issued to: NVIDIA DVS Dev Signing
+
+        Issued by: NVIDIA DVS Dev Intermediate
+
+        Expires:   Fri Nov 22 18:55:21 2024
+
+        SHA1 hash: 4193E6EACAE1C203C3BCFB3761B4B5AB8D980D90
+
+
+The signature is timestamped: Tue Oct 15 09:26:15 2024
+
+Timestamp Verified by:
+    Issued to: DigiCert Assured ID Root CA
+
+    Issued by: DigiCert Assured ID Root CA
+
+    Expires:   Mon Nov 10 03:00:00 2031
+
+    SHA1 hash: 0563B8630D62D75ABBC8AB1E4BDFB5A899B24D43
+
+
+        Issued to: DigiCert Trusted Root G4
+SignTool Error: WinVerifyTrust returned error: 0x800B010A
+
+        Issued by: DigiCert Assured ID Root CA
+
+
+        Expires:   Mon Nov 10 02:59:59 2031
+	        .
+
+        SHA1 hash: A99D5B79E9F1CDA59CDAB6373169D5353F5874C6
+
+
+            Issued to: DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA
+
+            Issued by: DigiCert Trusted Root G4
+
+
+            Expires:   Mon Mar 23 02:59:59 2037
+
+            SHA1 hash: B6C8AF834D4E53B673C76872AA8C950C7C54DF5F
+
+
+                Issued to: DigiCert Timestamp 2024
+
+                Issued by: DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA
+
+                Expires:   Mon Nov 26 02:59:59 2035
+
+                SHA1 hash: DBD385EE62DBD23E7BE4F67148508724D5865B45
+
+
+
+Number of files successfully Verified: 0
+
+Number of warnings: 0
+
+Number of errors: 1
+

@@ -1,0 +1,30 @@
+INFO / fixed navigation follow-up,20.10.2026
+
+The owner's refinements arrived while the completed font/language build0.1.91
+was being delivered. That build was verified and committed as66e7834 before
+starting this follow-up; no successful build is left uncommitted.
+
+TabLabels.h now defines the only UTF-8/UTF-16 header list for both platforms:
+FANs, SETs, KEYs, INFO, GPU Nvidia, GPU Radeon.
+The owner's explicit no-translation rule is written beside the constants.
+Localization::protectedName checks isFixedTabLabel before catalog lookup, so
+even a future catalog entry cannot translate these exact product labels.
+The notebook model never selects another navigation spelling.
+
+The top information card uses BiosActions::kInformationCaption on both OSs.
+Its descriptive part has complete RU/EN/SC/TW translations; INFO stays fixed.
+Existing BIOS/UEFI/EC inventory data and internal BiosPage/Tab::Bios identifiers
+remain technically correct. Windows --tab=info is added while --tab=bios works.
+
+Both findings from info-fixed-tabs-review.txt were addressed before the next
+build: Linux measures GPU labels from the same tabTitles array it paints,
+and own navigation instructions/whole-message translations now refer to INFO,
+not a nonexistent BIOS navigation tab. Actual firmware BIOS wording is retained.
+
+Only the header title source changes inside shared Layout.h. Numeric dimensions,
+Geometry.h, theme, button renderer, page mechanics and scrollbar remain intact.
+The separate BIOS-button correction is already in0.1.91: all six actions use
+the reference bottom-row appearance and the common hover/press behavior.
+
+No GUI, EC, monitor probe or tests were run for this follow-up. Static inspection
+and the subsequent common build/artifact verification are recorded separately.

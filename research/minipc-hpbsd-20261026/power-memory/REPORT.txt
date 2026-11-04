@@ -1,0 +1,158 @@
+HPBSD / EliteMini / BIOS1.06 — температуры DDR5 и управление мощностью
+Разбор и измерения 26.10.2026. Часовой пояс пользователя: Москва (UTC+3).
+
+РЕЗУЛЬТАТ
+
+Температуры обоих модулей действительно доступны: SMBus0x50=38.25C,
+SMBus0x51=36.50C, измерение22:42:39–22:42:40МСК. Это аппаратные SPD5118
+датчики DDR5, а не системная температура EC и не оценка температуры памяти.
+Точная привязка SMBus адресов к физическим верхнему/нижнему слотам не установлена.
+SMBIOS сообщает2x32GiB Hynix HMCG88AGBSA092N,5600MT/s.
+
+Обнаружена и воспроизведена причина отсутствия показаний в приложении:
+на обоих хабах выбран MR11=07, то есть страница7. Type, vendor, capability,
+температура в таком состоянии возвращают нули. На странице0 прочитаны:
+  0x50: type word1851, revision12, vendor wordB380, capability03,
+        config00, temperature word0264 =>38.25C.
+  0x51: type word1851, revision12, vendor wordB380, capability03,
+        config00, temperature word0248 =>36.50C.
+В словах SMBus младший байт идёт первым:1851 соответствует bytes51/18.
+Декодер: sign_extend((raw>>2)&7FF,11)*0.25C.
+Термодатчики поддерживаются (MR5.bit1), уже включены (MR26.bit0=0).
+Включать датчик или менять его температурные пороги не понадобилось.
+
+Выполнен только временный выбор страницы MR11:07->00->07 у каждого хаба.
+Один общий Access_SMBUS.HTP.Method mutex удерживался на время операции.
+До переключения записан отдельный журнал. В finally выполнено восстановление
+07 и readback; оба page-selector-*.json подтверждают restored=true.
+SMBus mux/частота, EEPROM/SPD содержимое, MR26, thermal thresholds не писались.
+Неизвестные адреса52..57 отвечают HRESULT800701B1 и не модифицировались.
+GUI0.1.224 PID9440 продолжала работать после измерений.
+
+ПЕРВИЧНЫЙ ИСТОЧНИК ПРОБЛЕМЫ SPD
+
+Linux drivers/hwmon/spd5118.c, spd5118_i2c_init, строки601–635:
+именно для нулевого type/vendor при ненулевой странице предусмотрено временное
+обращение к MR11 для доступа к странице0. Комментарий указывает известное
+поведение Renesas/IDT. Производителя наших хабов по одному комментарию не
+подставляем: сохраняем реально считанный JEP106 wordB380.
+https://github.com/torvalds/linux/blob/master/drivers/hwmon/spd5118.c
+Описание DDR5 TSOD и диапазона адресов:
+https://docs.kernel.org/hwmon/spd5118.html
+
+У нас SensorModuleWindows.h::temperature проверяет type==1851 сразу,
+не учитывая MR11. PawnTelemetryWindows.cpp передаёт только0x50/0x51.
+На HPBSD эти адреса правильные; первопричина — выбранная страница, не отсутствие
+датчиков и не необходимость выдумывать другие EC адреса.
+Продуктовый reader в этой исследовательской задаче не изменялся.
+Для интеграции нужен общий проверенный paged-read helper с восстановлением,
+строгой идентификацией устройства, журналом и явной ошибкой восстановления.
+Не следует включать этот fallback на всех ноутбуках только по типу CPU.
+
+МОЩНОСТЬ: ПОДТВЕРЖДЁННОЕ ЧТЕНИЕ
+
+Три серии по3снимка SMU, в том числе одновременно с успешным чтением DDR5:
+PM table4C0009, размер0xB00=2816bytes; STAPM54.4W, Slow60.0000038W, Fast65W.
+Восемь первых floats имеют уже используемую в приложении раскладку:
+float0=STAPM limit, float2=Fast limit, float3=Fast-window APU power,
+float4=Slow limit. CSV содержит все704floats без выдуманных подписей остальных.
+Факт чтения лимита не доказывает, что команда изменения будет исполнена.
+Команд установки мощности во время этой работы не отправляли.
+
+BIOS IFR: ИМЕНА, ЕДИНИЦЫ, ПОЛЯ
+
+Из полного пользовательского BIOS33554432bytes извлечены Setup,
+CbsSetupDxePHX, AmdPbsSetupDxe, OEM/AMD PEI/DXE модули.
+SHA256 исходного BIOS:
+c7c0247ae493ccae23cc790de9acc4f1bbd905953dbe688b08caa4af4bc4a379.
+Оригинал не изменён; декомпрессия/дизассемблирование только производных копий.
+В questions.json103совпадения (включая повторяющиеся формы); наличие поля не
+объявляется доступностью кнопки или работающим runtime методом.
+
+AmdSetupPHX GUID3A997502-647A-4C82-998E-52EF9486A247:
+  1B7 byte: System Configuration.
+  1B8 byte: SPL Control;1B9 dword: Sustained Power Limit [mWatts/STAPM].
+  1BD byte: PPT Control (0Auto,1Manual).
+  1BE dword: Fast PPT Limit [mW].
+  1C2 dword: Slow PPT Limit [mW].
+  1C6 dword: Slow PPT Time Constant [seconds].
+  1CA byte: STAPM Control (0Auto,1Manual).
+  1CE dword: Tskin time constant [seconds].
+  1D2 byte: Thermal Control (0Auto,1Manual);1D3 dword: TjMax[C].
+Это смещения внутри UEFI variable, НЕ адреса EC RAM.
+
+Текущая переменная прочитана GetFirmwareEnvironmentVariableEx из Windows:
+1663bytes, attributes7. Байты полностью совпадают с Data-записью AmdSetupPHX
+из исходного SPI-образа. Сейчас SystemConfiguration15(Auto),SPL0,PPT0,
+STAPM0; числовые SPL/Fast/Slow0. Значение0 в этих полях при Auto — не0W.
+ThermalControl1,TjMax92C — текущий заданный предел, не измеренная температура.
+
+AMD_PBS_SETUP GUIDA339D746-F678-49B3-9FC7-54CE0F9DF226:
+текущая переменная1280bytes/attributes7 прочитана; содержит многочисленные
+типовые FPPT/SPPT/Quiet/Balanced/Performance/Turbo формы. Проверенные поля
+FPPT_Balanced/SPPT_Balanced/FPPT_Performance/SPPT_Performance/FPPT_Turbo/
+SPPT_Turbo здесь0. Их наличие не даёт оснований объявлять эти профили
+реализованными нашим мини-ПК. Runtime SMU источник остаётся определяющим.
+
+OEM ПЕРЕКЛЮЧАТЕЛЬ И ВЕНТИЛЯТОРЫ
+
+Setup GUIDEC87D643-EBA4-4BB5-A1E5-3F3E36B20DA9 offset2D byte:
+PowerLimit Setting:1Balance Mode,2Performance Mode (IFR Setup).
+Windows API не отдал эту переменную: Win32=203. В SPI есть несколько
+Full/Data/Link версий, в том числе0/1; нельзя просто взять последнюю строку
+списка и назвать её действующим состоянием.
+
+Статический OemPei: Setup buffer находится EBP-D8; чтение EBP-AB означает
+ровно Setup+2D. Ветви0/1/2 посылают через I/O66 значения B0/B1/B2;
+для1 код9B2C957–9B2C974, для2 9B2C976–9B2C993.
+Отдельно учитывается CMOS index63 через70/71. OemDxe также синхронизирует
+Setup+2D с CMOS63 (0x79F–0x7C4). Эти пути здесь не исполнялись.
+Ранее разобранный EC fan path9DF7/9E3B выбирает B1/B2 заводские CPU-таблицы.
+Следовательно, повторение OEM профиля способно менять FAN policy;
+его нельзя автоматически использовать как независимый setter ватт.
+Полная связь каждой OEM ветви с фактической тройкой SMU ещё не доказана.
+
+SMU: НАЙДЕН ПУТЬ УПРАВЛЕНИЯ, НО БЕЗ ПРОВЕРКИ ПРИМЕНЕНИЯ
+
+RyzenAdj pinned5775fc3e6dbb25c7030ee2d100a1bdd6e8bf2d0a,
+lib/api.c FAM_HAWKPOINT: MP1 messages14=STAPM,15=Fast,16=Slow, arg0=mW.
+lib/nb_smu_ops.c для Phoenix/HawkPoint использует:
+  message03B10528, response03B10578, args03B10998.
+Это отличается от Renoir/Honor: response03B10564.
+Наш Honor-only setter не разрешает HPBSD и не должен копироваться без правки.
+
+Signed PawnIO RyzenSMU.bin/ioctl_send_smu_command использует PSMU mailbox
+03B10A20/03B10A80/03B10A88 для HawkPoint. Отправлять туда MP1 opcodes14/15/16
+как есть нельзя: это другой адресат. Нужен отдельный typed MP1 transport
+с exact CPUID/board/table guard, общим Access_PCI mutex, ограниченным timeout,
+предварительным fresh readback, rollback исходной тройки и последующей
+проверкой PM table. Подтверждение mailbox OK само по себе недостаточно.
+Исследованный backend уже умеет читать SMU; запись HPBSD не добавлена.
+
+Первичные исходники:
+https://github.com/FlyGoat/RyzenAdj/blob/5775fc3e6dbb25c7030ee2d100a1bdd6e8bf2d0a/lib/api.c
+https://github.com/FlyGoat/RyzenAdj/blob/5775fc3e6dbb25c7030ee2d100a1bdd6e8bf2d0a/lib/nb_smu_ops.c
+Локальные подписанные модули сверены с EmbeddedRuntimeCatalog.h:
+PawnIOLib d71f62627d66983bb9f5b1c269f27bcd8c1b8a46e794377a6330f84c198f4443
+SmbusPIIX4 91f9b4b1c39e3d399ce48477a89d8f6bd3e58a2241064a4daec3a1513dff56e5
+RyzenSMU 301d9ca397108e09f31bfbd5ac4c9bb4f352a5de68532c32db3ba7ddcde93450
+
+EVIDENCE В ЭТОЙ ПАПКЕ
+
+power-memory-20261026-194038-*: первое чтение8адресов и3PM snapshots.
+power-memory-20261026-194145-*: сырые MR0/1/2/3/4/5/11/26/49/50,страница7.
+power-memory-20261026-194239-*: подтверждённые температуры и2журнала restore.
+power-variables-20261026-194532-*: текущие2UEFI variables иошибкаSetup203.
+Read-PowerMemory-executed.ps1: точная исполненная версия успешного опыта.
+Read-PowerMemory.ps1: последующая правка диагностики: отказ от дальнейшего
+SMBus опроса при неподтверждённом restore; повторно на железе не запускалась.
+Read-BiosPowerVariables.ps1: только getters3разрешённых GUID/name.
+questions.json, nvram-image-values.json, *.asm, pm-*-floats.csv: offline evidence.
+ec-bank0.asm — линейный обзор8051, возможны данные и неверные границы;
+не используется как доказательство отсутствия какого-либо кода или датчика.
+Первый recursive UEFIExtract прервался из-за Windows path length; полный
+flat unpack успешно выполнен вbuild/hppm/b.bin.dump. Нулевая выдача первого
+частичного обхода не трактуется как отсутствие строк/модулей прошивки.
+
+Никаких новых продуктовых сборок: GUI/portable остаются0.1.224.
+Исходники контроллеров старых ноутбуков не менялись.

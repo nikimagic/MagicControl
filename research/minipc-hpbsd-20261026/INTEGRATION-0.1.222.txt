@@ -1,0 +1,74 @@
+MagicControl0.1.222 — HPBSD fan control, full RAM dump, Radeon status
+
+Общий HpbsdFanController используется GUI и mctl. NativeFixedFans — тонкий
+typed interface; прежние Honor class/state/commands/watchdog не изменены.
+GUI переиспользует fixed-target worker/editor и исходные4preset rectangles.
+Default/Manual/Min/Max подключены; поля Manual задают nominal-RPM percentage,
+а не PWM. CPU36–100%=codes18..51, System38–100%=codes15..40.
+Min — ненулевые заводские цели1800/1500RPM; Max — nominal5100/4000RPM.
+
+Отдельная pure protocol policy HPBSD B1/B2 и общий I2EC session: exact SMBIOS,
+BIOS1.06,AMD19h:75h,PNP/live5571/revision и43/14/7F signature. ISA mutex,
+checked parking, узкий normal-base/slope allowlist. CPU94+C иSystem83+C rows,
+thresholds,088A/088B,hardware PWM,platform,ROM-ID,SMU,battery,flash не пишутся.
+SystemFF handoff не используется: upper thermal stages firmware сохранены.
+Readback, отдельный owner semaphore, atomic apply/Default prefix journal,
+watchdog и обычный exit cleanup находятся в контроллере, не в кнопках.
+Неизвестные foreign tables не перезаписываются. Recovery требует explicitDefault;
+getters не восстанавливают таблицы записью. После firmware reset/sleep наблюдается
+Default; сохранённые Manual targets не переигрываются автоматически.
+
+LIVE ПРОГОН через тот же production controller
+Исходная таблицаB1: bases0/18/22/24/28/32/34,slopes0/14/16/21/28/10/154,
+critical51/100/93/0; System0/15/40,threshold rows25/83/100,slopes0/0/0.
+Max10s: CPU1966→5074RPM,System1515→3535RPM.
+Default5s: canonical tables restored; RPM возвращаются к штатным.
+Manual65/65 8s: requested codes33/26=>3300/2600nominalRPM,
+поздние наблюдения3333/~2579RPM.
+Min8s: CPU~1784–1789,System~1469–1513RPM в поздних наблюдениях.
+Default8s: finalDefault verified=true; исходные таблицы восстановлены.
+Raw transcript fan-cycle-first.txt. Це­ли и наблюдаемые RPM не отождествляются;
+полученный за10s system peak не объявляется калиброванным аппаратным максимумом.
+Нагрузочный thermal guard, sleep/resume и liveB2 отдельно не испытывались.
+
+OFFLINE
+PASS3348 interrupted restoration prefixes для обоихB1/B2 и разныхtargets.
+На каждом шаге apply/Default проверены immutable/critical/override bytes.
+Недопустимыеpercent/selectors/fingerprints отклоняются. GPU fixtures проверяют
+freshADLX + unavailableOS fallback в обоих порядках, RDP aliases/routes,
+software exclusion и сохранение двух разных физических GPU.
+Source tests/offline/hpbsd. Изолированный бинарник не обращается к железу.
+git diff --check прошёл. Wujie/GM6/Honor аппаратные fan classes/header
+совпадают сHEAD до этой задачи; правки касаются новогоHPBSD и общегоUIadapter.
+
+PRODUCT CLI0.1.222
+live-0.1.222-before-update.jsonl: profileminisforum-hpbsd, Radeon780M
+34–35C,800MHz,5W. Статус корректен: AMD ADLX monitoring, неOS-unavailable.
+Raw aliases/provider evidence сохраняются; статус пустого fallback больше
+не заменяет статус живого источника.
+
+FULL EC RAM
+mctl0.1.222 dump-ec completed saved=true,hardware_warning=false.
+ec.bin4096bytes,ec-valid.bin4096/4096valid.
+SHA256b1836f68a97f7341a61f84c3629fa80fb1c224ccdb50eaf4c7c3edcb57c94b1e.
+Нативная CPU/system RAM policy сохранена вfan-tables-default.json;
+snapshot_is_canonical_default=true,selector177(B1),overrides0/0.
+61provider samples,span60111ms,failed_partial_provider_passes0,cancelledfalse.
+Папка на мини-ПК:
+C:\Users\Public\Downloads\MagicControl\logs_HPBSD\ec-dumps\dump-20261026-184926-0
+CLI --output сначала создал её непосредственно вlogs_HPBSD; только эта наша
+завершённая тестовая папка затем перемещена вec-dumps. SHA до/после совпал.
+Collector всегдаReadOnly дляHPBSD: никаких Default/Max переключений при дампе.
+Это полное RAM window0000–0FFF, неlive EC-flash/SFR/firmware dump.
+
+BUILD
+Build-All -Resume complete,Windows/Linux GUI+mctl0.1.222;
+обе рабочие portable скопированы и проверены версия/SHA.
+WindowsGUI4cd9b3728c3d7275e4967c496e84b21815e43b75c756d60d97b89f85596c769a
+WindowsCLIf5a7ffab46e12900e40bff1fa4ce6ba087b3881221a923091bb503fe2ccc1923
+LinuxGUI73efbe6d30ec6437fbace6aa2b784c952df5d52da13c5e2a87869ca910c045fc
+LinuxCLI62399d3006d7e23be010a77514f8cd100066e7b55858963bc0bf8472926f0889
+Linux HPBSD writer не подключён; Windows transport/commands не заимствуются.
+Дальнейшая установка мини-ПК — только штатным --apply-update helper из
+его.magiccontrol-update с сохранениемsettings и резервной копией.
+GitHub публикация/push не запрашивались и не выполняются.

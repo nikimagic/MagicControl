@@ -1,0 +1,228 @@
+Подсветка Wujie X5SP4NAG — статическая сверка
+Дата:20.10.2026. Baseline5b1f092, portable0.1.88.
+Изменены только этот отчёт и wujie.json. Production/UI/INI не менялись;
+тесты, сборки, GUI/CLI/OEM, драйверы, EC/HID/UEFI/SMU и SSH не запускались.
+Wujie остаётся эталоном внешнего вида всех карточек и скролла.
+
+1. Точная плата и текущие возможности
+SMBIOS MECHREVO / WUJIE Series-X5SP4NAG, EC identity454/456/740=82/72/26.
+Общий core:src/core/src/KeyboardBacklight.cpp, точные X5/GM6 profile/capability
+guards15–20; runtime766.2. На каждом чтении сверяется live identity, другая
+плата не получает этот протокол. Источник OEM SingleZone подтверждает RGB EC
+layout, но не делает все Uniwill платы взаимозаменяемыми.
+
+Карта, src/protocols/uniwill/SingleZoneBacklight.h и x5sp4nag/Registers.h:215–244:
+  769/76A/76B: RGB device units0..50, не UI0..255;
+  78C: level bits7:5=0..4, power-disable bit1, apply strobe bit4;
+  767: Rainbow bit7, static-color strobe bit5; USB bit4/lightbar bit1 чужие;
+  7C5: breathing preset bits2:0; fan split bit7 чужой;
+  741.0: общий APP/manual-presence gate, не самостоятельный таймер подсветки.
+
+Windows0.1.88:
+- Mono, native Breathing, native Rainbow, custom RGB, уровни0..4 реализованы.
+- Восемь статических цветов; пульсация имеет четыре индекса, GUI mapping
+  white/red/green/blue=1/2/3/4 (SettingsPage.cpp:78,1422–1427). Скорость/период
+  Breathing отдельной командой SingleZone не найден; индекс не миллисекунды.
+- «Цикл6» — host timer, не четвёртый автономный эффект EC. Интервал1..3600с,
+  шесть изменяемых UI RGB, Version1/Interval/Color в keyboard-cycle.ini.
+- Native-mode кнопка — явно brightness4+Mono+cyan(0/50/50), а не передача
+  управления прошивке: SettingsPage.cpp:1464–1466. Она не снимает741.0.
+- Hardware inactivity timeout не установлен; соответствующие существующие
+  checkbox/edit disabled:SettingsPage.cpp:1230–1234. Это известный предел,
+  а не разрешение вписать неподтверждённый регистр.
+
+2. Точный изученный OEM idle path и его границы
+Корень OEM-декомпиляции:
+  C:\Users\admin\Documents\mechrevo\Decompiled\DefaultTool\
+  и соседний Decompiled\GCUService_Reference_w568w\GCUService\.
+Это OEM-код, в отличие от нашего C# Fan_X15Pro. Reference_w568w/DefaultTool
+не выдаются за доказанную исполняемую ветку каждой установленной версии Wujie.
+
+Цепочка OEM process timer:
+1) Reference_w568w/MyControlCenter/MySettingManager.cs:2468–2481:
+   Init читает sCloseTimer, SetKeyboardCloseTime, затем HookEvent/EnableCloseTimer;
+   при0 UnHook/Disable. KEYBOARD_LIGHTBAR_TIMER_ON/OFF:1411–1427,1538–1545.
+   SetCloseTimer3116–3119 сохраняет число в registry CloseTimer, не в EC.
+2) DefaultTool/MyControlCenter/KeyboardCloseTimer.cs:51–69 подписывает и KeyDown,
+   и MouseEvent;85–105 перезапускает таймер на вводе и публикует blank/wake;
+   109–150 задаёт System.Timers.Timer.Interval=seconds*1000.
+3) DefaultTool/MyControlCenter/InputEvents.cs:177–206,214–218:
+   Raw Input GenericDesktop keyboard usage6 и mouse usage2, keydown и mouse
+   activity доходят до timer. Это не просто GetLastInputInfo keyboard-only.
+4) DefaultTool/MyControlCenter.MyRgbKeyboard/SingleZone.cs:113–138:
+   ControlBrigtnessEvent на blank останавливает Manual/Rainbow/Breathing и
+   вызывает SetPowerDisable_EC(true); на input снимает disable.
+   SetPowerDisable_EC367–374 меняет только78C.1, СОХРАНЯЯ выбранные level bits.
+   В найденном SingleZone callback нет явного RunEffect после wake; не обещать
+   автоматическое восстановление host Manual по аналогии с другой HID веткой.
+
+Отдельно native effect cycle:
+  SingleZone.cs:922–929,950–960: ManualInterval*1000, host Timer и шесть индексов;
+  это не тот же timer, что inactivity CloseTimer. Native Rainbow код5 и
+  Breathing код2 исполняются контроллером; ITE speed/HID1A — иной backend.
+  LM_EC_RGB.cs:17–59 выбирает SingleZone по766.2 при подходящей detection policy;
+  generic LM_EC_RGB методы с NEEDS IMPLEMENT не опровергают реальный SingleZone
+  метод, который пишет EC непосредственно.
+
+3. Что показывают существующие физические наблюдения
+tests/test_util/analysis/keyboard-ec-timeout/report.md:5–44:
+483 полных4КБ snapshots, failures0, settings_writes=false. Две серии13.10:
+keyboard input ~11:55:04:741=84→80; физическое blank ~11:55:35:80→84,
+keyboard idle~31.2с. Во всех482кадрах767=80(Rainbow),78C=80(level4),78D=0.
+Сохранялись выбранные эффект/уровень; physical blank нельзя приравнять к Off.
+
+bit-0-result.md:6–16: в ранее разрешённом опыте741.0=1 удерживался90с,
+пользователь сообщил «клавиатура не гасла»; другие fan gates/mode не менялись,
+бит восстановлен. manual-context-results.md:9–31: при.0=1 bit2/bit7 прошивка
+возвращала примерно за1с;6FA циклически0..59 и не сбрасывался от keyboard idle.
+bit-1-2-results.md:17–28: установка741.2 не гасила немедленно и не менялаdelay.
+
+AC/DC оговорка обязательна: timeout-control-search.md:78–110 содержит наблюдение
+«AC не гаснет,DC гаснет»;741.2 встречался1 наAC без подтверждённого гашения.
+Поэтому741.2 — коррелят в отдельных условиях, не надёжный optical sensor и
+тем более не writable delay.6FA — счётчик, не найденная уставка времени.
+
+ВАЖНО: изученный OEM app callback очищает Rainbow через StopRainbowMode,
+но физические~31с серии сохраняли767.7=1. Нельзя объявлять именно этот callback
+причиной тех гашений. Наблюдаемое native DC поведение и найденный app timer —
+разные уровни доказательств. Exact EC firmware/компаратор inactivity не получен.
+
+4. Наш core, цикл, lifecycle, locks
+KeyboardBacklight.cpp:68–100: общий EcAccess transaction; свежие masked RMW,
+readback RGB/effect/brightness, соседние fan/USB/lightbar поля сохраняются.
+Cycle expected73–74 охватывает RGB/breathing/Rainbow, намеренно не Fn brightness.
+Journal27–38 записывает попытки изменений, перед откатом сравнивает own masks;
+неподтверждённый rollback пока только журналируется — см.K3.
+
+KeyboardColorCycle112–130: первый цвет сразу; далее wait interval, затем общий
+DeviceOperationKind::Background. Он не публикует interactive begin/end, поэтому
+старое мигание доступности кнопок при каждом цвете в этом коде не воспроизводится
+по прежней причине. Интервал отсчитывается после EC операции: период немного
+длиннее заданного, это видно и в старых логах, не потеря шага.
+Смена RGB/effect извне останавливает cycle; stop/exit оставляет последний цвет.
+Startup autoplay отсутствует. Сам цикл не хранится как desired effect в INI;
+старый Mono цвет сохранён отдельно. Скрытие вкладки не уничтожает реальные страницы.
+
+ConfigurationRestoreWindows.cpp:239–257 сравнивает saved с current наstartup/
+resume и восстанавливает эффект/RGB/яркость;110–140 делает adapter flash1с.
+Эти записи пользуются общим operation gate, но не имеют session с cycle:
+они могут сделать его expected устаревшим и остановить cycle при следующем шаге.
+MainWindow.cpp:447–452 при suspend/resume уведомляет FanController, не cycle.
+Cycle не имеет explicit power/session epoch; наличие DeviceOperation gate само
+по себе не является уведомлением «была подтверждённая гибернация».
+
+Владение741.0: FanControlWindows.cpp:491–510 выставляет APP presence свежей
+маской при разрешённом lifecycle; учитывает retained RAM owner. Default/exit
+не снимают этот общий gate по FAN_MODES. Из-за этого native autooff может вести
+себя иначе, чем до запуска MagicControl. Переключать741.0 из галки idle нельзя.
+Activity wake512–526 только strobe78C.4 при положительном уровне и bit1=0,
+то есть не переигрывает cached level и не отменяет явный Off.
+OsdSystemMonitor.cpp:196,264–272 наблюдает только keyboard Raw Input, отправляя
+задачу FanController::keyboardActivity:1338–1341 с throttle1с/delay75мс.
+Мышь сейчас не является wake source MagicControl; это не OEM CloseTimer policy.
+
+Сериализация: Global EC transaction исключает смешивание кооперативных операций;
+GUI/CLI Global single instance не блокирует чужой OEM-сервис. Wujie applyLighting
+идёт прямо в общий core, без GM6 OEM process exclusion. Fan lease останавливает
+GCUBridge лишь в собственных ручных режимах, Default этого не гарантирует.
+
+5. Конкретные замечания
+K1 [P2] Нет согласованного lifecycle cycle/restore/adapter flash.
+  core KeyboardBacklight.cpp:118–128, ConfigurationRestoreWindows.cpp:110–140,
+  239–249, MainWindow.cpp:447–452. Собственный flash/restore воспринимается как
+  внешняя смена и прекращает цикл; suspend в цикле явно не представлен.
+  Дополнительно model():19 на одном несовпавшем live identity инвалидирует
+  весь EcAccess. Без power epoch ранний resume read может принять transient
+  identity за заменённую плату. Это статический риск, не новый аппаратный repro.
+  Исправление: общий lighting session с pause(reason)/resume и power epoch,
+  явная граница своих временных эффектов; неизвестное после сна не писать и
+  не объявлять готовой identity. Внешние изменения по-прежнему уважать.
+
+K2 [P2] Adapter flash может сохранить временный idle blank как явный Off.
+  ConfigurationRestoreWindows.cpp:130–135 вычисляет liveBrightness=0 по78C.1,
+  затем rememberDevicePreferences(KeyboardLevel=0), если во время flash bit1=1.
+  Но найденный OEM idle path ставит только bit1 при сохранённом выбранном уровне4,
+  это НЕ доказательство пользовательского выбора Off. Получается стирание
+  desired brightness по временному effective state. Подтверждена ветка кода;
+  нужное совпадение событий на устройстве здесь не воспроизводилось.
+  Исправление: desired/effective разделить, не сохранять preference от transient
+  power-disable без подтверждённой команды пользователя/авторитетного события.
+
+K3 [P2] Ошибки/ownership loss rollback скрыты от caller.
+  KeyboardBacklight.cpp:32–38 пишет rollback skipped/unconfirmed лишь в log,
+  caller получает исходную ошибку. Возможен частично восстановленный RGB/effect
+  без явного результата«откат не подтверждён». В mixed-ownership случае RGB
+  strobe отменяется целиком, поэтому физический возврат дополнительно неизвестен.
+  Исправление: явный bounded rollback result с own-mask журналом и fresh actual
+  read; aggregate original+rollback error. Не посылать триггер на чужую RGB группу.
+
+K4 [P2] Общий process gate не исключает OEM writer Wujie.
+  SettingsPage.cpp:728–729/applyLighting, core model15–20 и apply68–100 не проверяют
+  GCUService/AiStone owner; cooperative locks OEM не обязан использовать.
+  Cycle detects RGB takeover лишь на следующем шаге; timeout/baseline getters
+  тоже не гарантируют эксклюзивного владения. В Default GCUBridge может работать.
+  Исправление: общий read-only ownership/capability preflight точного backend,
+  declined/unknown вместо ложной эксклюзивности; службой не управлять самовольно.
+
+K5 [P3, семантика] «Штатный режим» не firmware ownership reset.
+  SettingsPage.cpp:1464–1466 ставит level4/Mono/cyan и сохраняет это как preference.
+  Оно не восстанавливает OEM mode/таймер или741.0. Не обещать takeover native
+  словом«штатный». Уточнение поведения требует отдельного решения владельца;
+  геометрию/скролл и подписи самовольно не менять.
+
+6. План общего idle backend без изменения эталонного UI
+Не использовать нынешний setLevel(0) как idle blank: KeyboardBacklight.cpp:96
+маскойE2 стирает level bits и ставитbit1. Это правильный explicit Off API,
+но не эквивалент native SetPowerDisable_EC, сохраняющего выбранный level.
+Нужны desiredLevel/effect/RGB и effectivePowerDisabled; blank только собственной
+маской78C.1, wake только при своей blank session и неизменившемся desired state.
+Явный Off/внешний владелец/сон отменяют право wake, stale snapshot не replay.
+Input policy объявлять явно: native EC keyboard-only observation, OEM app
+keyboard+mouse и собственный будущий host idle не взаимозаменяемы автоматически.
+Host idle живёт только пока процесс работает; не выдавать его за сохраняемый
+после выхода аппаратный таймер. Cycle interval — отдельное поле и смысл.
+Один shared state machine для всех profiles, transport/capability adapter для
+каждой платы, существующие карточки/контролы/scrollbar остаются прежними.
+
+7. Калибровка и Linux — не смешивать с подтверждением физики
+Wujie текущая palette43: white50/50/50,orange50/10/0,purple35/0/50; custom57
+round(v*50/255). Старый Fan_X15Pro Set2EcSettings.Keyboard.cs:8–15:
+white50/40/40,custom divide5/min1 с исключениями. Это различие версий калибровки,
+не автоматическое основание менять работающий визуальный эталон. Readback не
+доказывает точный perceived RGB. Cycle6 default orange в UI255/102/0 тоже
+отличается от статического orange raw50/10/0; нельзя обещать одинаковуюкалибровку.
+Reference_Projects/LumaDesk/repository/src/core/driver/keyboard.rs:1–34,70–110
+подтверждает сходную карту и свою floor/min1 конверсию; это не независимое
+аппаратное доказательство Wujie и не источник для замены нашей калибровки.
+
+Linux: platform/linux/BackendLinux.cpp:6–20 EC отсутствует. Linux SettingsPage
+effects/cycle154,levels173,timeout223–231 disabled для Wujie; Huawei sysfs
+доступность не переносится X5. На Wujie Linux нет ни RGB writer, ни idle/cycle
+исполнителя; одинаковый макет не означает одинаковые hardware capabilities.
+
+8. Подтверждения и ограничения
+Существующие физические журналы подтверждают отдельные эффекты/blank/gate и
+старые successful readback; новых optical/runtime проб0.1.88 здесь нет.
+Readback success, UI selected, saved preference и physical LED output — четыре
+разных состояния. Не выводить поддержку таймера из741.2,6FA или чужого ITE1A.
+Следующая работа — согласованная программная архитектура и отдельно разрешённые
+проверки; никаких production изменений в этой исследовательской задаче нет.
+9. SHA256 прочитанных источников
+src/core/src/KeyboardBacklight.cpp
+  c0e7685ea8e5c4301f0a5d6985229836859821198b4f21b5fffbec32d1306b63
+src/devices/mechrevo/x5sp4nag/windows/ConfigurationRestoreWindows.cpp
+  4a5b1b497bf5fac13e6e37783cb7ee7060ddfd07329f7bd65819b5064b80281f
+src/gui/windows/SettingsPage.cpp
+  17799fbaaa64bdc4458049d67035a15318e8f34fb0b980bd3c7719eb5bb39fc6
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/MyControlCenter/KeyboardCloseTimer.cs
+  04839cc1d237bd5321d456ffc453e5ce92abf6c3aef92829c6760a1db6733d04
+C:/Users/admin/Documents/mechrevo/Decompiled/DefaultTool/MyControlCenter.MyRgbKeyboard/SingleZone.cs
+  03f02fdfee9e200867d8d280a617e6661c2dd222d11765f04d0f5758ff541574
+C:/Users/admin/Documents/mechrevo/Fan_X15Pro/Set2EcSettings.Keyboard.cs
+  6febb99b9f437306f559ef9c7fae0447140f453483e596ac3064b2d3b6d558da
+tests/test_util/analysis/keyboard-ec-timeout/report.md
+  fd973a8545ca7b4929d177973318146a2e3d978dbbfe229c4caeff3b17f66b73
+tests/test_util/analysis/keyboard-ec-timeout/bit-0-result.md
+  4124daaf3b92ebd10b9c72ceb4b4012dc5afe7560634534d8144b2bdf580a416
+C:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/LumaDesk/repository/src/core/driver/keyboard.rs
+  ae528539561dc2ecc5e4e36a4a1196f2aa55fae4b060f12f951407c561cbd7df

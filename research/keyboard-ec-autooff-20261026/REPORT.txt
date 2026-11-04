@@ -1,0 +1,79 @@
+Native keyboard auto-off: WUJIE / GM6,26October2026
+
+Scope: saved firmware bytes, existing historical reports and existing source.
+No live EC/SMBus/HID/driver/app execution or writes. Input SHA-256 verified
+against census.json; exact paths/hashes/call candidates: EVIDENCE.json.
+WINDOWS.asm preserves fresh bounded instruction decodes. Some windows begin
+inside a larger function or contain compiler switch data, not a complete CFG.
+
+Confirmed native idle handler:
+WUJIE N.1.20MRO15 embedded EC core: bank2 BB34..BBD0.
+GM6 EC1.11 from MRO09: bank2 B521..B5BD.
+GM6 EC1.12 from MRO10 family: bank2 B529..B5C5.
+These are independently decoded exact inputs; do not transfer their addresses
+or writable permissions to other laptop families.
+
+Operation:
+1. If power state06E6!=1 OR741.0 APP presence is set, reset counter08A5/08A6,
+   clear input flags bit-address23/24 (internal RAM24.3/24.4), clear741.2,return.
+2. If either activity flag is set: clear flags and counter, clear idle blank
+   741.2; request refresh via086F.2 or enter the keyboard restore path.
+3. Otherwise compare the big-endian16-bit counter08A5/08A6 to a FIXED constant.
+   WUJIE helper D7FA, GM6v1.11 D81F, GM6v1.12 D827 all return7C3 XOR4.
+   Platform ID4 selects30; other platforms select600.
+   This condition is NOT AC/DC and does NOT test ROM ID770.
+4. Before expiry increment the counter by1 via compiler16-bit addition helper.
+   At expiry, if not already blank, set741.2. Then request update086F.3 or call
+   the direct blank path. WUJIE B47B zeros1803/1805/1808 PWM outputs and marks
+   internal animation state0852..; selected brightness78C is not simply set0.
+5. Other keyboard effect paths read741.2 and respect blank state. It is a status
+   controlled by firmware, not a user-configurable time value.
+
+Raw proof locations:
+WUJIE BB34 start/APP gate,BB45 clear741.2,BB95..BBA2 compare30,
+BB81..BB8E compare0258hex=600,BBA4 increment,BBB4 setblank04,
+DD0E resetcounter;DC9A reads741.2;D7FA selects platform4;D626 tests06E6==1.
+GM6v1.12 B529 start,B57A compare600,B58F compare30,B599 increment,B5A9 setblank;
+v1.11 equivalents are8bytes earlier. Constants are immediate code, not read
+from a discovered timeout-seconds setting.
+
+Timing / historical physical corroboration:
+WUJIE caller bank2 86C9 ->86E1 LCALL BB34 is reached through common159A,
+common0E8E and scheduler switch0E09. Timer0 interrupt0533 sets scheduler flag;
+the scheduler has a further60-step divider before calling86ED.
+The complete oscillator/clock-divider timing has NOT been independently
+calibrated in this audit. Do not claim a new precise stopwatch experiment.
+However tests/test_util/analysis/keyboard-ec-timeout/report.md records the
+earlier owner-observed physical blank after roughly31.2seconds, and74184->80
+after input then80->84 at blank. This strongly corroborates30 as seconds.
+Same handler/counter with600 is20times longer, approximately10minutes expected;
+that long physical interval has not been verified by the owner.
+Do not call08A5 a general writable timeout or reuse unrelated06FA counter.
+
+Activity evidence:
+WUJIE common2666 sets internal bit23 after output to KBC1308;
+bank2 E488 sets bit24 in another input/event path. Exact admission of all
+external USB/Bluetooth mouse/keyboard events is not proved by those two sites.
+The native handler consumes either flag. Restoring on every host input event
+is a separate software/OEM feature, not established as a universal EC input.
+
+Interaction with existing functionality:
+Current saved WUJIE logs have741=81 (APP=1). Native idle handler is therefore
+disabled/reset in that state regardless of whether30 or600 would be selected.
+APP741.0 is also used by native battery mode lifecycle and FAN/control paths.
+Clearing it just to enable idle timeout can disrupt working functionality.
+Changing Platform ID just to get30seconds also affects CPU/FAN/battery branches.
+No such changes are proposed or performed. Custom timeout seconds were not
+found in this native handler. Earlier OEM SingleZone source uses a separate
+host input/timer mechanism and power-disable78C.1 for configurable seconds.
+
+Final owner UI request:
+Remove the auto-off checkbox, numeric field and labels from ALL models on both
+OSes, including Honor and previews. Preserve underlying APIs/settings/restores.
+Controls remain internal hidden/disabled compatibility handles; Windows commands
+to their IDs are ignored and GTK interactive callbacks removed.
+Keyboard card mode/color/brightness rows, card bounds and scroll stay fixed.
+Only heading available width reclaims the removed control's former space.
+The owner also requested removal of dotted focus rectangle from clickable
+headers: shared button style suppresses it for battery/lighting headers only;
+ordinary button focus indications and keyboard/menu operation remain.

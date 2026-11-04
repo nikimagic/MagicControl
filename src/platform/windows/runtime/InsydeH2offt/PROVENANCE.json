@@ -1,0 +1,34 @@
+{
+  "component": "Insyde H2OFFT",
+  "version": "6.76",
+  "driver_version": "3.0.0.3",
+  "source_kind": "Official Lenovo OEM package, statically extracted without execution",
+  "source_url": "https://download.lenovo.com/consumer/mobiles/kscn43ww.exe",
+  "source_page": "https://support.lenovo.com/ni/en/downloads/DS559132",
+  "security_advisory": "https://support.lenovo.com/us/en/product_security/ps500793",
+  "source_sha256": "0a9df4f3eb9a6fb1ac44f1ed553dd85919147759e953954665cc08bf80b4c9d1",
+  "source_signer": "Lenovo",
+  "reader_sha256": "046514122b241581a61f7c3fda9e5d444b76de7f919efc89ab3ad2eb5d3a7de5",
+  "driver_sha256": "adac8f1ed5e46a8bcbdeb54e6ee08bf3695c65f2ab5e2b31cf1d438babf54463",
+  "original_ini_sha256": "016f6e4c5d92b37e9d39dfafc52e46314cb460f0b5bae0ed61a3273f28af1b68",
+  "runtime_ini_sha256": "2ae7faa58a658545c5093b4c53cd89445f2a84fd8a0aa981e7519bc569aa8a8d",
+  "firmware_payload_included": false,
+  "flash_programming_requested": false,
+  "command": "H2OFFT-Wx64.exe <new output path> -g",
+  "signature_dependencies": [
+    {
+      "file": "FlsHook.exe",
+      "version": "1.0.0.9",
+      "sha256": "8203ed25c7007eaee9a69a45b3255c99ef607287f0a64dbccd0ba4bec8ad9a74",
+      "signer": "Insyde Software Corp.",
+      "executed_by_read": false
+    }
+  ],
+  "runtime_ini_changes": [
+    "UI Silent0->1",
+    "UI DisableMouseAndKeyboardInput1->0",
+    "FDFile FileName emptied; no firmware input included",
+    "Log_file Flag0->1"
+  ],
+  "kernel_signature_verification": "signtool verify /kp /c H2OFFT.cat H2OFFT64.sys passed"
+}

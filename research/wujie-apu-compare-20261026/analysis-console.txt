@@ -1,0 +1,13 @@
+OEM557 saved profiles 11
+Mode1_Profile1.json [0, 0, 0]
+Mode2_Profile1.json [0, 0, 0]
+Mode3_Profile1.json [0, 0, 0]
+Mode4_Profile1.json [0, 0, 0]
+{'utc': '2026-10-26T12:41:09.141Z', 'version': '0.1.219', 'action_id': 183, 'message': 'SETs APU: PM=0x5D0009 fast_power=7.018916130065918W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}
+{'utc': '2026-10-26T12:41:12.925Z', 'version': '0.1.219', 'action_id': 184, 'message': 'SETs APU: PM=0x5D0009 fast_power=6.925652027130127W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}
+{'utc': '2026-10-26T12:41:15.490Z', 'version': '0.1.219', 'action_id': 185, 'message': 'SETs APU: PM=0x5D0009 fast_power=6.470255374908447W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}
+{'utc': '2026-10-26T12:41:20.518Z', 'version': '0.1.219', 'action_id': 186, 'message': 'SETs APU: PM=0x5D0009 fast_power=5.959438323974609W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}
+{'utc': '2026-10-26T12:41:25.666Z', 'version': '0.1.219', 'action_id': 187, 'message': 'SETs APU: PM=0x5D0009 fast_power=8.623076438903809W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}
+{'utc': '2026-10-26T12:41:29.960Z', 'version': '0.1.219', 'action_id': 188, 'message': 'SETs APU: PM=0x5D0009 fast_power=7.268321514129639W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}
+{'utc': '2026-10-26T12:41:34.428Z', 'version': '0.1.219', 'action_id': 189, 'message': 'SETs APU: PM=0x5D0009 fast_power=6.50652551651001W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}
+{'utc': '2026-10-26T12:41:41.492Z', 'version': '0.1.219', 'action_id': 190, 'message': 'SETs APU: PM=0x5D0009 fast_power=7.145477771759033W Fast=15.000000953674316W Slow=10W STAPM=10W stale=false status=PawnIO / SMU'}

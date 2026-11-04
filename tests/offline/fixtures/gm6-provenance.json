@@ -1,0 +1,47 @@
+{
+  "scope": "Exact GM6IR0C Project25/RAM1.5 saved EC snapshots; test inputs only, no backend calls.",
+  "cases": [
+    {
+      "case": "gm6-unplugged",
+      "archive_sha256": "29cc4815be2833e282b64c4ac032d8e3fbb352a4b0038172255372b01ba41a7d",
+      "files": {
+        "gm6-unplugged.bin": {
+          "source_member": "logs_GM6IR0C/dumps/power-input-20261021-163502-0/01-unplugged/dump-20261021-163523-0/ec.bin",
+          "sha256": "3e56ffd2316e98919dea0716aa7ba2bbcdc86382dff63f3dd20261da55b5c9a3"
+        },
+        "gm6-unplugged.valid": {
+          "source_member": "logs_GM6IR0C/dumps/power-input-20261021-163502-0/01-unplugged/dump-20261021-163523-0/ec-valid.bin",
+          "sha256": "3431383721510cf1c211de027cf958c183e16db5fabb6b230eb284c85e196aa9"
+        }
+      }
+    },
+    {
+      "case": "gm6-charging",
+      "archive_sha256": "29cc4815be2833e282b64c4ac032d8e3fbb352a4b0038172255372b01ba41a7d",
+      "files": {
+        "gm6-charging.bin": {
+          "source_member": "logs_GM6IR0C/dumps/power-input-20261021-163502-0/02-charging-on-dc/dump-20261021-165055-0/ec.bin",
+          "sha256": "a799fce7f19c16de7a479e060351fb143e7551b37a00918a544c98336adeda44"
+        },
+        "gm6-charging.valid": {
+          "source_member": "logs_GM6IR0C/dumps/power-input-20261021-163502-0/02-charging-on-dc/dump-20261021-165055-0/ec-valid.bin",
+          "sha256": "3431383721510cf1c211de027cf958c183e16db5fabb6b230eb284c85e196aa9"
+        }
+      }
+    },
+    {
+      "case": "gm6-full",
+      "archive_sha256": "29cc4815be2833e282b64c4ac032d8e3fbb352a4b0038172255372b01ba41a7d",
+      "files": {
+        "gm6-full.bin": {
+          "source_member": "logs_GM6IR0C/dumps/power-input-20261021-163502-0/03-full-on-dc/dump-20261021-175144-0/ec.bin",
+          "sha256": "d75da5b79dcd8740e1ca0495e26b03bff6da02949494416f02380994e802f855"
+        },
+        "gm6-full.valid": {
+          "source_member": "logs_GM6IR0C/dumps/power-input-20261021-163502-0/03-full-on-dc/dump-20261021-175144-0/ec-valid.bin",
+          "sha256": "3431383721510cf1c211de027cf958c183e16db5fabb6b230eb284c85e196aa9"
+        }
+      }
+    }
+  ]
+}

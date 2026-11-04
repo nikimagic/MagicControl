@@ -1,0 +1,8 @@
+From: 00d61154 To: 005bb6c2 Type: INDIRECTION Op: 0 ANALYSIS null
+From: 00fd5120 To: 005bb6c2 Type: DATA Op: 0 ANALYSIS null
+From: 010c4299 To: 005bb6c2 Type: DATA Op: 0 ANALYSIS null
+From: 010c42a4 To: 005bb6c2 Type: DATA Op: 0 ANALYSIS null
+From: 010c42bb To: 005bb6c2 Type: DATA Op: 0 ANALYSIS null
+From: 010c43b0 To: 005bb6c2 Type: DATA Op: 0 ANALYSIS null
+From: 010c43b5 To: 005bb6c2 Type: DATA Op: 0 ANALYSIS null
+From: 005bc5ef To: 005bb6c2 Type: UNCONDITIONAL_CALL Op: 0 DEFAULT FUN_005bc5eb

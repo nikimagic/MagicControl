@@ -1,0 +1,80 @@
+Linux GUI font/language fixes — 2026-10-20
+Owner: /root/hydroc. Static implementation; no GUI, builds, tests or hardware run.
+
+Source preservation / GTK properties
+Ui.h/Ui.cpp now own one adapter for GtkLabel.label, GtkWindow.title,
+GtkWidget.tooltip-text and explicitly declared accessible labels. Native notify
+signals capture external dynamic source changes, re-entrant translation updates
+are suppressed. A weak object registry refreshes live non-widget objects such
+as GtkColorDialog without keeping them alive. Window refresh discovers transient
+windows and labels; detached real pages are separately refreshed by MainWindow.
+SettingsPage/AboutPanel/MainWindow/UpdateWindow/OsdService title and tooltip
+calls route through that shared adapter. No translated source is written to INI.
+AboutPanel bold headings use equivalent native Pango weight attributes with
+plain source text, avoiding lost lookup through <b> markup. Preview footer now
+retains its source; its previous pretranslated construction prevented switching
+back to a different language.
+
+Fonts, language, cache, CSS
+Cairo/Pango layouts and native widget Pango contexts receive the active language
+tag via common Fonts.h. Embedded font family follows selectedFontFamily(Language)
+(SC vsTC), while disabled embedded-font selection retains GTK's system family.
+Root owns actual font registration in main.cpp; that file was not edited here.
+One GtkCssProvider per GdkDisplay is reused; cache covers family/language/DPI/
+scale. Family list is quoted/escaped for CSS. Window map/scale-factor and native
+surface fractional-scale notifications refresh CSS, plus GTK font-name changes.
+A weak reference preserves the relevant window for settings-triggered refresh.
+MainWindow invalidates brand measurement on language/font changes. AboutPanel
+reuses its same shared laptopMenuGeometry function for current font/language
+measurements, preserving all menu constants and row controls.
+
+Other presentation paths
+TrayIcon translates DBusMenu labels and tooltip on request; refreshLanguage emits
+ItemsPropertiesUpdated, LayoutUpdated with an incremented revision and NewToolTip.
+Menu IDs, enabled actions, status/control protocol values are unchanged.
+OsdService translates title/detail only when sending desktop Notify; original
+messages and identifiers remain source values. refreshLanguage redraws/replaces a
+still-visible notification without restarting event timestamp or animation state.
+UpdateWindow retains its semantic release result. GUI timer formats the shared
+{version}{channel} / installed-version templates on the current language; channel
+is explicitly translated before passing opaque formatter arguments. Progress/
+errors retain source in State and pass through shared translate at presentation.
+
+Integration
+Uses common ui::selectedFontFamily(Language), ui::languageTag(Language),
+ui::formatMessage(source, initializer_list<pair<string_view,string_view>>).
+Catalog is owned by Wujie agent; new/existing Linux keys and exact update templates
+were sent to that agent. Common numeric card/GPU formatters are owned by root;
+remaining local numeric strings are integer identifiers/ticks or RGB hex, not
+localized fractional readings.
+
+Preserved
+Wujie card geometry, scrollbar construction/CSS constants, font roles, reference
+text metrics/baselines, model/device IDs, hardware capability guards and writers.
+No tests/build/GUI/EC/OEM/SSH/commit or portable replacement was performed here.
+Runtime rendering, native dialog/desktop behavior and device telemetry remain
+for root's coordinated build/authorized verification. These edits alone do not
+claim a working portable release.
+F04 completed after cold review — per-window typography override
+A display still owns one common base CSS provider. Each GtkWindow now owns one
+unique mc-fonts-N class and one additional APPLICATION+1 provider, cached by its
+own family/language/actual scale/DPI. Selectors are prefixed with that exact
+window class and contain only font-family/font-size: Body/default descendants,
+language-option-label, Caption curve-preset/numeric-field/text/button,
+ClassicHeading about-heading and KeyDetail about-secondary/about-detail.
+Thus a refresh/move of another root does not replace this window's text sizes.
+No scoped rule changes color, weight, border, scrollbar, card geometry/baseline.
+
+Provider ownership is explicit: one owned display ref and provider ref per root,
+plus the display style registration. Unrealize removes the registration and
+unrefs both; the qdata destructor is an idempotent final cleanup. A dormant flag
+prevents refresh of another window from re-registering a destroyed-but-retained
+root; only that root's subsequent map can reactivate its existing unique scope.
+Map/fractional/integer-scale, language and GTK font-name refresh all live scopes.
+One GtkWindow toplevel-list observer coalesces changes into an idle scan after
+construction, so native GTK color/language/transient dialog roots receive the
+same mechanism. It retains no windows. Portal-owned dialogs in another process
+remain outside application CSS control.
+Initial null tooltip remains unmodified when current==last; refreshAboutPanel
+has an explicit nullptr guard. Static lifetime/selector paths reviewed; no GUI,
+monitor experiment, build or tests run. Source freeze restored for root build.

@@ -1,0 +1,116 @@
+Wujie X5SP4NAG: independent exact EC firmware search
+Checked 20.10.2026. Read-only local file inspection and public HTTP GET.
+No EC/SMBus/HID/WMI/GUI/OEM calls, updates, builds or tests. No production edits.
+
+TARGET
+MECHREVO WUJIE Series-X5SP4NAG, Ryzen AI9 H365, BIOS N.1.20MRO15,
+EC1.18 from saved inventory. Need firmware writer/consumer of word0522,
+observed17000/17800; word0520 remains6300. These are observations supplied by
+root's offline exact-board comparison, not a newly established charger map.
+
+RESULT
+No exact EC code image obtained. No exact firmware writer of0522 established.
+Do not replace this missing result with another OEM's EC or a guessed0522 write.
+This is a bounded negative result; it does not prove that no public copy exists.
+
+INDEPENDENT PATHS CHECKED
+
+1. Exact web identity/version queries
+Queries included X5SP4NAG BIOS/download/bin/rom/cap/firmware/EC,
+N.1.20MRO15, N120MRO15, 无界15XPro H365 BIOS/固件/EC1.18.
+Results provide owner system identities and discussion, but no downloadable
+exact code image or exact EC1.18 disassembly.
+
+https://valid.x86.fr/b181n2
+Firsthand CPU-Z submission10.11.2025 confirms H365/X5SP4NAG/N.1.20MRO15
+08.06.2025 in US date format=06.08.2025. This is identity evidence, NOT BIOS.
+
+https://4pda.to/forum/index.php?showtopic=1098234&st=600
+Indexed owner posts31.08–02.09.2025 mention N.1.20MRO15 offered through a
+new Control Center, absent from website. Direct unauthenticated GET of this
+page and topic root returned403. No attachment was fetched or challenge bypassed.
+The indexed discussion does not provide an exact firmware download URL.
+
+2. GitHub repository index
+https://api.github.com/search/repositories?q=X5SP4NAG
+HTTP200, total_count0, incomplete_results=false. Saved raw response.
+This is repository metadata search, NOT complete GitHub code search.
+Do not generalise it to absence of matching strings/files anywhere on GitHub.
+
+3. Public archive index
+https://web.archive.org/cdx/search/cdx?url=driver.mechrevo.com/*MRO15*&output=json&filter=statuscode:200&collapse=urlkey
+HTTP200 with []. This specific wildcard captured no matching archived URL.
+No claim is made about every scheme/subdomain/server/archive.
+
+Archive query for old ota.mechrevo.com:2080/biosUp/D9D24AA7/* timed out20s.
+This is unavailable evidence, NOT proof of no archive. Origin OTA endpoints
+already tested by root were not retried in this branch.
+
+4. Exact-board repair material
+https://www.repairlap.com/threads/mechrevo-wujie-series-tongfang-x5sp4nag-rev-1-0-boardview.29478/
+Public post02.01.2026 lists X5SP4NAG1.0.rar178.5KB, expressly BoardView.
+It is not a BIOS/EC image; no attachment was downloaded or paid access used.
+Another indexed resource lists Rev1.1 BoardView(.CAD),300RUB. No purchase or
+access bypass. Boardview may eventually identify the charger IC, but cannot
+by itself establish the EC writer or MRO firmware version.
+
+5. Local file metadata independent scan
+Scanned selected Firmware, Research, outputs and mechrevo_dsh/analysis trees
+for bin/rom/fd/cap/img/800/801 files, then sizes128KiB..64MiB. Candidate metadata
+is saved in sources/local-payload-size-candidates.json.
+Only two262400-byte decompressed BIOS_OTA assets appeared:
+ C:/Users/admin/Documents/mechrevo/Research/BIOS_OTA_Full/BIOS_OTA/assets/00643994.bin
+ C:/Users/admin/Documents/mechrevo/Research/BIOS_OTA_Full/BIOS_OTA/assets/00927d0e.bin
+Both SHA256736acb2ecf7952a67007058aa32f92ed702a5ed07835a8f16f149823a1602ee4.
+pe.json says each is a10490-byte compressed asset expanded to262400bytes,
+at offsets643994/927D0E. Identical raw data begins with repeated00020204,
+ends with repeated5C58DF00, no readable8+-character ASCII identity strings.
+These are not verified EC images: no X5SP/MRO identity, reset/call graph,
+code version or extracted firmware container established. Size alone is not
+firmware proof. Kept originals unchanged; no software/image was executed.
+
+Known other-model CAP.EXE files locally are GXxHXxxN114MRO50 and
+X6AR45xUN115MRO10. They are Wujie14XA/ArrowLake families, not targetX5SP/H365.
+No replacement or cross-model application proposed.
+
+FUNCTIONAL LEAD, NOT EXACT FIRMWARE
+
+https://zeeko.dev/2025/08/improving-mechanical-revolution-15xpro-charging-speed/
+Author's20.08.2025 Wujie15XPro report says charging was slow and improved via
+Tuxedo USB-C battery charging priority. Companion series identifies H365.
+The article does NOT establish BIOS/EC version or source register522.
+It was already referenced in our02.10 findings: freshly verified old lead,
+not a newly discovered independent proof. No numeric before/after charge
+trajectory or voltage-target decoder is supplied.
+
+Author links via Rikka to:
+https://github.com/sund3RRR/Mechrevo14X-linux
+Pinned commit8b516120e67d7cb2c7fc87b9fc3cf472813a29e1.
+patches/add_mechrevo_vendor.patch is saved. It changes ONLY
+src/tuxedo_compatibility_check/tuxedo_compatibility_check.c by addingMECHREVO
+vendor DMI entries. It does not modify battery/current registers,0520/0522,
+or the charging-priority model allowlist. Patch not applied or executed.
+
+Our local generic uniwill_keyboard.h maps charging_prio to7CC.bit7,
+and gates official support on742.bit5 plus an older-model DMI list.
+Wujie snapshots supplied by root already have7CC=A4 (bit7=1), so this existing
+bit alone is not an identified changed state explaining fast→slow charging.
+Exact driver version used by the author is not established by the current patch.
+
+RECENT PRIMARY KERNEL DISCUSSION
+
+https://lists.openwall.net/linux-kernel/2026/10/11/284
+https://lists.openwall.net/linux-kernel/2026/10/11/1090
+https://lkml.iu.edu/2610.1/08806.html
+Exact X5SP4NAG support patch/review by author and maintainer. Review asks to
+check BATTERY_CHARGE_MODES and warns reported100% is not a reliable protection
+indicator. Available v3 adds BATTERY_CHARGE_MODES; no current-limit or arbitrary
+percentage feature. Patch does not contain firmware code or charger map.
+It is not proof that our exact EC firmware's0522 writer has been found.
+
+NEXT USEFUL EVIDENCE
+Exact OEM EC image/official recovery payload or an owner's retained OEM update
+archive with unambiguous identity and hash. Need static chainSBS/requested
+current-voltage→0520/0522→actual charger programming. Until then6300/17000
+remain candidate requested-current/voltage observations, not a supported setter.
+Root's already exhausted OTA/public-driver/XMG paths were not repeated.

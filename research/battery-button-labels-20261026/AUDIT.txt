@@ -1,0 +1,28 @@
+Battery card content audit, 26.10.2026
+
+Defect: unqualified Healthy matched the English alias of inventory status
+Исправен in TranslationCatalog.inc. Balanced also localized in Chinese while
+Full Capacity remained English. This produced inconsistent labels.
+
+Final requirement: keep OEM battery button names unchanged across RU/EN/SC/TC:
+Full Capacity / Balanced / Healthy. Use scoped source keys in the common
+renderer; Windows owner-draw and GTK retained-source localization share them.
+Do not change the inventory health translation or other Balanced buttons.
+
+Reviewed OEM evidence:
+research/devices/gm6ir0c/battery-all-modes-20261021/oem-audit/REPORT.md
+and source-excerpts.json: native codes00/10/20, aliases FullCapacity/Performance,
+Balanced/Optimal, Healthy/Stationary. Button ordering and mode mapping unchanged.
+
+Other contents checked in both adapters: native-first title menu, actual
+platform/ROM readout (unknown remains unknown), percent buttons100/95/85/10,
+selection by decoded mode, unsupported controls disabled, voltage setpoints
+and retained/offline labeling. Screenshot17800->17000 is800mV across the pack,
+consistent with4x200mV; this does not establish the measured adapter voltage.
+Cycles/health source unchanged. No card/scroll geometry or core writer changes.
+No hardware execution or application launch.
+
+Windows review also found a second translation at owner-draw time after native
+caption localization. The existing common button renderer now retrieves the
+retained source caption and translates it once. Native labels/accessibility
+remain readable; GTK already retains its source per property. No new renderer.

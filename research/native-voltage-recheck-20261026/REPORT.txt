@@ -1,0 +1,128 @@
+WUJIE / GM6: native voltage modes and calendar age, 26.10.2026
+Only saved firmware images, saved EC dumps and captured portable log bytes.
+No hardware interfaces, application, flashers or EC writes executed.
+
+1. Direct firmware review
+
+Verified SHA-256 of all three inputs against the earlier census (EVIDENCE.json):
+WUJIE core128KiB 5d4ec03a4ec9b36938d907fd6fcb51109b445b4a43c5498f018d022d4e6ac7a8
+GM6 EC1.11 5059e6cb58addec21ad7fd5693f4c082230fbd8c7692fb07799c90adabae5c4c
+GM6 EC1.12 5659c8217e9d93d3fd6fe278756872d7c5adbd15a0687d35705e2df4bb5c05dd
+The WUJIE image is embedded in the saved N.1.20MRO15 system BIOS; this is not
+an attestation of the complete currently executing EC flash. GM6 addresses
+are version-specific: bank2 C110(v1.11), C118(v1.12); WUJIE bank2 C574.
+FIRMWARE-WINDOWS.asm contains fresh bounded instruction decodes from exact bytes.
+Warnings for unnamed SFR F0 do not change decoded numeric instructions.
+
+2. Mode and voltage are different state
+
+7A6.mask30:00=Full Capacity/Performance,10=Balanced,20=Healthy.
+741.0 absent makes the firmware clear this mode field. APP is already set in
+the observed WUJIE logs; no experiment to raise it was performed.
+
+The firmware chooses the FIRST applicable reduction tier, per cell:
+250mV: history H>15840 OR cycles>=550 OR calendar age>=25months
+200mV: history H>11520 OR cycles>=450 OR age>=19 OR Healthy
+150mV: history H>8640  OR cycles>=350 OR age>=13
+100mV: history H>6480  OR cycles>=250 OR age>=10 OR Balanced
+ 50mV: history H>4320  OR cycles>=150 OR age>=7
+  0mV: none of the above.
+For an invalid tiny BMS voltage input(<500mV), a separate guard leaves delta0.
+H is a firmware high-voltage/temperature exposure counter; this report does
+not assert a wall-clock unit or identify arbitrary host-mapped bytes as its
+actual current internal value.
+
+WUJIE direct proof: C6CB=250,C703=200,C736=150,C76D=100,C790=50;
+DD16 supplies low-byte E0/carry for the highest H threshold3DE0; D71A compares
+age25, C6F0 age19, C72E age13, C75A age10, D881 age7.
+GM6 raw table is independently preserved in its two image windows and the
+earlier ec-audit/HEALTHY.md, not inferred solely from the WUJIE function.
+
+Full Capacity removes only the USER minimum. It does not disable aging.
+Balanced ensures at least100mV/cell; Healthy at least200mV/cell. Aging may
+select a stronger tier in any mode. The UI must not promise different CV
+values for every button or promise100% of an unaged cell's nominal energy.
+
+3. Calendar age, actual WUJIE saved data
+
+WUJIE bank1 E7C6..E9A5 calculates age; bank0 trampoline1CA8 dispatches there.
+The function uses the preferred valid date7F2/7F3 or otherwise manufacture
+date0314/0315. Current year/month are72D/72E (BCD). It calculates whole calendar
+months, publishes/cache036C, validates input and can fall back to saved036C.
+Maintenance flags726 and override036D can alter this path; they are not normal
+UI settings and were not changed.
+
+In dump-20261025-142546-0/ec.bin (and prior saved24/25October dumps):
+0314/0315=5A52;72D/72E=26/10;7F2/7F3=0000;036C=14hex=20;
+036D=00;726=00. Corresponding ec-valid.bin marks these byte reads valid.
+SBS packed manufacture date5A52:
+year=1980+(word>>9)=2025,month=(word>>5)&15=2,day=word&31=18.
+Thus the battery-reported manufacture date is18February2025, and the EC's
+October2026 calculation is(2026-2025)*12+(10-2)=20months.
+This is an EC copy of battery metadata, not a new direct BMS read in this
+analysis. It is neither purchase date nor a measured wear percentage, and
+does not prove the pack's physical birth date if BMS metadata was rewritten.
+
+4. Voltage formula and charger handoff
+
+Cells:491&C0==C0 ->4;==80 ->3;otherwise2 in the reviewed functions.
+Base:030E/030F BE16 BMS charging-voltage request.
+Target:0522/0523 LE16 = base - cell_count*selected_reduction.
+WUJIE C792..C7C8 performs this multiply/subtract; command handoff:
+0522/23 ->0836/37 ->pending0832.1 ->bank0 D5BD ->ChargingVoltage command15.
+GM6:0522/23 ->0836/37 ->DE6B pending0832.1 ->common1C06 ->bank0 C929
+->ChargingVoltage15. Earlier byte-linked handoff evidence remains in:
+research/battery-logger-comparison-20261026/CURATED-WINDOWS.asm and
+research/devices/gm6ir0c/battery-all-modes-20261021/ec-handoff-audit/REPORT.md.
+Prepared voltage requests do not prove SMBus ACK or measured charger output.
+With AC absent this function need not update the target: it can remain saved.
+Measured pack voltage0438 is a separate signal.
+
+5. Fresh WUJIE portable corroboration
+
+Captured battery logs include versions0.1.213/214/215; see exact session
+provenance in source files and byte hashes/capture sizes in EVIDENCE.json.
+Source files may grow after capture, so their current size/hash is not promised.
+At UTC10:18:15,10:18:46,10:19:06,10:19:38 on26October (Moscow+3):
+7A6=00,10,20,00 respectively, while741=81,490=0F (AC present),
+7C3=7,770=FF and030E=17800,0522=17000 remain unchanged.
+These observed readbacks show that mode changes reached EC RAM. Since the
+voltage target remained17.00V under AC in each state, this is not explained
+only by an offline cached UI string. The old age20 record meets the200mV tier:
+17800 -4*200 =17000mV. This is consistent with the firmware aging calculation;
+the precise live internal H value was not independently measured.
+
+GM6 saved corroboration (earlier evidence file, not a fresh laptop session):
+ec-audit/live-voltage-corroboration.json records mode0,age19,3cells,
+BMS13200,target12600,cycles41/42.13200-3*200=12600mV.
+Thus this observed GM6 also already met Healthy's minimum in Performance.
+
+6. Result / boundaries
+
+The displayed WUJIE Full Capacity plus0.80V reduction is consistent with the
+reviewed firmware; it does not by itself indicate a failed button or a UI bug.
+The earlier statement that switching a mode must change displayed voltage was
+too strong: it changes the mode field, while stronger aging can dominate CV.
+These modes are voltage/aging profiles, not95/90% charge hysteresis. The separate
+percentage limiter and its lower restart semantics are not changed by this audit.
+No product source, settings, platform/ROM identity, firmware or EC was changed.
+
+7. Coverage: manufacture date is not a universal EC address
+
+Confirmed here: WUJIE and GM6's reviewed images/EC layouts have the date and
+calendar-age chain described above. Other supported models are not confirmed
+by this audit. In particular0314/0315 must not be read/decode-assumed universally
+for HYDROC, GM5, L16, Honor or unknown laptops merely by family resemblance.
+Honor uses a separate vendor interface, not this Uniwill map.
+Windows BatteryManufactureDate is a DIFFERENT interface, already queried by
+MonitoringWindows.cpp and BatteryInterfacesWindows.h. If its battery driver
+does not return it, INFO may show unknown even though a reviewed EC image has
+its own copy. Calendar age and date are not guaranteed on every laptop.
+
+8. Explicit owner-authorized Windows check,26October13:33Moscow
+PowerShell Read-WindowsBatteryDate.ps1 queried only Battery Class read IOCTLs.
+Ordinary session open failedAccessDenied5. Escalated read opened battery and
+retrieved tag1; BatteryManufactureDate returnedfalse,Win32Error1 (Invalid function).
+The zero output buffer is not a manufacture date. This Windows route does not
+return the date on the current machine. No direct EC/vendor/SMBus method used.
+Exact response: windows-battery-date-result.json. App sources unchanged.

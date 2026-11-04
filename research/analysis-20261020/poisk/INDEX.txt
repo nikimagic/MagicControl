@@ -1,0 +1,131 @@
+SEARCH INDEX — MagicControl battery investigation
+Date:20.10.2026; agent Поиск
+Scope: readonly; paths are evidence, not permission to run code or write devices.
+
+REPOSITORIES
+FanSlider: C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\FanSlider\repository
+  origin=https://github.com/nemoiwkryang/Open-Mechrevo-FanSlider.git commit=c6665cfc15b7ceb0d08111ea317d9ceccc2feb2e
+LumaDesk: C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\LumaDesk\repository
+  origin=https://github.com/YuzakiKokuban/LumaDesk.git commit=196349a373e4da941e022668f84f4016d30fc436
+NUCtool: C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\NUCtool\repository
+  origin=https://github.com/cyear/NUCtool.git commit=20834aac0f8c733f7298b0205c4d8d67950548d8
+OpenRevo: C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\OpenRevo\repository
+  origin=https://github.com/faintonce/open-revo.git commit=51f1d917183758e65ce5d3ebe70294e6157a79f1
+
+SOURCE FILES
+GM6 active OEM BatteryProtection2
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\research-gm6ir0c\all-active\020001C6-GCUService.MySystem.BatteryProtection2.cs
+  exists=True bytes=14899 sha256=e3167dc0dd898f3f742590a741c19082ae999a726c1f60c5a6ef79a25e72be3a
+  Exact native profile methods and private percentage setters; no enforcement proof
+GM6 native constants
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\research-gm6ir0c\all-active\02000053-Define.ECSpec.cs
+  exists=True bytes=15096 sha256=31ff02a1090efed231d5509e48abe0c95f5b77c392f6f64e80ab4f05b8591473
+  ecBt1Temperature=1186; constant alone does not establish units
+GM6 NvramVariable
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\research-gm6ir0c\all-active\0200023A-MyControlCenter.NvramVariable.cs
+  exists=True bytes=20977 sha256=50b4423569701686910381148228e7dc2338a30257dd28029a0c71dd5958684b
+  SetFwVars byte dispatch omits battery keys; whole cached UEFI writer is not usable percentage activation
+HYDROC G2 BatteryProtection2
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\research-hydroc16g2\gcu-by-token\020001D1-GCUService.MySystem.BatteryProtection2.cs
+  exists=True bytes=7098 sha256=42834e85b9110ce7650059b6fa90d0c243c2c068e75a95531818a9f03d3ae840
+  Reconstructed OEM code, target package ControlCenter5.23.51.56; separate native profiles
+HYDROC G2 native constants
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\research-hydroc16g2\gcu-by-token\0200005B-Define.ECSpec.cs
+  exists=True bytes=15714 sha256=2f418a1b68f295ee86e4bc743d9cdd4e263cb4d965a2298b1c635952b52894fa
+  ecBt1Temperature=1186; no unit conversion caller found
+GM6 DSDT
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\research-gm6ir0c\samples\DSDT.dsl
+  exists=True bytes=4912008 sha256=737f71e11c4c23364568d7ffed5402dd0735c6f983bcf78bdea7e793fe2d1bea
+  CGLM host field7B9; _BST OR8 based on configured value is not physical cutoff
+Uniwill Linux snapshot
+C:\Users\admin\Documents\mechrevo\Research\Uniwill-Pulsation-20261014\uniwill-acpi.c
+  exists=True bytes=90721 sha256=914d876fa3255e6ad8f8669162eaa844b23eaf9f41fd181113447c49c3ecc2a7
+  Percentage low7 and charging profiles0x7A6 differ; model gating required
+Tuxedo source
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\battery-temperature-20261020\tuxedo-drivers-main\src\uniwill_keyboard.h
+  exists=True bytes=68946 sha256=69a9196cf92eec11cd3ae50d9081c74600f1720530d2487df6b7a120aa458b8b
+  Native charging profile writer0x7A6; no universal percentage activation
+Uniwill DKMS source
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\battery-temperature-20261020\uniwill-laptop-dkms-main\uniwill-acpi.c
+  exists=True bytes=85509 sha256=5fddb820ded83b5b20890a0665e761f3a5260d6fae983e346f9a1002490f21e1
+  end_threshold setter only7B9; generic property name is not exact board validation
+Leo-stro Wujie findings
+C:\Users\admin\Documents\mechrevo\Research\Battery-Charge-Limit-20261002\Leo-stro-FINDINGS.md
+  exists=True bytes=8976 sha256=eb23789f5f35ec59c2cd6d6c555e359daacd5432e1831daeb16ac338c1af8310
+  WUJIE15XA/14XA-family hypothesis, not Intel GM6 or HYDROC
+Leo-stro Wujie implementation
+C:\Users\admin\Documents\mechrevo\Research\Battery-Charge-Limit-20261002\Leo-stro-charge-limit.pyw.txt
+  exists=True bytes=13364 sha256=583e9ac34ec664743e5100ec4e806565fdd738b118fa256c8109a476e6b1583c
+  Temporary platform7C3=4/store trigger; foreign board write recipe, not permission
+BIOS published links catalog
+C:\Users\admin\Documents\mechrevo\Research\BIOS_Driver_Catalog\catalog.json
+  exists=True bytes=13389 sha256=71c892496e85db9063ad1f688a8da2247eaa907a020bf95ee8ef379c6abad373
+  AuroraX GMxIR7xN105MRO09_CAP.EXE published link; file identity not proven by matching version
+OEM OTA reverse engineering
+C:\Users\admin\Documents\mechrevo\Research\BIOS_OTA_Full\README.md
+  exists=True bytes=30492 sha256=cdafd4fde7a69134ea98bed6c3c60b32c6e8ed705c421bcf0837e4e778efc1ad
+  Download protocol only; not a local EC firmware image
+Local Wujie firmware request
+C:\Users\admin\Documents\mechrevo\Firmware\N.1.20MRO15\README.md
+  exists=True bytes=2467 sha256=aba37c3e80a8e47113a09cdf0b3eb8c0fa2a96d01072d46a8982ccf7abb68305
+  Explicitly no downloaded firmware in this directory; other board
+LumaDesk battery implementation
+C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\LumaDesk\repository\src\core\hal\windows.rs
+  exists=True bytes=39352 sha256=847e7fe206269f5d8c16a7a8ed5e2167de6d2889dbd1d2496226ff458e9b815b
+  Writes770/7B9/7D0/7A6; own verify script proves readback only
+FanSlider
+C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\FanSlider\repository\Program.cs
+  exists=True bytes=145999 sha256=ffd78b259714740c7ed47c45a9871f5d04d482a07a6bdfefab0f34026f6692d0
+  7A6=09 in broad OEM experiment, not isolated battery enable
+Prior local search
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\battery-enable-search\local-projects.txt
+  exists=True bytes=14187 sha256=5307cb5b472600b93cac9da3fa356097c790a0dcb23768331e67a3291b34244d
+  Bounded earlier search, negative evidence and exact scope
+Prior Chinese search
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\battery-enable-search\chinese.txt
+  exists=True bytes=12952 sha256=4473638796b5c6bc75220bed00f419e57692a28a10c48b740d9b3e0086047ddb
+  losewayy JIAOLONG and w568w Wujie are not the Intel target boards
+GMxIR7xN105MRO09_CAP.http-denied.html
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\GMxIR7xN105MRO09_CAP.http-denied.html
+  exists=True bytes=10369 sha256=00eb24d33c2b1e34d3430d4ea152a2c794e42dd578ac7e8e6e96b7657bc1d3da
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-battery_summary.py
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-battery_summary.py
+  exists=True bytes=7625 sha256=159e13932a22831987dd35240e571cefff82141693229cb861c215dd3aed2ec3
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-battery_watch.py
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-battery_watch.py
+  exists=True bytes=9048 sha256=52e28d13701372ae9c6252edb26fec093e59eba4f494e3728d36ad335a74e650
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-CHARGE-CEILING-TRIGGER-CHAIN.md
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-CHARGE-CEILING-TRIGGER-CHAIN.md
+  exists=True bytes=27014 sha256=4efb00c74b3ab65d9d74052ccb1226bc1afc64510e430359e24626b4a2699dad
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-EC-FIRMWARE-FINDINGS.md
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-EC-FIRMWARE-FINDINGS.md
+  exists=True bytes=45802 sha256=15674f8feb3d71fe89d49c7966766b768689f6879bff8f0c3cf1c79bf4c56aff
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-ec_disasm.py
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-ec_disasm.py
+  exists=True bytes=12705 sha256=bf18cc9ca73f449751492c28fa9bea728d6c5782d55905e326130cd7d620464c
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-ec_image_scan.py
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-ec_image_scan.py
+  exists=True bytes=11714 sha256=0d24f01f275d8755d3a8a84bcdc524fdf5d3f8ea7890ba78cf4a4f3d6404da94
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-ec_state_capture.py
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-ec_state_capture.py
+  exists=True bytes=9814 sha256=5ea14c633dbb82f3312e3d7208a869dbbbbda8dcb3766690fd383fe671c3fd70
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-FIRMWARE-118-PLAN.md
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-FIRMWARE-118-PLAN.md
+  exists=True bytes=26575 sha256=42b6b20b6631e7c6812f982d98dd6ac992fb601fb6673c004567b9a133432af2
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-README.md
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-README.md
+  exists=True bytes=23243 sha256=9de3e519cfb8435da4d23e77aa339d3ff1c0eff5c46ae73580a572f3cc65c582
+  Fresh public source saved2026-10-20; see findings for model/version boundaries
+HydroControl-tree.json
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\analysis-20261020\poisk\sources\HydroControl-tree.json
+  exists=True bytes=84486 sha256=7e7144262ea432c03491175dcfe8efdfa2920fdd936b0075eed0f795e48156c1
+  Fresh public source saved2026-10-20; see findings for model/version boundaries

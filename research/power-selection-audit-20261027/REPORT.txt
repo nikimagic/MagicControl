@@ -1,0 +1,56 @@
+CPU mode selection audit, 2026-10-27
+
+Scope: static review of Windows/Linux selection, drawing and availability
+for every registered device backend; no hardware execution, no tests.
+Only live evidence inspected here: current WUJIE portable0.1.243 log.
+
+Windows common selection:
+SettingsPage::select clears every sibling MC.Selected property and sets
+only the requested index. drawButton previously additionally forced Gaming
+when apuLockedByFanDefault() was true. This could display Office+Gaming.
+Removed the forced drawing condition; selected CPU state remains the source.
+FAN Default no longer fabricates a CPU selection. No writer/limit changes.
+
+Backend coverage:
+WUJIE: PowerState::powerButton uses complete override readback, native751
+mask90, and explicit Auto/Custom intent. Current log has Office/A0/0,0,0,
+AC absent, application_ec_write_count0. The old FAN Default restriction
+on Minimal/Custom remains; this audit does not authorize removing it.
+GM6IR0C: explicit Auto/Economy/stock CPU/custom/native profile branches.
+GM5HG0A and MACHENIKE L16: shared RAM controller branch, own limits/defaults.
+HYDROC16G2: shared RAM controller branch, own limits/codec/ownership guards.
+Honor HLYL-WXX9: OEM native Balanced/Performance selection and SMU Custom.
+These four RAM models bypass apuLockedByFanDefault; Honor bypasses it too.
+HPBSD: public PowerLimits unsupported; no fabricated selected power mode.
+Remaining10 inventory-only profiles and Unknown: no admitted controller
+or EC transport -> renderSelection clears all performance/custom selection.
+Those10 are GM6PX7X, X6xx55xW-B2, X6xR55xY, GM6BG0X, X6xx57tW,
+X6DR55xx-B2, GX6HG0U-F, X8xR55xP-B2, X6AR55xY, GM6IX9B.
+Registry coverage:17 registered devices (16 laptops+HPBSD), plus Unknown.
+
+Windows tray reads the same selectedPowerMode; no second forced Gaming
+indicator found. Some backends intentionally do not expose tray CPU state.
+Minimal/Custom availability remains model-specific, including existing
+AC/ownership/FAN guards. Availability is not proof of selected CPU state.
+
+Linux SettingsPage creates all CPU buttons, Custom and slots disabled,
+with no CPU action callback; it does not mirror Windows hardware support.
+No FAN Default-based forced CPU selection found in Linux SettingsPage.
+
+Reviewed sources:
+src/gui/windows/SettingsPage.cpp
+src/gui/windows/MainWindow.cpp
+src/gui/linux/SettingsPage.cpp
+src/gui/common/CpuPowerLabels.h
+src/protocols/uniwill/x5sp4nag/PowerState.h
+src/core/include/MagicControl/StockCpuProfiles.h
+src/core/include/MagicControl/DeviceProfile.h
+src/devices/DeviceRegistry.cpp
+src/devices/mechrevo/ReportedProfiles.cpp
+src/devices/mechrevo/gm6ir0c/ControlWindows.cpp
+src/devices/huawei/hlyl-wxx9/ControlWindows.cpp
+src/devices/minisforum/hpbsd/Profile.cpp
+
+Validation: source diff whitespace check passed. No builds, GUI execution,
+hardware writes, tests or portable update performed for this audit.
+Static coverage is not a claim of device-by-device hardware verification.

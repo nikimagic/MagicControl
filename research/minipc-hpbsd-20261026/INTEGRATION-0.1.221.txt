@@ -1,0 +1,48 @@
+MagicControl0.1.221 — MINISFORUM HPBSD,26.10.2026
+
+Реализовано: exact профиль HPBSD/EliteMini, пункт меню17, официальный support
+link, native CPU/PawnIO Tctl/core energy/package power, общая Windows частота,
+отдельный read-only ITE5571 CPU/system tach + температуры. SMU PM4C0006–9
+подключён к существующему reader; SETs/CLI power status/диагностика читают лимиты.
+Общие исправления GPU:1414:008C software, physical PCI identity aliases,
+presentation merge/routes и сохранение свежих ADLX при отсутствующем ADL.
+CPU System temperature и system fan подписаны отдельно. Геометрия не менялась.
+
+Аппаратная проверка на192.168.10.70 выполнена через новую mctl0.1.221:
+профиль minisforum-hpbsd, PM4C0009, STAPM54.400002W, Slow60.000004W, Fast65W.
+Три status snapshots: CPU37.5–38.125C, CPU clock3131.75–3223.5MHz,
+CPU fan1958.45–1962.01RPM, system fan1520.63–1523.85RPM.
+CPU power после первой базовой выборки0.813916–1.405791W.
+Одна GPU-card Radeon780M:35C,800MHz,4–6W. Software renderer не выбран;
+дубли физической Radeon не стали двумя карточками. Сырые источники сохраняются.
+Полный вывод: live-0.1.221.jsonl,
+SHA25687cfbe6a50cca917ea41ae9de72c086d84e97e021d98e77c2849cf37be16a4c7.
+
+Build-All -Resume завершён: complete; Windows/Linux GUI+CLI, portable verified.
+WindowsGUI6ffb0b07d135b272cf0bab88ce88f6ea0624d863640e67412e3c5dafb8575118
+WindowsCLIc22d00b8575f64f6559833b9a7f55e69e1e1c144a5b4498a4b99746a3dd6c68e
+LinuxGUI4be3ed52726aeac49d1b513c22dd9d923428dbb6d917e8a2b2d7c627d0c01b25
+LinuxCLI44cf5bd65de00418503ea731978ccfa4a971a06e8137f15b6d7155167370bf0c
+git diff --check прошёл. Общие тестовые цели не запускались.
+
+На мини-ПКGUI/CLI переданы в C:\Users\Public\Downloads\MagicControl-HPBSD-0.1.221,
+удалённые SHA совпали с локальными. Settings/fonts/licenses скопированы только
+из предыдущей установки этого мини-ПК. Настройки Wujie/Honor не переносились.
+GUI0.1.220 продолжает работать;0.1.221GUI ещё не запущен в интерактивном сеансе.
+Запуск через привилегированную Scheduled Task отклонён auto-review;
+задача не создавалась. Возможен ручной запуск новой GUI на рабочем столе.
+
+Штатный Control Center именно для HPBSD не найден. Официальная страница
+https://www.minisforum.com/pages/product-info
+публикует для UM880Pro/UM890Pro BIOS/драйверы/руководство. По центральному
+каталогу официального пакета (593entries,78,913downloaded bytes) есть только
+AMD_Chipset/DRTM/GFX,Intel/MTK Wi-Fi/BT,RealtekAudio/AudioAPP/Ethernet.
+ControlCenter/Space/fan utility в именах и структуре пакета нет.
+https://pc-file.s3.us-west-1.amazonaws.com/UM880PRO_UM890PRO/Driver/HPBSD_PHX_MINISFORUM_Drivers_x64_240408.zip
+Сохранён индекс official-driver-package-index.json. Ничего из пакета не запускалось.
+
+Границы: это подтверждённое подключение мониторинга; fan,SMU-power,charge,
+lighting setters не выдаются как готовое управление. Подробности собственного
+протокола и незавершённого fan-control исследования — README профиля.
+Нельзя переносить Uniwill-регистры, нижний порог батареи или ROM-ID на HPBSD.
+Бинарные BIOS/EC/логи пользователя не включать в публичный релиз.

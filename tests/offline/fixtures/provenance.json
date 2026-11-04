@@ -1,0 +1,98 @@
+[
+  {
+    "case": "fast",
+    "record": {
+      "file": "MagicControl/windows/logs_WUJIE_Series-X5SP4NAG/dumps/dump-20261020-100812-0/ec-after.bin",
+      "source_sha256": "672c2f38e00a5fe6524925a35de1cf433d1232f11f49a28425512538a3719413",
+      "ram_sha256": "672c2f38e00a5fe6524925a35de1cf433d1232f11f49a28425512538a3719413",
+      "validity": "per-byte mask",
+      "fields": {
+        "0x490": 15,
+        "0x497": 69,
+        "0x49F": 10,
+        "0x742": 38,
+        "0x7A5": 0,
+        "0x7A6": 0,
+        "0x7B9": 85,
+        "0x7C3": 4,
+        "0x7CC": 164,
+        "0x7CD": 0,
+        "0x7CE": 65,
+        "0x7D0": 80
+      },
+      "words_little_endian": {
+        "0x30E": 34885,
+        "0x434": 1802,
+        "0x436": 4466,
+        "0x438": 16818,
+        "0x4A2": 3040,
+        "0x4A4": 1802,
+        "0x51C": 5800,
+        "0x520": 6300,
+        "0x522": 17000
+      },
+      "bms_rsoc_raw": 77,
+      "phase": "ec-after",
+      "snapshot": "snapshots/672c2f38e00a5fe6524925a35de1cf433d1232f11f49a28425512538a3719413.bin",
+      "mask": "snapshots/672c2f38e00a5fe6524925a35de1cf433d1232f11f49a28425512538a3719413.valid",
+      "mask_sha256": "3431383721510cf1c211de027cf958c183e16db5fabb6b230eb284c85e196aa9"
+    },
+    "expected": {
+      "current_mA": 1802,
+      "voltage_mV": 16818,
+      "soc": 77,
+      "raw520": 6300,
+      "raw522": 17000,
+      "base_BE": 17800,
+      "watts": 30.306036
+    }
+  },
+  {
+    "case": "slow",
+    "record": {
+      "file": "MagicControl/windows/logs_WUJIE_Series-X5SP4NAG/dumps/dump-20261020-160057-0/ec-after.bin",
+      "source_sha256": "19dca57d8b17816369ced2c64cc8318acaa1b9cc13ddedf043a6226aa71653e3",
+      "ram_sha256": "19dca57d8b17816369ced2c64cc8318acaa1b9cc13ddedf043a6226aa71653e3",
+      "validity": "per-byte mask",
+      "fields": {
+        "0x490": 15,
+        "0x497": 69,
+        "0x49F": 10,
+        "0x742": 38,
+        "0x7A5": 0,
+        "0x7A6": 0,
+        "0x7B9": 0,
+        "0x7C3": 4,
+        "0x7CC": 164,
+        "0x7CD": 0,
+        "0x7CE": 100,
+        "0x7D0": 80
+      },
+      "words_little_endian": {
+        "0x30E": 34885,
+        "0x434": 612,
+        "0x436": 4988,
+        "0x438": 16889,
+        "0x4A2": 3030,
+        "0x4A4": 612,
+        "0x51C": 5800,
+        "0x520": 6300,
+        "0x522": 17000
+      },
+      "bms_rsoc_raw": 86,
+      "phase": "ec-after",
+      "snapshot": "snapshots/19dca57d8b17816369ced2c64cc8318acaa1b9cc13ddedf043a6226aa71653e3.bin",
+      "mask": "snapshots/19dca57d8b17816369ced2c64cc8318acaa1b9cc13ddedf043a6226aa71653e3.valid",
+      "mask_sha256": "3431383721510cf1c211de027cf958c183e16db5fabb6b230eb284c85e196aa9"
+    },
+    "expected": {
+      "current_mA": 612,
+      "voltage_mV": 16889,
+      "soc": 86,
+      "raw520": 6300,
+      "raw522": 17000,
+      "base_BE": 17800,
+      "watts": 10.336068
+    }
+  }
+]

@@ -1,0 +1,58 @@
+Native battery button latency,26October2026
+Source audit and captured portable bytes only. No app/hardware execution.
+
+Fresh session: MagicControl-1.jsonl,app0.1.217,UTC11:15:53 start.
+Captured immutable byte size/hash are recorded in EVENTS.json; live files may
+grow/change slots afterwards. TIMINGS.json contains per-action durations.
+Nine native mode commands251/252/253 completed with observation:
+worker settings.apply803.778..1210.198ms,median981.978ms.
+This is logged software processing duration, not an end-to-end stopwatch or
+physical charging-response measurement. Queue/UI rendering can add further time.
+The worker posts WM_APP+10 on completion, so its success update does not wait
+for the next3second refresh timer. No false timer-delay diagnosis is asserted.
+Each captured command generated605..1282 action-channel events, not necessarily
+that many distinct physical reads. Native mode readbacks changed successfully.
+
+Source path before:
+applyVoltageMode -> complete NativeBatteryController::read precheck ->typedset;
+then settings worker readStateFromEc (unrelated keyboard/power fields);
+native battery readback; batteryReader.readBatteryOnly +readOsBatteryOnly+
+readEcBatteryOnly+readBatteryPowerPolicy; APU/SMU or Intel diagnostics;
+only then completion notification/button update.
+Thus a battery button synchronously pays for unrelated telemetry before UI
+completion. Existing logs do not measure each of those stages independently.
+
+Change:
+- Typed setter retains all fresh model/context/APP/ownership checks, masked
+  RMW, readback, settings persistence and bounded rollback, unchanged in core.
+  Remove only the duplicate UI pre-read of the whole battery snapshot.
+- For native mode commands with a valid existing UI snapshot and a real voltage
+  backend: preserve other observations and their timestamps; perform the setter
+  and a fresh NativeBatteryController::read confirmation. Validate connected,
+  writable, current mode, APP and context exactly as before.
+- Defer unrelated keyboard/power/OS/EC battery and SMU/Intel diagnostics to the
+  existing normal poll. Retain battery values with stale/retained markers.
+  APU keeps its own previous freshness/edit availability instead of being
+  artificially disabled just because a battery button deferred its refresh.
+- If the previous UI snapshot is invalid, retain the original full refresh.
+  Error/uncertain-write paths still perform their original fresh recovery reads.
+  No optimistic selected mode or reduced writer/transport admission.
+- Add software_command_timing apply_ms/confirmation_ms with explicit
+  monitoring=deferred and physical_response_measured=false.
+- Correct the WUJIE generic percentage-status branch: native voltage mode
+  completion must say mode confirmed by EC readback, not "threshold written".
+
+Scope: same native button path on every admitted model, no new model capability.
+No EC/driver/firmware writers or core APIs changed. OSD/category, controls,
+geometry and scroll remain unchanged. Linux shared strings compile, but no
+unsupported native writer is enabled there.
+
+Verification: both Release builds/portable hashes, source diff checks.
+No new timing on hardware was measured; the next owner-run session can quantify
+apply and confirmation separately using the added log event.
+
+A second source defect: syncBatteryCard and applyVoltageMode blocked all clicks
+while a passive poll was running, despite start already supporting a bounded
+one-command queue. Native buttons now allow that existing queue during reading
+only, showing the pending OSD immediately; active writes/interactivity still
+block commands. Core transaction/serialization remains unchanged.

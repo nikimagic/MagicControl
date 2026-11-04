@@ -1,0 +1,73 @@
+UpdateCTestConfiguration  from :/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize/DartConfiguration.tcl
+Test project /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+    Start 1: firmware_afu_synthetic
+
+1: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize/firmware_validator_offline_tests "afu"
+1: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize
+1: Test timeout computed to be: 90
+1: PASS afu: 35 pure-buffer checks; no hardware/vendor code linked.
+1/5 Test #1: firmware_afu_synthetic ...........   Passed    0.35 sec
+test 2
+    Start 2: firmware_fpt16_synthetic
+
+2: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize/firmware_validator_offline_tests "fpt16"
+2: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize
+2: Test timeout computed to be: 90
+2: PASS fpt16: 105 pure-buffer checks; no hardware/vendor code linked.
+2/5 Test #2: firmware_fpt16_synthetic .........   Passed    0.71 sec
+test 3
+    Start 3: firmware_fpt19_synthetic
+
+3: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize/firmware_validator_offline_tests "fpt19"
+3: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize
+3: Test timeout computed to be: 90
+3: PASS fpt19: 105 pure-buffer checks; no hardware/vendor code linked.
+3/5 Test #3: firmware_fpt19_synthetic .........   Passed    0.94 sec
+test 4
+    Start 4: firmware_nvidia_synthetic
+
+4: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize/firmware_validator_offline_tests "nvidia"
+4: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize
+4: Test timeout computed to be: 90
+4: PASS nvidia: 72 pure-buffer checks; no hardware/vendor code linked.
+4/5 Test #4: firmware_nvidia_synthetic ........   Passed    0.23 sec
+test 5
+    Start 5: firmware_real_files
+
+5: Test command: /usr/bin/python3 "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/tests/offline/firmware/verify_real_files.py" "--reader" "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize/firmware_validator_offline_tests" "--repo" "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl" "--scratch" "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize/real-fixtures"
+5: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux-sanitize
+5: Test timeout computed to be: 120
+5: PASS pinned file: wujie-afu-pass1
+5: PASS pinned file: wujie-afu-pass2
+5: PASS pinned file: gm6-stock-full-file
+5: PASS pinned file: gm6-patched-full-file
+5: PASS pinned file: gm6-region-is-not-full-spi
+5: PASS 5 pinned local fixtures; 4 accepted structural files and 1 refused region; originals unchanged.
+5/5 Test #5: firmware_real_files ..............   Passed   20.91 sec
+
+The following tests passed:
+	firmware_afu_synthetic
+	firmware_fpt16_synthetic
+	firmware_fpt19_synthetic
+	firmware_nvidia_synthetic
+	firmware_real_files
+
+100% tests passed, 0 tests failed out of 5
+
+Label Time Summary:
+afu                 =   0.35 sec*proc (1 test)
+firmware            =  23.13 sec*proc (5 tests)
+fpt16               =   0.71 sec*proc (1 test)
+fpt19               =   0.94 sec*proc (1 test)
+nvidia              =   0.23 sec*proc (1 test)
+offline             =  23.13 sec*proc (5 tests)
+private-fixtures    =  20.91 sec*proc (1 test)
+
+Total Test time (real) =  23.32 sec

@@ -1,0 +1,76 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\IntelFpt\FPTW64.exe
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha256): 3F95F867EB9E78BEE974B380F598B505A76340CB2918D841A3F0C5951D7A8883
+
+Signing Certificate Chain:
+    Issued to: USERTrust RSA Certification Authority
+
+    Issued by: USERTrust RSA Certification Authority
+
+    Expires:   Tue Jan 19 02:59:59 2038
+
+    SHA1 hash: 2B8F1B57330DBBA2D07A6C51F70EE90DDAB9AD8E
+
+
+        Issued to: Sectigo RSA Code Signing CA
+
+        Issued by: USERTrust RSA Certification Authority
+
+        Expires:   Wed Jan 01 02:59:59 2031
+
+        SHA1 hash: 94C95DA1E850BD85209A4A2AF3E1FB1604F9BB66
+
+
+            Issued to: Intel Corporation
+
+            Issued by: Sectigo RSA Code Signing CA
+
+            Expires:   Thu Apr 06 02:59:59 2023
+
+            SHA1 hash: 6AED8E3DB918ED7C2DC154F5F8E69F36A9CB2988
+
+
+The signature is timestamped: Mon Jun 13 15:21:29 2022
+
+Timestamp Verified by:
+    Issued to: USERTrust RSA Certification Authority
+
+    Issued by: USERTrust RSA Certification Authority
+
+    Expires:   Tue Jan 19 02:59:59 2038
+
+    SHA1 hash: 2B8F1B57330DBBA2D07A6C51F70EE90DDAB9AD8E
+
+
+        Issued to: Sectigo RSA Time Stamping CA
+
+        Issued by: USERTrust RSA Certification Authority
+
+        Expires:   Tue Jan 19 02:59:59 2038
+
+        SHA1 hash: 02D65B95E28370C1570095FA88F923DD937FAD8F
+
+
+            Issued to: Sectigo RSA Time Stamping Signer #3
+
+            Issued by: Sectigo RSA Time Stamping CA
+
+            Expires:   Thu Aug 11 02:59:59 2033
+
+            SHA1 hash: AB34013AAC4097319F081AF0B318E183F80F7881
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\IntelFpt\FPTW64.exe
+
+
+Number of signatures successfully Verified: 1
+
+Number of warnings: 0
+
+Number of errors: 0
+

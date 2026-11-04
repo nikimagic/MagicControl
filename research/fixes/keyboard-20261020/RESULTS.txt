@@ -1,0 +1,85 @@
+Исправления подсветки после пяти модельных исследований —20.10.2026
+Исходный baseline5b1f092 / Windows+Linux portable0.1.88.
+
+РЕАЛИЗОВАНО
+Wujie: adapter flash больше не пишет временный idle blank как KeyboardLevel0;
+selected E0 и power-disable bit1 разделены, свежий Fn-level сохраняется.
+Возвращается только собственная временная RGB/effect группа, не старый чужой
+снимок. Migration/restore не принимают временное гашение за новый выбор Off.
+
+GM6: один pure exact-native RGB converter для fixed/custom/Cycle6. Вся native
+recognition palette и special cases сведены в protocol header; saved raw RGB
+не перекодируется. Worker восстанавливает только явные Keyboard* на startup/
+подтверждённом resume, без FAN/APU/цикла autoplay. Bounded pre-write retries,
+uncertain write terminal. Restore сравнивает selectedlevel, сохраняет native
+idle disable; GCUBridge/process owner active/unknown запрещает takeover.
+
+Общий core: KeyboardLightingPause и power epoch приостанавливают существующий
+цикл на сон/собственный restore/flash; resume/rebase только после свежего
+подтверждённого Mono state. Неоконченный scope останавливает цикл с unknown,
+defer допустим лишь для pre-write transient. Все обычные шаги Background
+DeviceOperation: массовое disable/enable кнопок на цвете не добавлено.
+Raw selected и effective blank имеют отдельный setter contract powerDisabled.
+RGB journal проверяет целую apply группу и сообщает rollback status caller;
+ownership/power loss не вызывают слепой old snapshot replay.
+OS preflight вынесен через IEcBackend/EcAccess в Windows transport: core не
+вызывает SCM/Toolhelp напрямую. Это snapshot admission, не эксклюзивный lease.
+
+Honor: exact BIOS1.09 native idle/fade и retained-HIGH resume classifiers,
+selected level отдельно от actual duty/period/phase. OFF/LOW больше не зависят
+от requested HIGH для валидности baseline. Неизвестные PWM/guards остаются
+ошибкой, activity counters и новые writeaddresses не добавлены. PNPCFG finish
+проверяется до success/no-op; failed session больше не допускает target/address
+access, destructor лишь пытается завершить cleanup. Fresh03FC.C0 RMW сохранён.
+Win/Linux native timeout делят один stable-readback/owned-rollback protocol.
+
+Дамп: keyboard-initial.json с исходными reviewed RGB/level/disable raw fields
+либо typed Honor context; keyboard-after.json с доступным дополнительным
+typed final context/error. Honor fixed PWM/timer/guard rows читаются в parent,
+не в убиваемом child; исходный RAM0..FFF не выдаётся за весь SFR context.
+
+Unknown/HYDROC: существующий read-only HID collector расширяется binding/
+schema/completeness данными. Exact OEM descriptor helper отличает keyboard
+и lightbar candidates; bcdDevice не заменяет FW80. Permission всегдаfalse,
+не добавлены feature/output requests. Linux — существующие native LED metadata,
+configured brightness/channels/parent/driver; безgeneric Unknown writer.
+Конкретные adapter изменения и пределы — unknown.txt/hydroc.txt.
+
+ИНТЕРФЕЙС И ДАННЫЕ
+Эталонные Wujie cards/geometry/palette/paint/scroll компоненты не меняются.
+Изменяется только доступность команд/описание состояний в существующих полях.
+Не включён host idle вместо запрошенного сохраняющегося аппаратного timeout.
+Статическая Wujie RGB калибровка остаётся прежней. NativeMode не переименован:
+это существующий preset, не заявленная передача firmware ownership.
+Личные INI/CSV/логи не заменяются и не входят в коммит.
+
+ОСТАВШИЕСЯ АППАРАТНЫЕ УСЛОВИЯ
+На HYDROC нужен свежий dump с VID/PID/Usage/Report IDs/lengths и затем отдельно
+подтверждённый80/88 protocol step. Не включать EC SingleZone приclear766.2.
+HID88 не читает полныйpalette; saved/cache не становятся actual RGB/rollback.
+GM6 pulse color mapping и физические новые сценарии sleep/idle требуют данных
+реального устройства. Новая сборка не будет объявлена аппаратным подтверждением.
+
+ПРОВЕРКИ И ПОСТАВКА
+Статическая сверка агентами и корнем, diff checks. Тесты, GUI/CLI/OEM,
+аппаратные пробы и установка драйверов в этой задаче не запускались.
+Build-All успешно завершён: Windows и Linux portable0.1.89, GUI+CLI каждой ОС.
+Версии и SHA256 всех четырёх build/portable пар совпадают; Windows VERSIONINFO
+проверена общим builder. Все425 application inputs совпадают с завершённым
+билдом. Все6 личных INI/CSV имеют прежние SHA256. Проверенные protected UI
+geometry/theme/paint/common/GTK файлы не имеют diff. Полный машиночитаемый
+отчёт: research/ui/keyboard-fixes-20261020.json.
+Компиляция без ошибок, с предупреждениями: в том числе formatting/indentation,
+shadowed label в новом metadata helper, а также прежние signedness/unused/
+array-bounds diagnostics других компонентов. Warning-free сборка не заявляется.
+GitHub упаковка/push/publication не входят в запрос.
+
+УТОЧНЕНИЕ ВЛАДЕЛЬЦА О ПОЛОСЕ У ПЕТЕЛЬ
+Отдельный ограниченный проход Wujie: wujie-lightbar.txt. В OEM есть ITE HID
+hinge ветка, но её exact presence на этом Wujie пока не установлена. Текущий
+LightingOwnership проверяет reviewed OEM services/processes, не HID presence.
+Будущий typed status должен раздельно хранить presence/protocol/access/owner:
+AccessDenied/SharingViolation/partial enumeration не означают «узла нет».
+Физическую полосу, legacy EC765.6 и HID collection не объединять в один флаг.
+Новый descriptor inventory помогает получить эти данные, новых hinge writers
+эта сборка не включает. Production после source freeze не менялась.

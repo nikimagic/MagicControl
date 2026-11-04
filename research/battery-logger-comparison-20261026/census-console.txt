@@ -1,0 +1,4 @@
+catalogues {'WUJIE': 62, 'GM6': 27, 'GM6_CURRENT_CALC': 14}
+WUJIE word/byte fields 62 unique addresses 62 DPTR sites 618
+GM6_1.11 word/byte fields 41 unique addresses 41 DPTR sites 470
+GM6_1.12 word/byte fields 41 unique addresses 41 DPTR sites 471

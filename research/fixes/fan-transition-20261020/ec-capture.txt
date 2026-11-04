@@ -1,0 +1,36 @@
+EC capture scheduling and timing — 2026-10-20
+
+Scope: common dump orchestrator plus verified Wujie EcAccess transport and
+optional local EC getters. No driver/IOCTL, register writer or fan-map changes.
+
+The existing Wujie dump required97.797s and98.652s for two complete4096-byte
+snapshots. It had no read retries/errors. Repeated slow address pages alone do
+not establish contention or a faulty driver. No speedup is claimed without a
+new hardware capture.
+
+Added ec-read-timing.json and ec-after-read-timing.json. Every attempted16-byte
+read records address/count, outcome and elapsed microseconds, including failed
+or busy attempts. Wujie additionally separates local gate wait, backend/cross-
+process gate wait, actual raw-byte I/O, successful bytes and slowest-byte address.
+Other typed transports retain end-to-end timing and explicitly null detailed
+transport timing; no fabricated mutex/I/O breakdown is inferred.
+
+A nestable process-local PassiveEcReadPause is independent of ObservationPause
+and DeviceOperation admission. Only after confirmed firmware Default, and only
+for the snapshot scope, optional parent-process EC power/battery/fan telemetry
+getters defer reads. The dump remains allowed to read; the two transaction gates
+are unchanged. RAII releases the hint on normal completion/cancellation/error.
+Active online cooling, safety/ownership checks, cleanup and commands are never
+paused by this hint. Other providers (MSR/SMBus/storage/GPU/Windows battery IOCTL)
+and isolated diagnostic-helper telemetry remain independent. Already running
+reads may finish; this is neither an atomic EC snapshot nor a global driver pause.
+ReadOnly/unconfirmed Default snapshots do not set the hint.
+
+All4096 addresses, valid masks, retry/cancellation behavior,180-second budget,
+16-byte lock holds and2ms inter-block fairness remain. Default→snapshot→telemetry
+and30-secondMax sequencing, minimum60-second telemetry and finalDefault policy
+are preserved. No prior Manual/online mode is automatically replayed after dump.
+
+Protected cards/fonts/layout/scrollbar are unchanged. Compilation and static
+artifact/source inspections are reported separately by root; no application,
+GUI, test suite or hardware experiment is run for these changes.

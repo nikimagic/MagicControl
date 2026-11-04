@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Start SensorProbe
+Name[ru]=Собрать данные датчиков
+Comment=Collect 10 sensor snapshots, 5 seconds apart
+Comment[ru]=10 снимков датчиков с интервалом 5 секунд
+Exec=bash -c "location=\\$1; case \\"\\$location\\" in file://localhost/*) location=\\${location#file://localhost}; printf -v location %%b \\"\\${location//%%/\\\\\\\\x}\\";; file:///*) location=\\${location#file://}; printf -v location %%b \\"\\${location//%%/\\\\\\\\x}\\";; file:*) exit 1;; esac; exec sh \\"\\$(dirname -- \\"\\$location\\")/StartSensorProbe.sh\\"" SensorProbe %k
+Icon=utilities-system-monitor
+Terminal=true
+StartupNotify=false
+Categories=System;Utility;

@@ -1,0 +1,4 @@
+Implementation completed in core/device/protocol backends.
+Common product build0.1.220 completed; both portable GUI/CLI pairs verified in VERIFICATION.json.
+See REPORT.txt and src/core/src/POWER_MODES.md for semantics and limits.
+No hardware or tests run. Minimal/Custom retained; native CPU standard choices preserve FANs.

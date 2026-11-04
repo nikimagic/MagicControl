@@ -1,0 +1,263 @@
+HYDROC-16 G2: полное статическое исследование подсветки
+20.10.2026
+
+ГРАНИЦЫ
+-------
+Изучены AGENTS.md, README модели, CONTROL-REVIEW и реальные восстановленные
+тела exact OEM5.23.51.56. Production source/UI/карточки/scrollbar/INI не менялись.
+Оборудование, драйверы, GUI/CLI/OEM, тесты/билды/коммиты не запускались.
+Созданы только hydroc.txt и hydroc.json. Это static source proof, не аппаратная
+проверка идентичности клавиатуры или физического исполнения эффектов.
+Wujie остаётся визуальным эталоном; новый аппаратный backend не требует вкладки.
+
+ИТОГ
+====
+Точный OEM поддерживает ITE HID keyboard и EC SingleZone fallback. На HYDROC
+G2 в старом EC dump fallback НЕ заявлен. Для выбора конкретного HID codec пока
+не хватает VID/PID/usage/page/firmware реального экземпляра. Поддерживаемое
+семейство и его команды восстановлены, но заявлять PID600B/per-key G2 уже
+доказанными нельзя. Получить недостающую HID metadata можно нашей дампилкой:
+такой read-only collector уже есть, новый extractor не требуется.
+
+Главная новая находка: штатный idle timeout в секундах — HOST KeyboardCloseTimer
+с keyboard+mouse RawInput. Он НЕ равен HID1A welcome timeout и не требует UEFI
+welcome-записей. Общий host timer можно проектировать отдельно от HID codec.
+
+ИСТОЧНИК И ХЭШИ
+===============
+Корень всех путей C:\Users\admin\Documents\mechrevo_dsh\MagicControl.
+OEM/ означает research/devices/hydroc-16-g2/oem-5.23.51.56/
+recovered-20261019/readable-csharp/.
+GCUService.exe в build/research-hydroc16g2/installer/app/AiStoneService/
+MyControlCenter/ повторно хэширован:
+e5d388b45515d06567c2e71e4c2b882a1fa9313704d70785f19aec960e361003.
+Это собственные восстановленные5512 JIT тела, не ранние Runtime exception
+заглушки. Хэши16 исследованных типов, route matrix и packets — в hydroc.json.
+
+1. ЧЕТЫРЕ РАЗНЫХ УРОВНЯ «ТИПА КЛАВИАТУРЫ»
+=========================================
+A) CustomizeInfo.m_sKeyboardType — coarse support string, не HID PID/LM enum.
+OEM/02000244-MyControlCenter.CustomizeCtrl.cs:465–474 вызывает NvramVariable_Init;
+:514–520 берёт GetKeyboardType(). OEM/02000257-MyControlCenter.NvramVariable.cs:
+928–949 проверяет single-zone/single-colour support; :1141–1152 возвращает
+строки0/1/2, default1. SingleZone detection здесь D00.bit0 (:1075–1085),
+single-colour support78C.bit0 (:1061–1071). Нельзя трактовать строку1 как
+RGBKB_Type.SingleZone только потому, что enum тоже имеет такое численное значение.
+
+B) RGBKeyboard.init → LM_Manager.LM_Init — реальный transport selection.
+OEM/02000181-MyRGBKeyboard.RGBKeyboard.cs:1704–1766 вызывает LM_Init и factory;
+OEM/020000D7-LightingModel.LM_Manager.cs:28–85 пробует ITE ПЕРВЫМ, EC fallback
+вторым, затем пишет обнаруженный LM enum в ItemSupport/KeyboardType.
+
+C) ITE type — результат USB HID identity + UsagePage + FW80 + EC73C subtype.
+OEM/020000DF-LightingModel.LM_ITE_RGB.cs:4115–4299.
+
+D) HIDKeyboardFactory выбирает класс эффектов по этому enum, иногда ещё по
+major FW: OEM/020003F3-MyControlCenter.MyRgbKeyboard.HIDKeyboardFactory.cs:13–83.
+FourZone → FourZoneKeyboard; MEZone2nd → HIDKeyboard;
+2p1 variants → _2p1ndkeyboard/KC/QC по FW;2p2 → _2p2ndkeyboard;
+3nd и3p1 → _3ndKeyboard; EC SingleZone → SingleZone.
+Эти уровни нельзя объединять по одному названию «KeyboardType».
+Literal RGBControl/RGBControl.exe в проверенном recovered service не найден;
+реальные классы — RGBKeyboard/LM_ITE_RGB/HIDKeyboard, MQTT Keyboard/Ctrl.
+Само слово RGBControl не устанавливает driver/ABI.
+
+2. ТОЧНЫЙ ТРАНСПОРТ И ДРАЙВЕР
+=============================
+OEM/020000C9-UsbHidModel.HIDManager.cs:35–98:
+SetupAPI HID interface → CreateFile sharedRW → HidD_GetAttributes →
+HidD_GetPreparsedData/HidP_GetCaps. Нужны VID/PID, Usage1, UsagePage и
+FeatureReportByteLength; не первый похожий USB Input Device.
+
+OEM/020000DD-LightingModel.ITE_SPEC.cs:10–24:
+VID048D, keyboard PIDs CE00/6000/6001/6002/6003/6004/6006/6007/600A/600B.
+Lightbar PID7001/7000/6005/6008/6010 — отдельные устройства, не клавиатура.
+UsagePageFF12 — FourZone (Project17 отдельно FourZoneSingleColor);
+FF02 — MEZone1st, кроме FWmajor32 → MEZone3nd98;
+FF03 — FW+73C routing. Неизвестные combinations должны оставаться unknown.
+
+Это HID Feature Reports через системный hid.dll/HID stack. UWACPIDriver
+11.2.18.347 нужен отдельным EC metadata/fallback путям, не RGB transport HID.
+PawnIO не является HID транспортом. vhidmini из OEM — отдельный virtual-HID/
+airplane путь, не основание направить ITE lighting packets туда.
+
+3. ЧТО ИМЕННО ДОКАЗЫВАЕТ СТАРЫЙ G2 DUMP
+=======================================
+build/audit-logs-20261019/logs_HYDROC-16-ca5dbd707263/logs_HYDROC-16/
+dumps/dump-20261019-151330-0/, версия0.1.69:
+Project740=1A(26),73C=18,766=93,78C=00,D00=2C.
+D00.bit0 и78C.bit0 clear; это совместимо с coarse RGB string1.
+EC fallback требует ДРУГОЙ guard766.bit2, он тоже clear:
+OEM/020000DB-LightingModel.LM_EC_RGB.cs:49–65.
+Следовательно EC SingleZone fallback не заявлен в этом снимке. Нельзя ради
+включения карточки перенести сюда769–76B/767/78C writer Wujie или GM6.
+
+73C=18 — subtype, не готовый HID enum. Условные, пока НЕ выбранные ветки:
+- Только если PageFF03 и FWmajor34: subtype24(18hex) → MEZone_3p1nd_101,
+  затем _3ndKeyboard (LM_ITE_RGB.cs:4263–4284).
+- Только если PageFF03 и FWmajor32: subtype18hex → MEZone_3nd_98
+  (:4248–4261). Это другой enum и может означать иной RGB calibration path.
+Нужен ответ80, чтобы отличить эти случаи; версия CPU/BIOS не заменяет его.
+
+inventory.json старого G2 dump содержит лишь несколько безымянных
+USB Input Device и версию Windows driver. VID/PID,UsagePage,FW80 и lengths нет.
+dependencies.json фиксирует PawnIO, не идентичность ITE клавиатуры.
+Сам EC RAM не является USB HID descriptor. HydroControl G1 с048d:600b и
+chinbar048d:7001 остаётся сторонней зацепкой, не доказательством PID у G2.
+
+4. ПАКЕТЫ И ЭФФЕКТЫ, ВОССТАНОВЛЕННЫЕ ИЗ РЕАЛЬНЫХ ТЕЛ
+=====================================================
+OEM/020000DF-LightingModel.LM_ITE_RGB.cs:
+1217–1233:08H=[0,08,Control,Effect,Speed,Light,ColorIndex,Direction,Save].
+1237–1244:09H=[0,09,02,Light,0,0,0,0,0] для basic brightness.
+1266–1303:80 FW query, SetFeature затем GetFeature; response bytes2..5:
+major/minor/test/customer. Native проверяет command80, но error handling слабый.
+1325–1339:88 query=[0,88,0,0,0,0,0,0,0]; response2..7 — Control/Effect/Speed/
+Light/ColorIndex/Direction. Native игнорирует BOOL и не проверяет command88.
+1352–1417:14 color packet, basic=[0,14,0,Index,R,G,B,0,0], варианты поKBtype.
+1307–1321:1A=[0,1A,Control,Enable,Time,0,0,0,Save], welcome timeout.
+3714–3734:A2 LED source/vendor query, нужен отдельным FWtype/calibration веткам.
+
+Глобальные firmware effects (3862–3912): Static1,Breathing2,Wave3,Rainbow5;
+существуют Reactive/Ripple/Music/User51 и другие, но общий UI не обязан
+изображать их поддержанными до capability/type подтверждения.
+Control2 — обычный active lighting,1 — off,3 — welcome,4 — night;
+расширенные5/6 power packets имеют model/FW условия и не нужны для базовой
+карточки. Save0=NOT_SAVE,1=SAVE (RGBKB_NV_SAVE/ITE_SPEC), нормальный host cycle
+должен использовать volatile0, не устраивать постоянные NV writes.
+
+Логическая яркость0..4 → raw0/8/22/36/50 (3915–3924).
+Speed0..4 → raw10/7/5/3/1 (3928–3940).
+ColorIndex1 используется для одного заданного цвета;8 — circular palette;
+Set_ITE_Effect_Type_FwMode3245–3315 сначала пишет palette через14, затем08.
+
+RGB имеет диапазонUI0..255, НЕ EC0..50. Calibration зависит от точного типа:
+2nd/2p1/2p2/FourZone/3nd имеют разные WKDColor conversions (:1355–1405).
+WKDColor.cs:642–699 например корректирует white255/255/255 в125/255/185 для
+HIDKeyboard3. Но MEZone3p1 enum в этом условии отсутствует и проходит raw else.
+Одинаковый класс _3ndKeyboard НЕ разрешает применить один calibration ко всем
+его enum variants. _3ndKeyboard.cs:32–61 задаёт для native Rainbow палитру7
+цветов, это не наш шестицветный последовательный host timer.
+
+Per-key/user51: используются дополнительная row/picture отправка12/16/26 и
+буферы LED. Это расширение отдельного codec, а не замена basic global08/09/14.
+Для нашей общей карточки сначала достаточно global static/breathing/rainbow,
+если конкретный hardware type и эти команды подтверждены.
+
+5. ДВЕ РАЗНЫЕ ФУНКЦИИ ТАЙМАУТА
+==============================
+Idle auto-off В СЕКУНДАХ — host feature:
+OEM/020002C5-MyControlCenter.KeyboardCloseTimer.cs:100–156 включает RawInput
+keyboard+mouse, перезапускает таймер при активности, на idle генерирует
+brightness-close event, при первой новой активности — restore event.
+163–208: seconds*1000;0 отключает timer. НикакихEC timeout register writes здесь нет.
+OEM/02000291-MyControlCenter.MySettingManager_Intel.cs:290–294 принимает
+JSON Seconds, сохраняет UserSetCloseTimer;318–323 TIMER_OFF unhooks;
+934–956 default0 и восстановление сохранённого host setting.
+OEM/020003E9-MyControlCenter.MyRgbKeyboard.HIDKeyboard.cs:2866–2899:
+idle→CloseAnimation,activity→RunEffct(0,2); Aurora owner блокирует действия.
+3280–3289 CloseAnimation снижает brightness0 без сохраненияAC/DC.
+Это доказанный путь для поля «АвтоВыкл, сек» после появления typed backend.
+
+Welcome1A НЕ idle:
+LM_ITE_RGB.cs:3738–3765 также пишет UEFI RGBKeyboard1A/SmartLightbar1A.
+HIDKeyboard.cs:694–719/2491–2514 передаёт4 при включении,0 при выключении.
+Единицы/смысл Time как idle секунд не доказаны. Нельзя подменить host idle
+этим вызовом, тем более переписывать UEFI ради обычного времени на карточке.
+
+6. ЦИКЛ ШЕСТИ ЦВЕТОВ
+====================
+В exact OEM SingleZone.cs:1703–1764 host timer ManualInterval*1000,
+1768–1846 последовательное ManualMix шести выбранных индексов;
+defaults1471–1477 =1/5/9/13/21/25,interval10с.
+Это программный цикл, а не доказанная шестишаговая команда ITE G2.
+Его идея уже реализована общим KeyboardColorCycle в src/core/src/KeyboardBacklight.cpp.
+Для ITE после идентификации можно использовать тот же timer/операционный gate,
+но нельзя напрямую подключить нынешний EC codec: SingleZoneModel имеет лишь
+Wujie/Gm6, keyboardColorLevels переводитUI RGB вEC0..50.
+Нужен общий typed lighting state с model codec RGB conversion за callbacks,
+а не копия SettingsPage или ещё одна карточка HID.
+
+7. STARTUP/EXIT/SLEEP/RESUME И ЧТО НЕ НАДО КОПИРОВАТЬ
+====================================================
+App.cs:1365–1383 запускает RGBKeyboard.init и отдельно lightbar managers.
+RGBKeyboard.cs:1704–1766 выявляет hardware и вызывает InitalizeKeyboardEffect;
+HIDKeyboard async init читает сохранённые per-project эффект/AC/DC brightness,
+_RunEffct/_OpenAnimation может немедленно посылать hardware commands.
+Поэтому OEM LM_Init/constructor нельзя запускать из read-only диагностики.
+HIDKeyboardFactory выбирает класс, но его constructor также не чистый metadata getter.
+
+RGBKeyboard.cs:1303–1315 AC/DC StatusChange вызывает Plugged/UnPlugged;
+HIDKeyboard.cs:2818–2858 переключает раздельные сохранённые AC/DC brightness.
+RGBKeyboard.cs:2173–2188 Resume прекращает AP animation transfer и повторяет
+RunEffct(0,2), сохраняетOff;2193–2215 Suspend вызывает CloseAnimation.
+Отдельно modern-standby менеджеры обслуживают power events.
+Dispose/DeInit закрывают HID handles (RGBKeyboard1770–1776,LM_Manager.DeInit,
+HIDManager102–107); generic HIDKeyboard.Uninstall3346–3348 пуст.
+Native Registry Restore2224–2240 импортируетOEM.reg черезregedit — это не
+разрешение запускать его в MagicControl или перетирать пользовательские INI.
+
+Наши согласованные правила остаются своими: startup не должен сам стартовать
+шестицветный цикл; stop/exit не replay старый snapshot. Resume выполняет лишь
+явно сохранённую разрешённую policy, не EC/FANs side effects.
+
+8. READBACK, OWNERSHIP И ROLLBACK
+================================
+HIDManager117–150 использует per-object lock; WriteFeature возвращает BOOL,
+но верхние08/09/14 wrappers часто отбрасывают его и возвращаютtrue.
+Многие native packets имеют9байт array, а HidD_SetFeature вызывается с
+m_FeatureSize изcaps. Копировать потенциальный buffer-length mismatch нельзя:
+наш буфер должен иметь реальную FeatureReportByteLength>=9 и гарантированное
+заполнение trailing bytes. ОшибкиWin32/report-id/command/length обязаны быть данными.
+
+88 читает effect/speed/brightness/index/direction, но НЕ сам RGB palette.
+ILM_RGBKB_GetEffectALL4682–4684 вообще возвращаетfalse;
+GetAllKeyboardStatus3351–3354 и GetBrightness2931–2933 возвращаютCACHE.
+Поздние GetDeviceSupport/GetLogoPin Feature queries — support bits, не полный
+palette getter. Поэтому «откат цвета подтверждён» и «чужой RGB обнаружен» по
+одному88 пока заявлять нельзя. Смена palette с тем же index/effect может быть
+не видна такому owner check. Полный readback ещё требует отдельного доказательства.
+
+OEM CheckAurora останавливает host действие при внешнем lighting controller,
+но per-object lock не является межпроцессной эксклюзивной арендой.
+Полноценный compare-before-rollback в рассмотренных HID setters не найден.
+Нужно: отдельный typed HID gate, проверка native/OEM/Aurora ownership, корректный
+snapshot тех полей, которые реально читаются;unknown→никаких restore writes.
+Для palette, которую невозможно прочитать, не делать слепого rollback чужого
+цвета и не выдавать сохранённый cache за applied hardware state.
+
+9. ЧТО ЧИТАТЬ НА СЛЕДУЮЩЕМ ДАМПЕ
+================================
+Общий read-only descriptor collector УЖЕ существует:
+src/platform/windows/NativeInterfaceInventoryWindows.h:169–178,
+InventoryDetailsWindows.cpp:241, DiagnosticWmiWindows.cpp MagicControlNativeInterfaces.
+CreateFile access0, HidD_GetAttributes/GetPreparsedData/GetCaps дают interface,
+VID/PID/version,UsagePage/Usage,Input/Output/Feature lengths. Feature/output
+reports не отправляются. Это нужное evidence; не дублироватьcollector.
+
+Нужен свежий G2 dump с этой секцией и её completeness/errors. Старый0.1.69 её
+не имеет. Для grouping желательно также PnP instance/parent/container/service
+и reportIDs/valuecaps изpreparsed metadata,безусловно безSetFeature.
+bcdDevice изHIDD_ATTRIBUTES не приравнивать автоматически кFW80 major.
+
+Следующий protocol step80/88 отдельно: это logical getter, но реализован
+через SetFeature-запрос+GetFeature-ответ, а не чистая descriptor inventory.
+Он должен быть явным, exact-instance-gated, bounded, с сохранениемraw/error.
+Сначала type/FW, потом volatile brightness/effect с наблюдением физического
+ответа; не включать native lifecycle/UEFI save/advanced AP animation автоматически.
+
+ПРИОРИТЕТЫ
+==========
+P0: свежая read-only HID metadata G2; точный instance и безопасныйlogical getter.
+P1: typed ITE global08/09/14 adapter, строгиеbounds/readback/ownership, capability
+по факту, shared UI/state; яркость0..4,Static/Breathing/Rainbow иRGB поcodec.
+P1: общий host idle seconds и activity wake; неwelcome1A.
+P2: общий шестицветный timer с canonical UI RGB и отдельнымmodel codec.
+P2: доказатьRGBpalette readback/rollback и sleep-resume без перехватаAurora/OEM.
+Advanced per-key editor/lightbar/welcomeUEFI не нужны для снятия текущей блокировки.
+
+КОНЕЧНОЕ СОСТОЯНИЕ
+==================
+Аппаратные команды найдены, host timeout раскрыт. Неизвестен фактический HID
+экземпляр G2 и ряд гарантийreadback/ownership; настройки «как уWujie» не дают
+права писать EC fallback приclear766.2. Production/UI остались неизменными.

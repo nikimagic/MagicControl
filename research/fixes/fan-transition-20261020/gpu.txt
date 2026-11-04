@@ -1,0 +1,145 @@
+GPU identity / power domain fixes — 2026-10-20
+Owner: /root/hydroc. Static source implementation only; no GUI, hardware calls,
+EC/OEM execution, tests, build, commit or driver installation performed.
+AGENTS.md / DEVICE-ARCHITECTURE constraints retained.
+
+Evidence inspected
+research/analysis-20261020/wujie-dump-100812.txt and existing user dump:
+MagicControl/windows/logs_WUJIE_Series-X5SP4NAG/dumps/dump-20261020-100812-0/
+The old radeon.json has ADLX uuid adlx:25600:150E:5006 plus5 ADL handles.
+ADL rows report bus100/device0/function0 and PCI SUBSYS50061D05 / REV C4.
+Their existing os_adapter_id marker is luid:00000000:0000d0c4.
+ADLX was unmatched: its separate SubSystemId5006 was compared directly with
+DXGI's full PCI subsystem50061D05. No name or ADLXUniqueId->BDF inference used.
+
+Typed model / physical display grouping
+GpuDevice.h adds GpuPowerDomain{Unknown,Board,Asic,Gpu,Gfx}, GpuPciLocation
+(domain/bus/device/function optional + source), explicit physicalId,
+osAdapterId, identitySource/status and raw providerIdentities.
+GpuReading.uuid remains its original vendor/control handle. It is NOT replaced
+with physicalId and no writer receives a synthesized physical grouping key.
+physicalGpuReadings in common/GpuDevice.cpp is presentation only and is called
+by existing DiscreteGpu::read. Only nonempty proven physicalId keys are grouped.
+Unknown/ambiguous identity is not grouped by names or a shared VEN:DEV pair.
+Original control-capable provider row is preferred; read-only PMLog data never
+creates tuning permission. Only missing telemetry is filled from observations
+of the same proven physical instance. Supported zeros are retained.
+The old RadeonGpu::read(true) diagnostic route remains independent raw rows:
+no ADLX/ADL adapter handles or PMLog raw channels are removed from dumps.
+
+Windows OS physical binding
+GraphicsAdaptersWindows.cpp enumerates present display-class PCI devnodes with
+read-only SetupAPI metadata. DXGI AdapterLuid is matched to the exact Windows
+SDK DEVPKEY_Device_AdapterLuid binary property (GUID c50a3f10-aa5c-4247-b830-
+d6a6f8eaa310,pid3, from ntddvdeo.h). A unique full PCI VEN/DEV/SUBSYS/REV
+match is a fallback; names and one VEN/DEV are insufficient. Contradictory
+hardware IDs, multiple matches, incomplete/capped SetupAPI or DXGI enumeration
+refuse a physical grouping ID. Missing metadata remains a status, not guessed.
+Canonical identity is windows-pnp:<exact device instance>. LUID is explicitly
+session-scoped. PCI bus/device/function come from SPDRP_BUSNUMBER/SPDRP_ADDRESS;
+device=high16, function=low16 validated bus<=255/device<=31/function<=7.
+PCI segment is not reported and remains null, never assumed0.
+No D3D/render device, D3DKMT GPU handle or workload is created for the new bridge.
+
+Windows AMD binding
+RadeonGpuWindows.cpp uses DeviceId + separately queried SubSystemId and
+SubSystemVendorId; full PCI SUBSYS = (16-bit device<<16)|16-bit vendor.
+RevisionId corroborates when reported. This addresses the exact5006 vs50061D05
+mismatch without changing existing ADLX UUID or control resolution.
+OS hardware tuples must be unique. With duplicate identical GPUs, an ADL
+BDF must match a known exact OS location; a candidate with unknown location
+cannot win merely by exclusion of a known mismatching device. Multiple equal
+locations/unknown PCI segments remain ambiguous. A unique OS adapter match
+without proven physical devnode retains osAdapterId but has no physicalId,
+so it cannot collapse independent physical GPUs.
+Raw ADL AdapterInfo bus/device/function remain separately sourced fields.
+ADLX UniqueId is treated as opaque:25600 is NOT decoded as bus100 despite the
+numerical resemblance. IADLMapping is not borrowed from a differently initialized
+ADL context; the existing ADLX initialization/ownership is unchanged.
+
+Power domain semantics
+Exact local AMD ADL SDK adl_defines.h IDs:
+ADL_PMLOG_ASIC_POWER23; ADL_PMLOG_GFX_POWER30; ADL_PMLOG_BOARD_POWER73.
+SDK source: tests/test_util/vendor/AMD/ADL/include/adl_defines.h:2078/2085/2128
+(older enum documented equivalently at1990/1997/2040).
+SHA256 d1c39f8523ecb224160c99ee3b043219bc8e2265c5993ec57548e382c22bd10b.
+Production uses reviewed named constants, not a new runtime SDK dependency.
+
+AmdTelemetryWindows now selects Board73 -> ASIC23 -> GFX30 for primary power;
+all three independent typed domain readings and every raw PMLog ID are retained.
+This changes Wujie's former preference for GFX0 over ASIC9 because ASIC is a
+broader explicitly named domain, NOT because0 was declared faulty. A supported
+Board0 or ASIC0 remains valid and wins over lower-priority nonzero domains.
+Dashboard source strings explicitly say Board/ASIC/GFX and PMLog ID, using the
+existing powerSource field and existing rendered source line. No domain is summed.
+
+ADLX GPUPower is named generic GPU consumption by our primary SDK; it does NOT
+explicitly promise ASIC semantics. Previous additional metric name asic_power
+is corrected to gpu_power, with typed GenericGpu domain. GPUTotalBoardPower is
+Board and documented to include all board components/VRAM. Board -> generic GPU
+fallback keeps exact getter source. No unsupported return becomes a valid0.
+Relevant local SDK ISystem.h SubSystemId/SubSystemVendorId:396–454,
+IPerformanceMonitoring.h GPUPower/GPUTotalBoardPower:935–988.
+ISystem.h SHA256 7fe4d9874b2f0a2c4852b4516d49ef1f2006c0b814b22ee6d2d986ae13c2fbd0.
+IPerformanceMonitoring.h SHA256
+250e86ab3bd655fee20c79166c160d59846e319f5a72b6c52bf012d26086053d.
+
+Shared UI primary-power choice across same physical sources is Board > ASIC >
+generic GPU > GFX > unknown; never numerical max/sum/nonzero preference.
+The source and domain identify what the displayed number measures. Domains are
+not asserted equal, nor independent quantities that can be added together.
+
+Linux
+GraphicsAdaptersLinux.cpp uses the validated full canonical PCI sysfs path,
+including PCI domain, for physicalId. Bus/device/function are parsed only from
+exact domain:bus:device.function syntax. subsystem_device/subsystem_vendor are
+combined into the same full PCI subsystem contract as Windows. Raw sysfs ID
+and original provider key remain unchanged. No new GPU node/ioctl probe added.
+RadeonGpuLinux copies this identity and labels power1_average/input as generic
+amdgpu GPU power with its actual filename/source; no automatic Board/ASIC claim.
+Its preexisting runtime-suspended guard and all hwmon power setters are unchanged.
+
+Diagnostic files
+Only GPU serializers in common/DiagnosticDump.cpp were extended: radeon/nvidia/
+graphics observations now carry physical_id, os_adapter_id, identity evidence,
+optional PCI location, typed power_domain and provider handle observations.
+GPU sensor power channels include the domain and exact powerSource, while raw
+additional PMLog channels remain intact. graphics.json remains all OS adapters;
+radeon.json remains all raw AMD handles, not a list of distinct physical GPUs.
+No sampler, EC capture, scheduling or dump control path was changed by this task.
+
+Cards / protected product appearance
+An initially proposed existing-detail suffix in DiscreteGpuCard.h was removed
+on root/user clarification. git diff for DiscreteGpuCard.h is empty. No card,
+layout, renderer, font, scrollbar, row count or UI caption file remains changed.
+Power source/domain are data, surfaced by existing dashboard powerSource text
+and diagnostics. Existing separate GPU-card appearance is byte-identical.
+
+Primary external references inspected (metadata/units only, no live API probes)
+https://learn.microsoft.com/en-us/windows-hardware/drivers/install/devpkey-device-address
+https://learn.microsoft.com/en-us/windows-hardware/drivers/install/identifiers-for-pci-devices
+https://learn.microsoft.com/en-us/uwp/api/windows.devices.display.core.displayadapter
+https://docs.kernel.org/6.0/gpu/amdgpu/thermal.html
+Windows SDK10.0.26100 shared/ntddvdeo.h:89–90 supplies the exact AdapterLuid key.
+The local AMD SDK headers are the direct source for ADL/ADLX definitions above.
+
+Unverified / next evidence
+Static mapping/data changes are complete; no new device sample or presentation
+was executed. A fresh user dump must show successful physical identity binding
+and typed sources for the actual installed drivers. If OS metadata remains
+incomplete, duplicate observations intentionally stay unresolved rather than
+claiming a proven merge. Runtime initialization, power/fan control, driver
+installation and GPU wake/render workload were not expanded by this change.
+Root owns build, portable replacement and final commit after coordinated review.
+Dashboard ordering follow-up: when ADL supplies only a GFX-domain value,
+readAdlx may replace that primary with supported GPUPower (generic GPU domain),
+matching Board > ASIC > generic GPU > GFX ordering. This is domain preference,
+not zero filtering; an explicit generic0 is still accepted and raw GFX remains
+in the diagnostic sensor observations. Board/ASIC are not overwritten by generic.
+Final static review: DXGI enumerationComplete is assigned descriptionsComplete
+when DXGI_ERROR_NOT_FOUND terminates enumeration; any missing descriptor/error/
+cap leaves identity grouping refused. Thus an unread identical GPU cannot create
+false uniqueness. Presentation coalescing lists combined source names and
+retains/copies the explicit temperatureSource when filling a missing temperature;
+ADLX/ADL/amdgpu getters now set that source. Raw diagnostics are still unmerged.
+Final source freeze; no cards file has remaining changes.

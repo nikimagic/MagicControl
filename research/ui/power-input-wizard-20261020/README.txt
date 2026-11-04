@@ -1,0 +1,7 @@
+Проверка изменений20.10.2026
+Исходныехэши8личныхфайлов/13UIкомпонентов вbefore.json. MonitoringCards.h
+имеетотдельноеявноразрешённоевладельцемизменениеданныхIntelPCH/Package и
+GPUcomponents; Geometry/Fonts/renderer/scrollbarнеразрешалосьменять.
+verify-delivery.py сверяетactualcommonbuild/4бинарника иunchanged/approvedscope.
+Reviewmaster: research/fixes/power-input-wizard-20261020/review.txt.
+Аппаратныхпроб/GUI/testsдляпроверкисборкине запускаем; владелецвыполнитсценарий.

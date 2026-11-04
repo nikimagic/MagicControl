@@ -1,0 +1,22 @@
+AMI UCP decompressor dependency follow-up,21.10.2026
+Root completed decompression with existing trusted UEFIExtract75 through an
+explicit synthetic FV/FFS/compression wrapper before a second decoder was fetched.
+
+This agent inspected only primary source descriptions:
+https://raw.githubusercontent.com/platomav/BIOSUtilities/main/biosutilities/ami_ucp_extract.py
+https://raw.githubusercontent.com/tianocore/edk2/master/BaseTools/Source/C/Common/Decompress.c
+https://raw.githubusercontent.com/tianocore/edk2/master/BaseTools/Source/C/Common/Decompress.h
+AMI UCP UafHeader16bytes and UafModule Comp/Orig8bytes match the framing
+used by root. EDK2 exposes separate EfiDecompress and TianoDecompress routines.
+Source inspection is not a second independent decompression result.
+
+No TianoCompress binary/package was downloaded, installed or run. No global
+Python/package installation. No execution of CAP.exe or firmware code.
+An ordinary local WSL tool inventory probe returned sandbox E_ACCESSDENIED;
+it was not retried after root had a working decoder.
+
+Existing output file was read only to confirm integrity:
+build/gm6-battery-firmware-20261021/BIOS-MRO09-from-UCP.bin
+Size24117248bytes, SHA256
+ e6d9205000bfa888e48f4499f620f7d9725334827dbbb2e750388bb4b51ff688
+This confirms the current saved file, not cross-decoder equivalence or target identity.

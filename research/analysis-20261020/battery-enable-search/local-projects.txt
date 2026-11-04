@@ -1,0 +1,190 @@
+Local downloaded-project search — battery enable consumer / GM6 + HYDROC G2
+Date2026-10-20. Agent/root/wujie. READONLY except this research report.
+No production edits, app/OEM execution, EC/driver/service/firmware access,
+tests, builds, downloads, commits or setting changes in this task.
+
+RESULT
+No exact GM6IR0C Project25/N.1.05MRO09 or HYDROC-16 G2 Project26/N.1.13ELU11
+firmware consumer/enable sequence was found in the inspected local projects.
+A stored/read-back85/80 pair does not prove enforcement. The supplied GM6
+86→87% while85/80held,7C3=7,7A6=9 observation is context from root's fresh
+log analysis; it was not a new measurement performed by this agent.
+The following are concrete implementations, but none supplies exact-model proof
+for enabling those two Intel boards. Do not transplant Wujieplatform4 or ROMID.
+
+1. Linux upstream-style uniwill-acpi.c — percentage and profile are distinct
+Local snapshot:
+C:/Users/admin/Documents/mechrevo/Research/Uniwill-Pulsation-20261014/uniwill-acpi.c
+Identical copy:
+C:/Users/admin/Documents/mechrevo/Fan_X15Pro/Tools/EC-Sources/uniwill-acpi.c
+Commit not recorded in these raw-file snapshots; exact contentSHA is below.
+Do not label it current upstreamHEAD. Source attribution in prior research:
+linux/drivers/platform/x86/uniwill/uniwill-acpi.c.
+
+Exact functions/macros:
+ :286–295 OEM4=07A6, CHARGING_PROFILE_MASK=GENMASK(5,4),
+ EC_ADDR_CHARGE_CTRL=07B9, CHARGE_CTRL_MASK=GENMASK(6,0).
+ :1869–1876 uniwill_sanitize_battery_threshold:
+   /*0 means "charging threshold not active"*/ if(!value)return100;
+ :1967–1985 uniwill_write_charge_type:
+   regmap_update_bits(...EC_ADDR_OEM_4,CHARGING_PROFILE_MASK,value)
+ mapsTrickle/Standard/Longlife to profile bits, not arbitrary SOC percentages.
+ :1995–2018 uniwill_set_property END_THRESHOLD:
+   regmap_update_bits(...EC_ADDR_CHARGE_CTRL,CHARGE_CTRL_MASK,max(val->intval,1))
+ Only the seven-bit upper threshold is written here; no platform/enable latch.
+ :2121–2145 uniwill_battery_init checks DEVICEFEATURE_BATTERY_CHARGE_LIMIT,
+ sanitizes0/invalid threshold to100 and writes07B9 only when normalization
+ changes it. Comment says this signals taking control, but this is not an
+ additional enable-bit setter or exactGM6/G2 runtime compatibility proof.
+ :2424–2434 suspend saves07B9; :2546–2553 resume updates the same low7 bits.
+
+Applicability is model-gated, not evidence from a similarly named sysfs property:
+ :2680–2712 percent feature is set forLAPQC71A/B,LAPAC71H,LAPKC71F descriptors.
+ :2881–2886 LAPQC71A maps toXMG FUSION15(L19), notGM6/G2.
+ :2722–2787 modernTuxfeaturesets1–4 containBATTERY_CHARGE_MODES instead of
+ BATTERY_CHARGE_LIMIT. :3351–3353 force mode explicitly excludes charge limit.
+ An exact targeted scan of this snapshot found0 hits for07C3/07D0/087F,
+ BatteryLimitation,SCHG,GCHG,GM6IR0C orHYDROC. There is no missing-target
+ enable consumer in that bounded file. This does not prove no newer source exists.
+
+2. Older Tuxedo Uniwill header — native modes only
+C:/Users/admin/Documents/mechrevo/Research/Battery-Charge-Limit-20261002/tuxedo-uniwill-keyboard.h.txt
+Raw snapshot; commit not recorded; contentSHA below.
+ :708–711 documents profile0 highcapacity,1 balanced,2 stationary.
+ :713–730 uw_set_charging_profile performs fresh read07A6 then
+   next=(previous & ~(0x03<<4)) | (profile<<4)
+ :743–767 uw_has_charging_profile checks078E.bit3 with DMI exclusions.
+ This bit advertises native CHARGING_PROFILE, not percent-limit capability.
+ :574–586 uw_set_charging_priority uses07CC.bit7; it is charging-versus-
+ performance priority, not a proven percentage-enable field.
+ No07C3/087F/SCHG-based arbitrary-threshold activation is supplied by these
+ functions. OEM profile modes do not become100/95/85% just because sysfs exists.
+
+3. LumaDesk — concrete write recipe, readback-only evidence
+RepositoryC:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/LumaDesk/repository
+LocalgitHEAD verified196349a373e4da941e022668f84f4016d30fc436.
+Sourcehttps://github.com/YuzakiKokuban/LumaDesk, pinneddownload-manifest.json.
+ src/core/hal/windows.rs:442–478 set_battery_limit:
+   addresses=[0x770,0x7B9,0x7D0,0x7A6]
+   values=[limit<95 ?4:0xFF,limit,limit.saturating_sub(5),(beforeA6 &8)|mode]
+ mode is1/0x11/0x21 by requestedlimit band; method writes/rolls back allfour.
+ No07C3,087F,BatteryLimitation enable consumer in this method.
+ This mixes ROM770 and native07A6 profiles with thresholds. It is not a safe
+ portable enable recipe for our exact boards; ROMID writes are not recommended.
+ scripts/verify-controls.py:125–131 battery_limits only asserts07B9==limit,
+ 07D0==limit-5 and softwareget_hardware_status.limit. It does not log charging
+ through the threshold, current cutoff or restart. The script was NOT run here.
+ reverse/native/REPORT.md:3 identifiesYaoShi15Air,project0x1A; :65–66 says
+ 60/80/100 setting/readbackpassed, not physicalcutoff. Project0x1A is reused;
+ it does not establish compatibility withHYDROC G2's Project26/BIOS.
+
+4. FanSlider —07A6=09 is a side effect of a broad fan experiment
+RepositoryC:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/FanSlider/repository
+LocalgitHEAD verifiedc6665cfc15b7ceb0d08111ea317d9ceccc2feb2e.
+Sourcehttps://github.com/nemoiwkryang/Open-Mechrevo-FanSlider.
+ Program.cs:845 OemExactTest; :915–934 optionalfullProfile branch.
+ :931 W(0x7A6,0x09); //health protection
+ The same branch also writesGPU/PL/VRM/fan/customer bytes. No percent threshold,
+ cutoff measurement or exactGM6/G2 enable consumer appears there. The observed
+ GM607A6=9 does not acquire an enable meaning from this comment. Do not replay
+ the broad sequence or infer a need to change adjacent fields. Not executed here.
+
+5. OpenRevo — available snapshot is documentation, not battery implementation
+RepositoryC:/Users/admin/Documents/mechrevo_dsh/Reference_Projects/OpenRevo/repository
+LocalgitHEAD verified51f1d917183758e65ce5d3ebe70294e6157a79f1.
+Sourcehttps://github.com/faintonce/open-revo.
+ README_en.md:113–114 advertises three100/80/60 modes. The available tree has
+ documentation/screenshots/license; no source implementation of the battery
+ consumer was found. Release0.8.5archive exists separately; it was not executed,
+ installed, extracted or decompiled during this readonly search. Marketing text
+ or a release binary is not evidence of a verified target thresholdenable path.
+
+6. Leo-stro community implementation — Wujie-specific gate, not Intel proof
+C:/Users/admin/Documents/mechrevo/Research/Battery-Charge-Limit-20261002/
+ Leo-stro-charge-limit.pyw.txt andLeo-stro-FINDINGS.md.
+Source attributionhttps://github.com/Leo-stro/mechrevo-charge-limit infindings.json;
+rawdownload snapshots have no pinnedcommit metadata, so use contentSHA only.
+ FINDINGS.md:3 identifiesWUJIE15XA/BIOSN.1.14MRO50, notGM6 orHYDROC G2.
+ Register table identifiesProject0x1A; identicalProjectID alone is insufficient.
+ pyw.txt:124–141 apply_limit writes07B9low7 then calls_store_trigger.
+ :108–121 temporarily sets07C3=4, holds2.5s, restores priorplatform.
+ :135–140 checks0742.bit2 and live threshold. Does not writeROM770.
+ FINDINGS.md gate section describes state_is(07C3/0770=4or5) and validstored087F.
+ This is the author's firmware pseudocode/research explanation, NOT a decompiled
+ consumer from the exactGM6Project25/G2Project26 firmware. Its own physical tests
+ apply to its namedWujie only. Gate/readback observation is not generic cutoff.
+ExistingWujie BatteryLimitLab additionally enforces82/72/26 identity
+ LabEngine.cs:77; it is our localWujieexperiment, not independentIntel proof.
+
+7. HydroControl — strong negative on another machine, not G2 enable code
+Localfilesbuild/battery-thresholds-20261020/hydrocontrol/
+ {DESIGN.md,charge_path_probe.py,charge-profiles.json,provenance.json}.
+Provenance pinshttps://github.com/Gumwars/HydroControl
+ commitfc4024ce1456b8477313b28db3d41170e6464f4a,2026-10-20T00:24:00Z.
+ DESIGN.md:3–4 exactG1/i9-14900HX/RTX4090/EC117.ELUK, notourG2.
+ :106–107 separates07A6profiles,07B9low7 threshold,078E.bit3profile support.
+ :168–193 reports a full cycle76→100% while07B9=80held andReachedbit7 never
+ armed; the driver had locally assertedCHARGE_LIMIT feature byDMI, then removed
+ it. This is not readbacksuccess and not a proven G2feature absence either.
+ :130–165 reports ECRW/WKBC writes, rejects theFIXCGLM shadow-set premise and
+ distinguishes04xx live/readback fields,087Frejection and overlay07CDscratch.
+ charge_path_probe.py:299–322 replicatesSCHG throughWKBC, includingA6balanced,
+ 7B9 and the proposedshadowfields; it is an experiment, not firmware consumer.
+ Its docstring:6–13 saysSCHG/GCHG are absent from that stockG1DSDT and originate
+ in hydroc-driver/acpi_table_fix.asl overlay. The overlay itself was not found
+ as a local source file in this bounded scan; noDleyna implementation is claimed
+ to have been read here. charge-profiles.json has an explicit caveat that the
+ profile test may be plug-in latched; do not treat all itsprofileinert conclusion
+ as a universal proof forotherBIOS/models. Scripts were not run here.
+
+8. Additional GM6battery-temperature query:04A2 native units NOT established
+Root suppliedexactGM6Define.ecBt1Temperature=1186=04A2 andraw3060(F40B),
+with04A4current/04A6cycles matching telemetry. No derived32.85C is asserted here.
+Within the inspectedLinuxUniwill/Tuxedo,HydroControl,LumaDesk,FanSlider,OpenRevo,
+NUCtool and localthermalresearch source candidates, no native read04A2/1186
+consumer with a demonstrated0.1K decoder was found.
+The only matchedraw/10-273.15 formula is LumaDesk windows.rs:1027–1046,
+ acpi_thermal_zone_celsius(), queryingMSAcpi_ThermalZoneTemperature.CurrentTemperature.
+It describes an ACPIthermalzone, notbattery04A2; it cannot validate thatECunit.
+The recoveredHYDROCrawDefine.ECSpec also declaresecBt1Temperature1186, but a
+symbol/address is not units proof or activeconsumer. OEMactive-call analysis is
+owned by theGM6agent. XTP043A/DSDTzero was not renamed as a battery sensor.
+
+BOUNDED NEGATIVE FINDINGS / SEARCH LIMIT
+rg searched source/doc text in the listedReference_Projects(plusNUCtool),
+mechrevo/Research,EC-WritePath,CN-FanResearch,Fan_X15Pro/Tools/EC-Sources,
+and MagicControlbuild/research candidates, targeting07B9/07D0/07C3/07A6/087F,
+BatteryLimitation,charge_control_end/start_threshold,SCHG/GCHG,FIXCGLM.
+Generatedobject/node_modules/binary/vendor payloads and largeirrelevantdecomp
+were excluded from broad scans; keyprimaryfiles above were read directly.
+BIOS_OTAdecomp0x7B9 hits inspected (e.g.functions/14029c370.c:19–22) are
+param_2+objectoffset byteflags, notECaccess calls; they were not promoted to
+firmwarechargeconsumer evidence. No native battery-startthreshold implementation
+for the twoexactIntelboards was found in theseprojectcandidates.
+Downloads was only inspected by targeted top-level names/directories; the only
+matchingTelegramfile waslogs_HYDROC-16.zip, not a newLinuxprojecttree. This does
+not assert absence from every archive/.gitobject/unknownfolder or theInternet.
+No newsoftware was fetched or executed and no hiddenarchive payload was unpacked.
+
+WHAT THIS SUPPORTS
+- Do not call successful registerstorage/readback a completed85% cutoff.
+- Do not turn profile07A6.5:4,078E.3 or arbitraryDMIfeatures into percentenable.
+- Do not copyROM770,Wujieplatform4,04xxshadowwrites orSCHGoverlay recipes toGM6/G2.
+- A next positiveproof must bind an actualconsumer or controlledphysical sequence
+  toexactBIOS/EC/Project/model. These inspectedlocalprojects do not supply it.
+
+FILE SHA256 / size AT READONLY REVIEW
+C:\Users\admin\Documents\mechrevo\Research\Uniwill-Pulsation-20261014\uniwill-acpi.c bytes=90721 SHA256=914d876fa3255e6ad8f8669162eaa844b23eaf9f41fd181113447c49c3ecc2a7
+C:\Users\admin\Documents\mechrevo\Research\Battery-Charge-Limit-20261002\tuxedo-uniwill-keyboard.h.txt bytes=68855 SHA256=2a8483ddff86c923e1421724c342233b7d35eed1373af26f206091123d01f8a8
+C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\LumaDesk\repository\src\core\hal\windows.rs bytes=39352 SHA256=847e7fe206269f5d8c16a7a8ed5e2167de6d2889dbd1d2496226ff458e9b815b
+C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\LumaDesk\repository\scripts\verify-controls.py bytes=9792 SHA256=af51edf85795612a636b44988c3359d3cfd86d8b3b2b879793c1db1dd0adfd55
+C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\LumaDesk\repository\reverse\native\REPORT.md bytes=5234 SHA256=486e12ad7a6207d17880b64622304e5d0fd2fd461316b55bc4d90ea12a646b23
+C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\FanSlider\repository\Program.cs bytes=145999 SHA256=ffd78b259714740c7ed47c45a9871f5d04d482a07a6bdfefab0f34026f6692d0
+C:\Users\admin\Documents\mechrevo_dsh\Reference_Projects\OpenRevo\repository\README_en.md bytes=15703 SHA256=a4c38aeb718432ffbc139a6f23c8857f16c05ced1b12a600cf0943eead0bb194
+C:\Users\admin\Documents\mechrevo\Research\Battery-Charge-Limit-20261002\Leo-stro-charge-limit.pyw.txt bytes=13364 SHA256=583e9ac34ec664743e5100ec4e806565fdd738b118fa256c8109a476e6b1583c
+C:\Users\admin\Documents\mechrevo\Research\Battery-Charge-Limit-20261002\Leo-stro-FINDINGS.md bytes=8976 SHA256=eb23789f5f35ec59c2cd6d6c555e359daacd5432e1831daeb16ac338c1af8310
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\battery-thresholds-20261020\hydrocontrol\DESIGN.md bytes=60992 SHA256=5efab1a07a4f3b937e3fa75e7f0b9d89f470d75b215e77ca6cf6b9551d46b985
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\battery-thresholds-20261020\hydrocontrol\charge_path_probe.py bytes=15187 SHA256=508bd7df88d236b275564ce1df21be7854ecd38d3aafb60136d6a83c244b6948
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\battery-thresholds-20261020\hydrocontrol\charge-profiles.json bytes=2607 SHA256=a42e510dafefe0d5c8cfb87129a72bd58370bde04d446b293f115a2b4ba1b955
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\battery-thresholds-20261020\hydrocontrol\provenance.json bytes=586 SHA256=0128b1d53876f21d2cb038c2fc2df7c930a9d196255a575cd4d51e2d320745be
+C:\Users\admin\Documents\mechrevo\BatteryLimitLab\LabEngine.cs bytes=22756 SHA256=e4597698fb0cf353d3dcae70d6f9168c51f548473700271b49a8f1d2175c278c

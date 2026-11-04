@@ -1,0 +1,170 @@
+Подсветка клавиатуры — сводка модельной ревизии20.10.2026
+Baseline5b1f092, рабочие portable Windows/Linux0.1.88.
+
+КОНТРАКТ
+Все пять отдельных модельных исследований завершены. Общий внешний вид карточек Wujie и
+скроллбар сохраняются. Один UI, модельные данные/capability/typed transport.
+Исследование не равно новой аппаратной проверке или подключению найденного
+setter. В этой задаче production/UI/settings/portable не изменяются.
+Личные device-settings.ini и keyboard-cycle.ini не входят в результаты.
+
+ЧТО РАЗДЕЛЯТЬ
+1. Requested и saved UI RGB/яркость/эффект.
+2. Отправленный protocol packet, codec/calibration, exact instance/версия.
+3. Readback реально читаемых полей с raw/status/time и фактическим owner.
+4. Физическое исполнение: выбранный level не всегда равен effective PWM,
+   ACK не равен изменению света, hardware readback не равен оптическому цвету.
+5. Idle timeout, аппаратная пульсация/радуга и host Cycle6 — разные функции.
+
+WUJIE X5SP4NAG
+RGB EC: mono/pulse/rainbow/custom,0..4 brightness и host Cycle6 подключены.
+Найденный OEM CloseTimer — процессный таймер keyboard+mouse activity, seconds,
+blank через78C.1 с сохранением выбранных level bits. Текущий setLevel(0) пишет
+полеE2 и стирает level; это explicit Off, не эквивалент native idle blank.
+Ни741.2, ни6FA не дают аппаратного timeout setter.741.0 — общийAPP/FAN gate.
+
+Статические риски/дефекты:
+- Собственные adapter flash/restore воспринимаются Cycle6 как внешняя смена;
+  явной pause/resume policy и power epoch нет.
+- После adapter flash вычисление liveBrightness по power-disable может сохранить
+  transient idle blank как выбранный KeyboardLevel0. Ветка подтверждена по коду,
+  совпадение событий на устройстве здесь не воспроизводилось.
+- Shared Journal сообщает rollback lost/unknown только log, не caller outcome.
+- Прямой Wujie writer не имеет GM6-style OEM ownership preflight; наш глобальный
+  mutex действует только на кооперативные процессы. Default не гарантирует,
+  что GCUBridge/родной writer отсутствует. Службы автоматически не останавливать.
+- NativeMode — explicit brightness4/mono/cyan preset, не firmware takeover reset.
+
+Физические старые31с серии и изученный OEM app callback НЕ одна доказанная
+причинная цепочка: callback сбрасывает rainbow, а физические серии сохраняли767=80.
+КонтекстAC/DC важен. Старый C# Fan_X15Pro также имеет иную калибровку; это не
+основание самовольно менять действующий Wujie эталон. Linux EC RGB writer нет.
+
+GM6IR0C
+RGB SingleZone через UWACPIDriver/EC; точный активный GCUService, а не
+соседнее дерево ControlCenter. Общий core уже подключает mono/pulse/rainbow,
+яркость0..4 и программный Cycle6. RGB support766.2 и точная identity обязательны.
+
+Подтвержденный дефект: одинаковые UI RGB идут через разные converters fixed
+palette/custom/Cycle. Native SetColorMode вызывает SetRGBColor; COLOR_CELL
+R_Level — metadata, не доказательство фактической команды. Например orange
+255/80/0: fixed/native50/10/0, custom/Cycle50/13/1; cyan0/255/255:
+fixed0/50/50, custom1/42/42, native1/50/50. White50/40/40 корректен.
+Исправление должно объединить conversion по exact native execution для всех
+UI входов, не переинтерпретировать сохраненные EC raw как UI255 RGB.
+Физическая величина различия цвета не измерена.
+
+Другие пробелы: Keyboard* сохраняются, но startup/resume restore GM6 отсутствует.
+Отсутствие autoplay Cycle6 намеренное; статическое restore — отдельный вопрос.
+Pulse1..4 setter есть, UI color mapping отключен до физической сверки, это
+не отсутствие API. Native ManualMix интерполирует, наш Cycle6 ступенчатый.
+Native idle timeout — host software; аппаратный таймер не раскрыт.
+
+HYDROC-16 G2
+Exact OEM5.23.51.56 восстановил ITE HID transport и selection pipeline:
+LM_Manager сначала ITE, затем EC fallback; тип зависит от HID VID/PID,
+UsagePage/Usage, ответа80 FW и EC73C, а не одной строки KeyboardType.
+В старом G2 RAM766=93,bit2 clear: EC SingleZone fallback не заявлен.
+Wujie769..76B writer сюда не переносится.
+
+Раскрыты global packets08 effect,09 brightness,14 palette и queries80/88;
+logical brightness0..4 → raw0/8/22/36/50. Возможны Static/Breathing/Rainbow,
+но точный hardware type G2 пока не подтвержден. Save0 volatile; host timer
+не должен регулярно писать NV. Per-key/lightbar — отдельные протоколы.
+88 возвращает параметры эффекта, а НЕ полный RGB palette. OEM cache нельзя
+выдавать за hardware readback или основание гарантированного palette rollback.
+
+Idle AutoOff — KeyboardCloseTimer в секундах, keyboard+mouse RawInput,
+idle close и restore на активность. Welcome packet1A — другая функция;
+не подставлять туда seconds и не писать UEFI ради обычного idle поля.
+
+Следующий шаг: свежий обычный G2 dump с существующей секцией native HID
+metadata. Не нужен новый descriptor extractor. Затем отдельный exact-gated
+logical getter80/88: SetFeature request+GetFeature response, не просто metadata.
+После выбора codec — typed backend в общую карточку с bounds/readback/ownership,
+без нового renderer, borrowed SingleZone карты или запуска OEM constructor.
+
+HONOR HLYL-WXX9
+Белая OFF/LOW/HIGH, не RGB. Exact BIOS1.09/IT8987, I2EC allowlist02F4/03FC/1804;
+native PWM period200, low50/high100, т.е.25%/50% period, не проценты светимости.
+Исторически OFF/LOW/HIGH физически подтверждались; нового прогона нет.
+
+Дефекты текущего backend:
+- validate требует duty==duty(selectedLevel), хотя native idle/fade уменьшает
+  только1804, сохраняя selected02F4/shadow03FC. Нормальный fade/idle становится
+  ошибкой чтения и блокирует buttons. Нужны selected/effective/idle/unknown
+  состояния с прежними exact guards, не отключение валидации целиком.
+- Known resume HIGH signature читается успешно, но setter допускает из неё
+  лишь HIGH; явные OFF/LOW ошибочно запрещены. Валидность исходного состояния
+  должна быть независима от requested target.
+- PNPCFG release failure логируется destructor после confirmed; нужен checked
+  finish до публикации успеха, destructor оставить fallback.
+- Dump0..FFF не содержит keyboard PWM1804, typed state наружу его не отдаёт.
+  Нужен fixed read-only keyboard context вне убиваемого telemetry child,
+  без SFR sweep и новых write addresses.
+
+Fresh masked RMW03FC/C0 на transport boundary УЖЕ есть, в том числе rollback;
+соседниеlow6 из старого snapshot не восстанавливаются. Не исправлять заново.
+GKBT1206/SKBT1106 используют secondsLE16, DSDT хранит seconds*10;0 отключает
+native idle. Host Cycle6 для белой клавиатуры не предлагается. Ненулевой таймер
+физически в новой ревизии не измерялся. Linux работает только при реально
+существующих sysfs brightness/timeout; upstream huawei-wmi их не гарантирует.
+
+UNKNOWN
+Unknown правильно не получает writer другой платы. Наличие PawnIO/EC/HID
+не доказывает RGB, белую подсветку, per-key topology или безопасный setter.
+Windows HID discovery уже есть; нужны более явные interface→PnP/USB parent/
+container связи и metadata report IDs/value caps. Linux ordinary dump пока
+не инвентаризирует keyboard LED/multicolor. Это пробелы диагностики, не причина
+включать неизвестные записи. LampArray/Dynamic Lighting и Linux LED/multicolor
+возможны только как отдельно подтвержденные native adapters, не универсальный
+EC transport. Public LampArray FixedColor — capability, не current RGB getter.
+
+Native inventory completeness имеет ограничения: общий20с budget SetupAPI/SCM/
+hash/signature→HID может не оставить времени на все descriptors, а некоторые
+ошибки enumeration не очищают rows.complete. Требуется разделять завершение
+collection/enumeration и per-endpoint errors/denied/unsupported. Новый G2 dump
+следует проверять по фактическому содержимому/partial, не одному complete=true.
+
+Текущий host Cycle6 сам использует SingleZoneModel Wujie/Gm6 и EC scaling;
+перед generic/HID adapter нужно отделить UI RGB/timer от model codec и owner
+semantics. Представиться Wujie ради reuse нельзя. Unknown onboarding contract
+с конкретными admission/getter/rollback/lifecycle требованиями — unknown.txt/json.
+
+РЕКОМЕНДУЕМЫЙ ПОРЯДОК СЛЕДУЮЩЕЙ ИНТЕГРАЦИИ
+1. Honor: typed selected/effective state, узкие native idle/resume classifiers,
+   checked PNPCFG finish, достаточный read-only dump context.
+2. Wujie/GM6: desired/effective brightness, owned idle blank, caller-visible
+   rollback и общая cycle/restore/adapter ownership policy. GM6 дополнительно
+   единая native conversion для всех RGB входов и явное статическое restore.
+3. HYDROC: свежая HID metadata → admitted80/88 → typed volatile global codec.
+4. Общий host idle timer только после определения реально поддержанного writer,
+   отдельно от firmware timeout и Cycle6; законченный ownership/lifecycle contract.
+
+ОБЩАЯ АРХИТЕКТУРА ДЛЯ СЛЕДУЮЩЕГО ИЗМЕНЕНИЯ
+- Канонический UI RGB0..255 и модельный raw codec разделены. SingleZone0..50
+  нельзя переиспользовать как ITE HID RGB255. Existing raw INI не конвертировать
+  повторно под видом UI colors. Один converter на модель для всех UI входов.
+- Capability задаёт реально доступные getter/setter/effect/levels, а не внешний
+  вид карточки. Белый Honor не получает RGB через совпадение индекса кнопки.
+- Desired level/effect/color отдельно от observed/effective PWM и idle/suspend.
+  Native Wujie idle power bit не заменяется setLevel(0), теряющим выбранный level.
+- Цвет, эффект, яркость, idle timeout и host cycle сохраняются/подтверждаются
+  независимо. Ошибка сохранения не означает ошибку hardware write и наоборот.
+- Activity observer только сообщает событие. Команды выполняет общий worker
+  под DeviceOperation и exact transport transaction, не UI paint/RawInput callback.
+- Внешняя смена/OEM owner прекращает владение. Для нечитаемого HID palette
+  нет фиктивного expected RGB/readback/rollback на основе software cache.
+- Stop/exit не replay-ят старый fan/APU/keyboard snapshot. Startup autoplay
+  Cycle6 отсутствует; sleep/adapter indication получают явную политику паузы,
+  согласованную с saved static choice и реальным текущим owner.
+- Результат операции включает requested/command/readback/save/rollback отдельно;
+  uncertain rollback или config-exit failure не скрываются за словом confirmed.
+- Общие Windows/Linux UI/components/geometry/scroll неизменны; OS adapter
+  предоставляет только настоящий backend. Discovery не включает writer.
+
+Производственные файлы/дизайн не менялись. Сборка и новые аппаратные пробы
+не выполнялись. Подробности, raw examples, hashes и точные source references:
+wujie.*,gm6ir0c.*,hydroc.*,honor.*,unknown.*,SHARED.txt,SOURCES.txt.
+Наличие всех пяти TXT/JSON и синтаксис JSON проверены. GitHEAD5b1f092,
+diff src/docs/cmake/Tools пуст; portable версии обеих ОС остаются0.1.88.

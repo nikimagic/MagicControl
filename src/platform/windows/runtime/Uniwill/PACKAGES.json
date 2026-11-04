@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "component": "Uniwill OEM ACPI driver packages",
+  "installation": "Explicit user action only; no startup installation or service changes",
+  "packages": [
+    {
+      "id": "uniwill-10.48.11.331",
+      "directory": ".",
+      "inf_version": "10.48.11.331",
+      "inf_date": "2025-10-28",
+      "reviewed_model_ids": [
+        "wu-jie-15-xpro",
+        "mechrevo-gm6ir0c",
+        "machenike-l16"
+      ],
+      "sys_sha256": "6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235",
+      "l16_evidence": "Official MACHENIKE ControlCenterX5.60.60.17, support342 AMD7745HX/7945HX RTX50; exact SYS/INF/CAT hashes matched2026-10-22. L16 admits diagnostic reads only."
+    },
+    {
+      "id": "uniwill-11.2.18.347",
+      "directory": "11.2.18.347",
+      "inf_version": "11.2.18.347",
+      "inf_date": "2024-08-27",
+      "reviewed_model_ids": [
+        "eluktronics-hydroc16g2"
+      ],
+      "sys_sha256": "e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2",
+      "bundled_by_oem": [
+        "Eluktronics ControlCenter5.23.51.56 V4",
+        "MECHREVO GX ControlCenter5.57.1.2 / XY14PTL / CustomizeTarget57"
+      ]
+    }
+  ]
+}

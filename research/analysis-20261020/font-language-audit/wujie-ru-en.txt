@@ -1,0 +1,413 @@
+MagicControl — Wujie / common RU-EN font and translation audit
+Date:2026-10-20. Static audit only. No production/UI/config edits, GUI,
+hardware/EC access, tests, application/helper builds or commits in this task.
+Wujie remains the visual reference: no proposed card/scrollbar redesign.
+
+Scope and evidence
+Read AGENTS.md, docs/LINUX-UI-PARITY.md, Wujie README, all entries of the
+shared four-column translation catalog, Windows localization adapters and
+common cards/OSD plus Windows/Linux SETs/BIOS/updates/font consumers.
+Only RU and EN linguistic correctness is assessed here. SC/TC column presence
+is counted, not a review of Chinese wording/glyph quality (other agents own it).
+Source revision and hashes are recorded at the end. No external web claim needed.
+
+Summary
+NoP1 established. Main confirmed P2 defects: untranslated/mixed safety/status
+messages; language-independent decimal comma; unit fragments; unmapped update
+window status/title; misleading Firmware mode label for Wujie lighting preset.
+The current catalog has no empty RU/EN fields and its existing entries are
+reviewed individually in the complete ledger below; that is NOT full UI coverage.
+Unknown strings are explicitly preserved by translate(), so extra Russian text
+does not become English merely because both languages can render its glyphs.
+
+P2-1 — Safety/ownership/battery statuses lack English messages (both OSs)
+Mechanism: src/gui/common/Localization.h:219–235 matches only the enumerated
+Russian fragments and preserves the rest; it has no typed status/error keys.
+Exact examples:
+ src/gui/common/MonitoringCards.h:65 "Батарея не установлена" ->
+  "Battery не установлена"; suggested EN "Battery not installed".
+ :67 "Питание: источник неизвестен" -> "Power source: источник неизвестен";
+  suggested "Power source unknown".
+ :68 lowercase "заряд" is absent while catalog has uppercase "Заряд";
+  suggested complete template "Charge: {value} %".
+ :70 "последние показания" absent; suggested "last available readings".
+ :74/77 "Нет батареи", "Источник неизвестен", "Нет показаний" absent;
+  suggested "No battery", "Source unknown", "No readings".
+ :100/108 source-unavailable/data-missing strings absent; suggested
+  "No data" / "Source unavailable".
+ src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp:392
+  "Нет свежих температур CPU/GPU; управление возвращено EC." is not a full
+  catalog key; suggested "No fresh CPU/GPU temperatures; firmware control restored."
+ :435 "Флаги управления вентиляторами EC изменились." -> incomplete English;
+  suggested "EC fan-control flags changed.".
+ :547 "RAM-таблица изменена другим владельцем; восстановление отменено.";
+  suggested "RAM fan table changed by another controller; restore cancelled."
+ These are our own statuses, not untranslated third-party vendor error payloads.
+ src/gui/windows/FansPage.cpp:1025/1080–1094 forwards controller.message to the
+ operation status. Changing a language does not supply missing templates.
+ src/gui/linux/SettingsPage.cpp:31/135/137 similarly retains Linux transport/
+ unsupported backlight reasons in Russian; suggested complete messages
+ "Linux EC/SMU transport is not connected. Hardware control unavailable."
+ and "Linux keyboard-backlight driver is not connected yet."
+RU converse: src/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp:125,
+152/225 emits own English exceptions ("stored charge limit readback mismatch",
+"Unsupported charge limit", "EC battery platform readback mismatch"). RU UI
+returns input unchanged (Localization.h:220); suggested RU "Сохранённый предел
+заряда не подтверждён чтением", "Неподдерживаемый предел заряда", "Режим
+батареи не подтверждён чтением EC". Keep raw vendor/API error codes alongside.
+Fix proposal: shared stable message IDs/parameters + complete four-language UI
+messages for our own states. Preserve raw driver/API diagnostic payload separately.
+No fan/EC mechanism or UI geometry change is needed to localize messages.
+
+P2-2 — EN numbers use Russian comma; RU/GPU formatting inconsistent
+ src/gui/common/MonitoringCards.h:15–21 replaces every decimal point with comma
+ regardless of active language; applies CPU/GPU/RAM/battery/card readouts on
+ Windows and Linux. EN can show "43,0 °C", "12,41 V".
+ src/gui/windows/SettingsPage.cpp:782–786 and873–874 repeats forced comma for
+ APU watts and battery health; Linux SETs uses monitoringNumber as well.
+ src/gui/common/DiscreteGpuCard.h:31–32/42/49 uses std::format with default dot,
+ so in RU separate GPU card can show dot beside comma in FANs.
+Suggested shared display formatter: RU comma, EN dot; one grouping/unit policy
+across cards; keep logs/JSON/CSV machine formats invariant. Do not change telemetry
+values or introduce language-dependent parsing into saved fan/power settings.
+
+P2-3 — Unit fragments remain mixed (BIOS/inventory and common readouts)
+ Catalog Localization.h:104–108 covers MHz/GiB/MiB/mA/W but not Гц, Вт·ч, В/ГБ.
+ src/platform/windows/BatteryInterfacesWindows.h:72 formats "{:.2f} Вт·ч";
+ greedy fragment matching yields "W·ч", not Wh, in English (Вт matches but ч
+ has no entry). Suggested exact whole-unit EN "Wh" (RU "Вт·ч").
+ src/platform/windows/InventoryDetailsWindows.cpp:136 and
+ src/platform/windows/InventoryWindows.cpp:457/489 output Гц; EN should be Hz.
+ src/gui/common/MonitoringCards.h:82/110 hardcodes V/MHz even for RU while
+ other strings use МГц; not a sensor error, but typography/locale inconsistency.
+Suggested atomic unit tokens/full-value formatters instead of fragment replacement.
+Keep degree-Celsius, SI scales and binary GiB/MiB correct; no GB/GiB substitution.
+
+P2-4 — Updates window status/title bypass localization
+Windows src/gui/windows/UpdateWindow.cpp:53/66 creates and updates raw STATIC;
+no applyWindowLanguage or localized() call exists there. Ownerdraw buttons use
+localizedDrawText(:75), so buttons translate but status remains Russian.
+Window title :84 also raw "MagicControl — Обновления".
+Linux src/gui/linux/UpdateWindow.cpp:31/36–37/45 creates raw title/status without
+applyWidgetLanguage; actionButton for controls is localized via Ui.cpp:304–306.
+Own asynchronous messages :20/24 remain unmapped in catalog even if routed.
+Suggested EN title "MagicControl — Updates"; "Click Check.";
+"Checking GitHub Releases…"; "Preparing update…";
+"Version {version} is available. Click Update. Settings and curves are preserved.";
+"Version {version} is up to date."; "Package verified. Restarting…".
+Use shared label/status adapter and message templates; root separately documents
+hardcoded Segoe UI/DPI issues at Windows UpdateWindow.cpp:51. Do not duplicate
+font helpers or change Wujie card geometry to fix this secondary dialog.
+Startup dialogs: src/gui/windows/main.cpp:82–84 (already running) and94–97
+(failed to create window) use raw Russian Unicode escapes in MessageBoxW before
+MainWindow loads saved language. Suggested EN “MagicControl is already running.”
+and “Could not create the window.”; root owns startup language/font solution.
+
+P2-5 — "Firmware mode" incorrectly describes Wujie keyboard action
+ Localization.h:51 maps "Штатный режим" -> "Firmware mode".
+ src/gui/windows/SettingsPage.cpp:1470–1472 stops host cycle, sets level4,
+ effect0 and Wujie colorValues()[5] (cyan). This is an application lighting
+ preset; it does not relinquish control to a firmware keyboard policy.
+Related statuses :1343/1669 say "Штатная подсветка"/"Восстанавливаю штатную
+подсветку…", neither has a complete EN key.
+Suggested terminology decision (without altering card placement): EN
+"Default preset" / "Applying default lighting preset…"; RU "Штатная
+предустановка" / "Применяю предустановку подсветки…" if owner approves wording.
+Do not silently change the hardware action to make the existing English true.
+"Штатное управление EC" -> "Firmware EC control" (catalog:65) is separately
+appropriate for FANs Default and should not be globally replaced.
+
+P2-6 — OSD and KEYs success/error coverage incomplete
+ src/gui/common/OsdMessages.h:8–9/16–20/26–28/33–38/42–43 own messages
+ "Подсветка выключена", "Громкость", "Звук выключен", "Микрофон включён",
+ "Клавиатура", "Текущее состояние", "Состояние клавиши" lack full EN keys.
+Even common adjective forms differ: dictionary "Выключен" does not match
+lowercase "выключен" appended to Caps Lock. Suggested complete message IDs:
+"Keyboard backlight off", "Volume {value}%", "Muted", "Microphone on/off",
+"Touchpad on/off", "Camera on/off", "Key state", "Checking device state…".
+ src/gui/windows/KeysPage.cpp:235–244/265/320/322 similarly includes own
+ unmapped states, selected-vs-confirmed messages and caveats. Suggested
+ "Setting applied and saved to app-settings.ini.", "Change confirmed.",
+ "Command completed, but the device state is unconfirmed.".
+ Translate pending/confirmed/unknown distinctly; do not collapse readback into
+ proof of physical effect. Retain CPU/GPU/EC/SMU/PWM and technical API names.
+
+P3-1 — Tooltip/accessibility and custom-color dialog strings bypass mapper
+ Linux src/gui/linux/SettingsPage.cpp:156/159 palette tooltip names and
+ :218/223/230 title/reason hints go straight to gtk_widget_set_tooltip_text.
+ :178 sets dialog title "Выберите цвет" directly; applyWidgetLanguage
+ (Ui.cpp:110–112) traverses labels only, not tooltip/window-title properties.
+Suggested EN palette White/Red/Orange/Yellow/Green/Cyan/Blue/Purple;
+"Choose color", "Choose a preview color", "Automatic backlight off is not
+available yet.", "EC inactivity timer is not confirmed for this board."
+Do not translate #RRGGBB values or persist translated button labels as state.
+
+P3-2 — Minor term clarity in existing EN keys
+ Localization.h:19 "Цикл 6" -> "Cycle 6": proposed "6-color cycle" for meaning.
+ :46 "Мульти" -> "Multicolor": for Wujie actual hardware rainbow shown at
+ SettingsPage.cpp:816, proposed "Rainbow" (do not impose this label on a
+ different model effect if semantics differ; use shared semantic effect data).
+ :182 "No saved information. Click Refresh information." is understandable;
+ optional typographic improvement: "No saved information. Click “Refresh information”."
+ All remaining pairs in the201-entry ledger checked for basic meaning/nonempty fields;
+ no placeholder loss or duplicate conflicting RU key established.
+
+Fonts, measurement, truncation — confirmed structure, not visual pass
+ Common Fonts.h:25–35 shares role sizes/weights; :76–83 Windows maps Segoe UI
+ families; windows/Layout.h:35–39 substitutes private Noto Sans SC only when
+ enabled and excludes symbol role. Windows MainWindow.cpp:223–228 and Linux
+ main.cpp:17–39/74–77 register/fallback and log font availability. Font absence
+ is not proof of missing letters; system substitution/fallback remains OS-owned.
+ No RU/EN-specific font-family divergence is established by these source paths.
+ Linux Ui.cpp:62–82 shapes/measures translated text with Pango; :151–177 clips
+ within reference line boxes and uses shared fixed ascent/lineheight from
+ Fonts.h:48–61, not the active font's ink extents. This is a static clipping risk
+ for substituted fonts/combining marks, NOT confirmed visible clipping.
+ Windows BiosPage.cpp:46–49/273–278 measures localized text before row heights;
+ Linux BiosPage.cpp:59–62 does the same via textHeight; keep this good behavior.
+ Windows ControlTheme.h:43 uses DT_END_ELLIPSIS and Linux Ui.cpp:315 sets
+ label ellipsis: avoids overflow but does not prove full EN captions fit.
+ SettingsPage.cpp:866/878/904 single-line diagnostics use ellipsis; longer
+ translated safety reasons need accessible full text/tooltip, not wider cards.
+ Static audit cannot establish which installed fallback face actually renders,
+ optical glyph quality, DPI100/125/150/200% fit, missing-glyph boxes or screenshot
+ parity. No GUI/font rendering/test was run. Record these as unverified, never
+ present source review as a visual pass. Do not modify scroll geometry.
+
+Coverage boundary
+The complete catalog key ledger follows; native labels Default/Manual/Max,
+Manual online, CPU=GPU, FANs/SETs/KEYs/BIOS, names/SMBIOS/PCI IDs and raw vendor
+errors are intentionally not classified as missing RU translations simply for
+being Latin. Existing glossary fragments do not cover all inventory paragraphs:
+InventoryDetailsWindows.cpp:176 "Ядра / потоки" -> "Cores / threads";
+:191 "Дата драйвера" -> "Driver date"; :213 "Номинальная / настроенная скорость"
+-> "Rated / configured transfer rate"; :265 "Выпуск / сборка" -> "Release / build";
+InventoryWindows.cpp:536 EDID limitations need a complete EN paragraph, not word
+substitution. Suggested "Brightness, color gamut and panel technology cannot
+be reliably determined from standard EDID." Preserve 8bit+FRC caveats.
+Complete catalog presence ≠ complete inventory/status/tooltip coverage.
+
+Complete RU/EN catalog ledger — every existing Entry reviewed
+Format: source line | RU | EN | review (SC/TC only checked nonempty).
+15 | Батарея · верхний предел зарядки | Battery charge limit | OK: RU/EN meaning; nonempty4columns
+16 | Производительность Intel CPU | Intel CPU performance | OK: RU/EN meaning; nonempty4columns
+17 | Производительность APU | APU performance | OK: RU/EN meaning; nonempty4columns
+18 | Подсветка клавиатуры | Keyboard backlight | OK: RU/EN meaning; nonempty4columns
+19 | Цикл 6 | Cycle 6 | P3-2: clearer 6-color cycle
+20 | Каждые | Every | OK: RU/EN meaning; nonempty4columns
+21 | Цвета | Colors | OK: RU/EN meaning; nonempty4columns
+22 | BIOS · сведения о ноутбуке | BIOS · Laptop information | OK: RU/EN meaning; nonempty4columns
+23 | Обновить сведения | Refresh information | OK: RU/EN meaning; nonempty4columns
+24 | Установить драйвер PawnIO | Install PawnIO driver | OK: RU/EN meaning; nonempty4columns
+25 | Снять дамп | Collect diagnostic dump | OK: RU/EN meaning; nonempty4columns
+26 | Копировать отчёт | Copy report | OK: RU/EN meaning; nonempty4columns
+27 | Быстрое переключение | Quick toggles | OK: RU/EN meaning; nonempty4columns
+28 | Блокировка клавиши Windows | Windows key lock | OK: RU/EN meaning; nonempty4columns
+29 | Отключить экранное меню | Disable on-screen display | OK: RU/EN meaning; nonempty4columns
+30 | Блокировка клавиши Fn | Fn key lock | OK: RU/EN meaning; nonempty4columns
+31 | Питание USB при выключении и гибернации | USB power while off or hibernating | OK: RU/EN meaning; nonempty4columns
+32 | Автовключение при подаче питания | Power on when AC is connected | OK: RU/EN meaning; nonempty4columns
+33 | Блокировка клавиши Copilot | Copilot key lock | OK: RU/EN meaning; nonempty4columns
+34 | Блокировка действует, пока программа открыта; выбор сохраняется. | Blocking works while the app is open; the choice is saved. | OK: RU/EN meaning; nonempty4columns
+35 | Отключает наши уведомления OSD. Выбор сохраняется рядом с EXE. | Disables MagicControl OSD. The preference is saved beside the app. | OK: RU/EN meaning; nonempty4columns
+36 | Устройства Windows | Windows devices | OK: RU/EN meaning; nonempty4columns
+37 | Текущее состояние Windows. | Current Windows state. | OK: RU/EN meaning; nonempty4columns
+38 | Веб-камера | Webcam | OK: RU/EN meaning; nonempty4columns
+39 | Сенсорная панель | Touchpad | OK: RU/EN meaning; nonempty4columns
+40 | Состояния обновляются автоматически. | States refresh automatically. | OK: RU/EN meaning; nonempty4columns
+41 | Экономичный | Power saving | OK: RU/EN meaning; nonempty4columns
+42 | Офисный | Office | OK: RU/EN meaning; nonempty4columns
+43 | Сбалансированный | Balanced | OK: RU/EN meaning; nonempty4columns
+44 | Турбо | Turbo | OK: RU/EN meaning; nonempty4columns
+45 | Пульсация | Breathing | OK: RU/EN meaning; nonempty4columns
+46 | Мульти | Multicolor | P3-2: verify Rainbow semantic
+47 | Моно | Static | OK: RU/EN meaning; nonempty4columns
+48 | Свой цвет… | Custom color… | OK: RU/EN meaning; nonempty4columns
+49 | Свой цвет... | Custom color... | OK: RU/EN meaning; nonempty4columns
+50 | Авто Выкл | Auto off | OK: RU/EN meaning; nonempty4columns
+51 | Штатный режим | Firmware mode | P2-5: action mismatch; use Default preset
+52 | Штатный лимит | Default limit | OK: RU/EN meaning; nonempty4columns
+53 | Применить | Apply | OK: RU/EN meaning; nonempty4columns
+54 | Лимит мощности, Вт | Power limit, W | OK: RU/EN meaning; nonempty4columns
+55 | Лимит мощности, % | Power limit, % | OK: RU/EN meaning; nonempty4columns
+56 | Температура | Temperature | OK: RU/EN meaning; nonempty4columns
+57 | Загрузка GPU | GPU usage | OK: RU/EN meaning; nonempty4columns
+58 | Занято VRAM | VRAM used | OK: RU/EN meaning; nonempty4columns
+59 | Потребление | Power usage | OK: RU/EN meaning; nonempty4columns
+60 | CPU вентилятор | CPU fan | OK: RU/EN meaning; nonempty4columns
+61 | GPU вентилятор | GPU fan | OK: RU/EN meaning; nonempty4columns
+62 | Вентилятор | Fan | OK: RU/EN meaning; nonempty4columns
+63 | Мощность CPU | CPU power | OK: RU/EN meaning; nonempty4columns
+64 | Мощность APU | APU power | OK: RU/EN meaning; nonempty4columns
+65 | Штатное управление EC | Firmware EC control | OK: RU/EN meaning; nonempty4columns
+66 | Не применена | Not applied | OK: RU/EN meaning; nonempty4columns
+67 | Применена | Applied | OK: RU/EN meaning; nonempty4columns
+68 | Нет подтверждения | Unconfirmed | OK: RU/EN meaning; nonempty4columns
+69 | Общая кривая EC | Shared EC curve | OK: RU/EN meaning; nonempty4columns
+70 | гистерезис OEM | OEM hysteresis | OK: RU/EN meaning; nonempty4columns
+71 | Задано | Configured | OK: RU/EN meaning; nonempty4columns
+72 | факт | actual | OK: RU/EN meaning; nonempty4columns
+73 | Память | Memory | OK: RU/EN meaning; nonempty4columns
+74 | Батарея | Battery | OK: RU/EN meaning; nonempty4columns
+75 | Диск | Disk | OK: RU/EN meaning; nonempty4columns
+76 | Не установлен | Not installed | OK: RU/EN meaning; nonempty4columns
+77 | Температура недоступна | Temperature unavailable | OK: RU/EN meaning; nonempty4columns
+78 | От сети | On AC power | OK: RU/EN meaning; nonempty4columns
+79 | от сети | AC power | OK: RU/EN meaning; nonempty4columns
+80 | От батареи | On battery | OK: RU/EN meaning; nonempty4columns
+81 | от батареи | battery | OK: RU/EN meaning; nonempty4columns
+82 | Зарядка | Charging | OK: RU/EN meaning; nonempty4columns
+83 | Разряд | Discharging | OK: RU/EN meaning; nonempty4columns
+84 | Циклов | Cycles | OK: RU/EN meaning; nonempty4columns
+85 | Здоровье | Health | OK: RU/EN meaning; nonempty4columns
+86 | Питание | Power source | OK: RU/EN meaning; nonempty4columns
+87 | Порт зарядки | Charging port | OK: RU/EN meaning; nonempty4columns
+88 | Уровень | Level | OK: RU/EN meaning; nonempty4columns
+89 | Яркость | Brightness | OK: RU/EN meaning; nonempty4columns
+90 | Низкая | Low | OK: RU/EN meaning; nonempty4columns
+91 | Высокая | High | OK: RU/EN meaning; nonempty4columns
+92 | Выкл. | Off | OK: RU/EN meaning; nonempty4columns
+93 | Вкл. | On | OK: RU/EN meaning; nonempty4columns
+94 | Включён | Enabled | OK: RU/EN meaning; nonempty4columns
+95 | Выключен | Disabled | OK: RU/EN meaning; nonempty4columns
+96 | Включено | Enabled | OK: RU/EN meaning; nonempty4columns
+97 | Выключено | Disabled | OK: RU/EN meaning; nonempty4columns
+98 | Цвет | Color | OK: RU/EN meaning; nonempty4columns
+99 | сек | sec | OK: RU/EN meaning; nonempty4columns
+100 | Длительно | Sustained | OK: RU/EN meaning; nonempty4columns
+101 | Средняя | Average | OK: RU/EN meaning; nonempty4columns
+102 | Пик | Peak | OK: RU/EN meaning; nonempty4columns
+103 | об/мин | RPM | OK: RU/EN meaning; nonempty4columns
+104 | МГц | MHz | OK: RU/EN meaning; nonempty4columns
+105 | ГиБ | GiB | OK: RU/EN meaning; nonempty4columns
+106 | МиБ | MiB | OK: RU/EN meaning; nonempty4columns
+107 | мА | mA | OK: RU/EN meaning; nonempty4columns
+108 | Вт | W | OK: RU/EN meaning; nonempty4columns
+109 | мощность | power | OK: RU/EN meaning; nonempty4columns
+110 | Мощность | Power | OK: RU/EN meaning; nonempty4columns
+111 | Частота GPU | GPU clock | OK: RU/EN meaning; nonempty4columns
+112 | Частота | Clock | OK: RU/EN meaning; nonempty4columns
+113 | частота | clock | OK: RU/EN meaning; nonempty4columns
+114 | Загрузка | Usage | OK: RU/EN meaning; nonempty4columns
+115 | Заряд | Charge | OK: RU/EN meaning; nonempty4columns
+116 | всего | total | OK: RU/EN meaning; nonempty4columns
+117 | свободно | free | OK: RU/EN meaning; nonempty4columns
+118 | память | memory | OK: RU/EN meaning; nonempty4columns
+119 | действующий предел | enforced limit | OK: RU/EN meaning; nonempty4columns
+120 | Диапазон | Range | OK: RU/EN meaning; nonempty4columns
+121 | диапазон | range | OK: RU/EN meaning; nonempty4columns
+122 | штатный | default | OK: RU/EN meaning; nonempty4columns
+123 | Драйвер | Driver | OK: RU/EN meaning; nonempty4columns
+124 | Лицензия | License | OK: RU/EN meaning; nonempty4columns
+125 | Закрыть | Close | OK: RU/EN meaning; nonempty4columns
+126 | Проверить обновления | Check for updates | OK: RU/EN meaning; nonempty4columns
+127 | Проверить | Check | OK: RU/EN meaning; nonempty4columns
+128 | Обновить | Update | OK: RU/EN meaning; nonempty4columns
+129 | Загрузка… | Downloading… | OK: RU/EN meaning; nonempty4columns
+130 | Открыть | Open | OK: RU/EN meaning; nonempty4columns
+131 | Выйти | Exit | OK: RU/EN meaning; nonempty4columns
+132 | Выход | Exit | OK: RU/EN meaning; nonempty4columns
+133 | Отмена | Cancel | OK: RU/EN meaning; nonempty4columns
+134 | Ошибка | Error | OK: RU/EN meaning; nonempty4columns
+135 | Поддержка | Support | OK: RU/EN meaning; nonempty4columns
+136 | Донаты | Donations | OK: RU/EN meaning; nonempty4columns
+137 | Ноутбук | Laptop | OK: RU/EN meaning; nonempty4columns
+138 | Ноутбуки | Laptops | OK: RU/EN meaning; nonempty4columns
+139 | Другая модель — просмотр | Other models open in preview | OK: RU/EN meaning; nonempty4columns
+140 | Просмотр ноутбука | Laptop preview | OK: RU/EN meaning; nonempty4columns
+141 | Просмотр профиля · аппаратное управление отключено | Profile preview · hardware control disabled | OK: RU/EN meaning; nonempty4columns
+142 | Просмотр | Preview | OK: RU/EN meaning; nonempty4columns
+143 | Нажмите, чтобы скопировать | Click to copy | OK: RU/EN meaning; nonempty4columns
+144 | QR-код скопирован | QR image copied | OK: RU/EN meaning; nonempty4columns
+145 | Адрес скопирован | Address copied | OK: RU/EN meaning; nonempty4columns
+146 | Скопировано | Copied | OK: RU/EN meaning; nonempty4columns
+147 | Модель из прошивки | Firmware model | OK: RU/EN meaning; nonempty4columns
+148 | Производитель платы | Board manufacturer | OK: RU/EN meaning; nonempty4columns
+149 | Производитель BIOS | BIOS vendor | OK: RU/EN meaning; nonempty4columns
+150 | Производитель матрицы | Panel manufacturer | OK: RU/EN meaning; nonempty4columns
+151 | Производитель | Manufacturer | OK: RU/EN meaning; nonempty4columns
+152 | Семейство | Family | OK: RU/EN meaning; nonempty4columns
+153 | Материнская плата | Motherboard | OK: RU/EN meaning; nonempty4columns
+154 | Версия BIOS | BIOS version | OK: RU/EN meaning; nonempty4columns
+155 | Дата BIOS | BIOS date | OK: RU/EN meaning; nonempty4columns
+156 | Версия EC | EC version | OK: RU/EN meaning; nonempty4columns
+157 | Режим загрузки | Boot mode | OK: RU/EN meaning; nonempty4columns
+158 | Идентификатор системной прошивки UEFI | UEFI firmware identifier | OK: RU/EN meaning; nonempty4columns
+159 | Версия SMBIOS | SMBIOS version | OK: RU/EN meaning; nonempty4columns
+160 | Дисплей | Display | OK: RU/EN meaning; nonempty4columns
+161 | матрица | panel | OK: RU/EN meaning; nonempty4columns
+162 | Идентификатор панели | Panel identifier | OK: RU/EN meaning; nonempty4columns
+163 | Модель из EDID | EDID model | OK: RU/EN meaning; nonempty4columns
+164 | Код модели EDID | EDID model code | OK: RU/EN meaning; nonempty4columns
+165 | Версия EDID | EDID version | OK: RU/EN meaning; nonempty4columns
+166 | Изготовление | Manufacture date | OK: RU/EN meaning; nonempty4columns
+167 | Глубина цвета EDID | EDID color depth | OK: RU/EN meaning; nonempty4columns
+168 | Сигнал EDID | EDID signal | OK: RU/EN meaning; nonempty4columns
+169 | Гамма EDID | EDID gamma | OK: RU/EN meaning; nonempty4columns
+170 | Процессор | Processor | OK: RU/EN meaning; nonempty4columns
+171 | Оперативная память | System memory | OK: RU/EN meaning; nonempty4columns
+172 | Накопители | Storage | OK: RU/EN meaning; nonempty4columns
+173 | Модель | Model | OK: RU/EN meaning; nonempty4columns
+174 | Не сообщается | Not reported | OK: RU/EN meaning; nonempty4columns
+175 | Неизвестно | Unknown | OK: RU/EN meaning; nonempty4columns
+176 | Да | Yes | OK: RU/EN meaning; nonempty4columns
+177 | Нет | No | OK: RU/EN meaning; nonempty4columns
+178 | Сведения о ноутбуке | Laptop information | OK: RU/EN meaning; nonempty4columns
+179 | Обновление — только по кнопке. | Refresh is manual. | OK: RU/EN meaning; nonempty4columns
+180 | Сведения обновлены и сохранены | Information refreshed and saved | OK: RU/EN meaning; nonempty4columns
+181 | Сохранённые сведения от | Saved information from | OK: RU/EN meaning; nonempty4columns
+182 | Сохранённых сведений ещё нет. Нажмите «Обновить сведения». | No saved information. Click Refresh information. | OK: RU/EN meaning; nonempty4columns
+183 | Драйвер PawnIO уже установлен. | PawnIO driver is already installed. | OK: RU/EN meaning; nonempty4columns
+184 | Дамп и диагностика сохранены | Dump and diagnostics saved | OK: RU/EN meaning; nonempty4columns
+185 | Изменение подтверждено EC. | Change confirmed by EC readback. | OK: RU/EN meaning; nonempty4columns
+186 | Состояния EC обновлены. | EC states refreshed. | OK: RU/EN meaning; nonempty4columns
+187 | Читаю данные | Reading data | OK: RU/EN meaning; nonempty4columns
+188 | EC недоступен. | EC unavailable. | OK: RU/EN meaning; nonempty4columns
+189 | Аппаратные настройки отключены. | Hardware settings disabled. | OK: RU/EN meaning; nonempty4columns
+190 | Управление недоступно | Control unavailable | OK: RU/EN meaning; nonempty4columns
+191 | пока не подключено | not connected yet | OK: RU/EN meaning; nonempty4columns
+192 | Функция для | Feature for | OK: RU/EN meaning; nonempty4columns
+193 | пока не подключена. | not available yet. | OK: RU/EN meaning; nonempty4columns
+194 | только чтение | read only | OK: RU/EN meaning; nonempty4columns
+195 | чтение подтверждено | read confirmed | OK: RU/EN meaning; nonempty4columns
+196 | реакция вентиляторов подтверждена пробой | fan response confirmed by probe | OK: RU/EN meaning; nonempty4columns
+197 | исполнение CPU PL не измерено | CPU PL enforcement not measured | OK: RU/EN meaning; nonempty4columns
+198 | аномалия драйвера | driver anomaly | OK: RU/EN meaning; nonempty4columns
+199 | Сеть · звук · камера · NPU | Network · audio · camera · NPU | OK: RU/EN meaning; nonempty4columns
+200 | Память, сообщённая WMI | Memory reported by WMI | OK: RU/EN meaning; nonempty4columns
+201 | Установлено модулей | Installed modules | OK: RU/EN meaning; nonempty4columns
+202 | Всего | Total | OK: RU/EN meaning; nonempty4columns
+203 | Серийный номер | Serial number | OK: RU/EN meaning; nonempty4columns
+204 | Объём | Capacity | OK: RU/EN meaning; nonempty4columns
+205 | Тип | Type | OK: RU/EN meaning; nonempty4columns
+206 | Формат | Form factor | OK: RU/EN meaning; nonempty4columns
+207 | Подключение | Connection | OK: RU/EN meaning; nonempty4columns
+208 | Состояние Windows | Windows state | OK: RU/EN meaning; nonempty4columns
+209 | Система | System | OK: RU/EN meaning; nonempty4columns
+210 | Архитектура | Architecture | OK: RU/EN meaning; nonempty4columns
+211 | Последняя загрузка | Last boot | OK: RU/EN meaning; nonempty4columns
+212 | Зарядка остановлена | Charging stopped | OK: RU/EN meaning; nonempty4columns
+213 | Беспроводные устройства | Wireless devices | OK: RU/EN meaning; nonempty4columns
+214 | Сохранить | Save | OK: RU/EN meaning; nonempty4columns
+215 | Настройки | Settings | OK: RU/EN meaning; nonempty4columns
+
+Ledger total=201; empty-column entries=0; case-sensitive duplicate RU keys=0.
+Eight case-insensitive groups are intentional upper/lowercase variants, not duplicate exact keys.
+
+Source baseline (read-only): HEAD=83be3e6e70f9b087cba2be6f445846e3b4dcceee
+AGENTS.md SHA256=89b8e7cbded958f8aa7e86b453b437b2d76c163837de73587292488af2c45890
+docs/LINUX-UI-PARITY.md SHA256=5e274aeb6356e6186dfac2e42e249f984dc9c38e9c661145c40a0f6f67ddc16a
+src/devices/mechrevo/x5sp4nag/README.md SHA256=35f78c8988547934369a90154893b3c0a011ad683fe9f74e25c60e9489abfb08
+src/gui/common/Localization.h SHA256=41d64447efb4ce631b1b4473b371c809253467215e3e54d0b529919001141028
+src/gui/common/Fonts.h SHA256=6813bf5ff2d734c9990c741a305aa813029b7f56fa3713e1776983be3257d56f
+src/gui/windows/LocalizationWindows.h SHA256=d77fb716f4d28ac031694946e9cc55ffde97150de0340b2f6c49c116c5a8ae47
+src/gui/common/MonitoringCards.h SHA256=320efedd9fe9b861621f96af174a63bc884c4616d5655f8f9c3fa65c360426dd
+src/gui/common/OsdMessages.h SHA256=1ab77b2a8f1f010b4b0d16b2aff0bbfc22faf66211395adb137b75406f7e8fbf
+src/gui/common/DiscreteGpuCard.h SHA256=827193f50a10bc352d333bb9c6a17f6ef8aa287df1872c63d19bb6a9e504e1ec
+src/gui/windows/SettingsPage.cpp SHA256=bfc0cf6feed12b5ecd9a1ae27a6723eb5d0c6b623a1b46633941d029fe6c89c7
+src/gui/linux/SettingsPage.cpp SHA256=667b955dd2dda449221e936b3836ec6ebf1e2bffae49fe64bd86ede68ca5472b
+src/gui/linux/Ui.cpp SHA256=6dac705e075e943d994dca9e87b29e751f854c2315b64d9d3969c1d26a282daa
+src/gui/windows/UpdateWindow.cpp SHA256=93a8b4e972d8e318a234054145a3814521fffe8df2e852d5414ebadd92ab111a
+src/gui/linux/UpdateWindow.cpp SHA256=f979c8a1c603bb5f7a6de5c1c13618e3177c948e7525f88cd2e9e0c655b134e4
+src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp SHA256=028ede928fb93e49e2baffcfaa8170fe3792d5c10215ce461309de403bff81ae
+src/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp SHA256=415514a35660058817d8d7f054b8eb3ddf7eacc03bb92712583b925039caee40

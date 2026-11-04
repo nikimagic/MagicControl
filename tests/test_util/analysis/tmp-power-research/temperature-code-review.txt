@@ -1,0 +1,35 @@
+Температуры: ревизия загруженного кода, 16.10.2026.
+Изучены FanSlider, NUCtool, LumaDesk, OpenRevo, имеющиеся AMD SDK,
+реализация PawnIO MagicControl и 130 исторических кадров SensorProbe.
+
+CPU:
+- NUCtool: EC 0x43E; GPU 0x44F. У нас 0x43E известен, 0x44F нулевой.
+- FanSlider: MainForm.cs оставляет температуру CPU/GPU заглушкой.
+  Адреса 0x1097/0x1103 в FanProtocol помечены как требующие калибровки.
+- LumaDesk: максимум ACPI thermal zones через ROOT\WMI, не прямой Tctl.
+  На нашей плате ECTZ._TMP вычисляется из EmbeddedControl XHPP (offset 0x3E,
+  7 бит): (0xAAC + XHPP*10)/10 - 273.15. Это не MMRB offset 0x3E.
+- PawnIO: AMD SMN 0x59800, decodeZenTctl. 130/130 кадров status=ok.
+  Прямой CPU-канал уже используется; альтернативные CPU-источники не считать
+  независимыми физическими датчиками без подтверждения.
+
+RAM:
+- В четырёх проектах кода JEDEC/TSOD/SPD hub для температуры DIMM не найдено.
+- В MagicControl уже читаются DDR5 SPD hubs 0x50/0x51 через SMBus/PawnIO.
+  Проверяются тип 0x1851, capability/config, температура из word register 0x31.
+  Signed 11-bit после сдвига на 2, масштаб 0.25 C.
+- Исторические данные: модуль 1 37.25..61.25 C, модуль 2 35.75..61.25 C;
+  каждый источник 130/130 status=ok. Это температура SPD hub на модуле,
+  а не доказанная максимальная температура всех DRAM-кристаллов.
+
+Другие SDK:
+- AMD ADL TEMPERATURE_MEM sensor 9: unsupported во всех 130 кадрах.
+- AMD ADLX GPUMemoryTemperature: unsupported 130/130.
+- AMD ADLX GPUHotspotTemperature: unsupported 130/130.
+  GPU memory sensor не является источником двух независимых DIMM-датчиков.
+- OpenRevo не публикует аппаратную реализацию в скачанном дереве.
+
+Вывод: CPU и температуры обоих модулей уже доступны через PawnIO.
+Нового подтверждённого температурного канала памяти/процессора в четырёх
+проектах не обнаружено. Переносить чужие адреса и подменять датчики нельзя.
+Новых аппаратных вызовов или записей EC/SMU в этой ревизии не выполнялось.

@@ -1,0 +1,5 @@
+From: 00d61864 To: 0060cd3a Type: INDIRECTION Op: 0 ANALYSIS null
+From: 00fd9858 To: 0060cd3a Type: DATA Op: 0 ANALYSIS null
+From: 010cbe2d To: 0060cd3a Type: DATA Op: 0 ANALYSIS null
+From: 010cbfe5 To: 0060cd3a Type: DATA Op: 0 ANALYSIS null
+From: 0060e906 To: 0060cd3a Type: UNCONDITIONAL_CALL Op: 0 DEFAULT FUN_0060e902

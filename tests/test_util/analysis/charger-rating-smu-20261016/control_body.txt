@@ -1,0 +1,31 @@
+class PowerStatus(C.Structure):
+ _fields_=[('ac',W.BYTE),('flags',W.BYTE),('percent',W.BYTE),('reserved',W.BYTE),('life',W.DWORD),('full',W.DWORD)]
+k.GetSystemPowerStatus.argtypes=[C.POINTER(PowerStatus)];k.GetSystemPowerStatus.restype=W.BOOL
+def check_supply():
+ status=PowerStatus()
+ if not k.GetSystemPowerStatus(C.byref(status)) or status.ac!=1:raise RuntimeError('Expected AC')
+def smart_read():
+ # OEM ReadSmartApcTableByKey: BB is read, AA (write) is NEVER used here.
+ lock_ec()
+ try:
+  result=[]
+  for offset in range(12):
+   packet=(C.c_ubyte*2)(0xbb,offset);buf=(C.c_ubyte*4)();n=W.DWORD()
+   ok=k.DeviceIoControl(h,0x9c40a500,packet,2,buf,4,C.byref(n),None)
+   result.append(dict(offset=offset,ok=bool(ok),returned=n.value,raw=bytes(buf).hex(),error=0 if ok else C.get_last_error()))
+  return result
+ finally:k.ReleaseMutex(m)
+try:
+ check_supply();first=snapshot()
+ if [first[hex(a)] for a in [0x454,0x456,0x740]]!=[82,72,26]:raise RuntimeError('Wrong board')
+ baseline_flags={hex(a):first[hex(a)] for a in [*fan_addresses,0x783,0x784,0x785,0x7c3,0x7cd,0x7ce]}
+ if lib.pawnio_open(C.byref(module))<0:raise RuntimeError('PawnIO open failed')
+ data=(runtime/'RyzenSMU.bin').read_bytes();blob=C.create_string_buffer(data)
+ if lib.pawnio_load(module,blob,len(data))<0:raise RuntimeError('PawnIO load failed')
+ emit('start',ec=first,hardware_settings_writes=False,smartapc=smart_read())
+ collect('control',8)
+ emit('completed',ec=snapshot(),hardware_settings_writes=False)
+except BaseException as error:emit('error',error=str(error),traceback=traceback.format_exc())
+finally:
+ if module:lib.pawnio_close(module)
+ k.CloseHandle(pci);k.CloseHandle(m);k.CloseHandle(h);log.close()

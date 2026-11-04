@@ -1,0 +1,56 @@
+Пакет1: инструкции, карта и поиск;31.10.2026
+Начальная база2949414b/0.1.419; финальные docs сверены с отдельным параллельным
+commit267ca006/0.1.420. Его продуктовые изменения не входят в diff этого пакета.
+
+Состав: только AGENTS, README, PROJECT-MAP, WORKLIST, новый WORKING-RULES,
+ripgrep .ignore и документы проверки этого пакета. Ни src/cmake/Tools/packaging,
+ни binaries/runtime/INI/CSV/logs/dumps не редактировались этой задачей.
+
+AGENTS43861 ->7321байт (426 ->75строк). Критические permissions/tests/geometry/
+FAN bounds/private data/tray/build/commit/release правила теперь в начале.
+Подробные действующие ограничения читаются по domain route в WORKING-RULES;
+root+detail32798байт в текущей LF копии. Удалены даты/повторная история, не запреты.
+Все14старых level2 разделов классифицированы в RULE-COVERAGE.json; собственные
+свидетельства отмены/сужения записаны отдельно. Это semantic review, не формальная
+проверка эквивалентности текстов. Полный исходный текст доступен в указанной Git базе.
+
+Актуализация: удалены старые current243/402 и обещание ещё перенести уже общие
+GPU/Update/OSD/Sc. Из README удалён F23 hook/exit-unblock и app-settings для
+OSD/Copilot; native KEYs/keys-settings отражены правильно. Запрет FAN replay при
+обычном CPU profile сохранён; blanket запрет SETs FAN table writes сужен, чтобы
+не отменить существующий явный Custom FAN/CPU preset. Private startWorker/publish
+имена не объявлены неизменяемым API; one-owner/fresh/once/overlay инварианты сохранены.
+Исторические layout commit IDs оставлены как comparison anchors, не current spec.
+Версии readers и аппаратные факты вынесены из повторных README таблиц к источникам.
+
+README содержит один датированный build snapshot и ссылки на machine-readable
+версии. PROJECT-MAP содержит input/owner/backend/readback/save/view маршруты,
+без собственной копии номера build. WORKLIST закрывает прошлые execution пункты,
+но сохраняет encapsulation/private API/header/device/compositor validation задачи.
+Лицензия исходников не переопределена; прежнее «не определена» сохранено.
+
+Search .ignore не .gitignore: исключены только .git/build/out/research/Users_logs/
+GitHub_Releases/live portable/archive из обычного rg. Файлы не перемещены, не
+удалены, не сняты с Git и не скрыты от stagers. Explicit --no-ignore research/<case>
+работает; Src673файла до/после. Полный список135455 ->1368путей при замере.
+Это уменьшение поиска, не измерение токенов всей сессии. Другие индексы Codex
+не считаются автоматически перенастроенными фильтром rg.
+
+Markdown local paths/anchors проверены; битых ссылок нет. Все исходные правила
+сопоставлены с новым местом, changes review и staged scope проверены отдельно.
+Тесты приложения, сборка, hardware/GUI, установка, package/publish не запускались.
+Это documentation-only commit, продуктовая версия и working binaries нами не менялись.
+
+Во время работы появились параллельные src/tests/portable изменения другого
+задания. Они отражены в VERIFICATION как наблюдавшийся status, не принадлежат
+этому пакету и не включаются в его commit. Не откатывались и не stage-ились.
+
+Во время пакета параллельный420коммит скрыл experimental SETs controls и убрал
+неподдержанный USB-C writer. Navigation snapshot обновлён до420 после чтения
+этого commit/контракта и сверки complete manifest/обеих portable. Старое обещание
+USB-C режима заменено точным admission отказом; backend/visibility code нами не менялся.
+
+Итоговые размеры/срез/foreign status обновлены в VERIFICATION.json. Оригинальные
+14разделов покрыты; все local Markdown paths/anchors разрешаются. Source visibility
+до/после фильтра одинакова. Продуктовый build420 создан другим заданием; эта задача
+только прочитала его manifest и сверила четыре существующих бинарника.

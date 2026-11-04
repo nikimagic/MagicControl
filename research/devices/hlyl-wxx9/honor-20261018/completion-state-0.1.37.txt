@@ -1,0 +1,6 @@
+{"ProcessId":28712,"SessionId":1,"ExecutablePath":"C:\\Users\\aniki\\Documents\\MagicControl-Diagnostics\\native-0.1.37\\MagicControl.exe"}
+Temporary task definitions remaining: 0
+keyboard_level=2 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания
+flags=0 period=200 duty0=0 duty1=0 candidate_target0=0 candidate_target1=0 writes=0
+stapm=31.500000 slow=37.800003 fast=54.000004 pm=3604483 stale=0 status=PawnIO / SMU
+charge_start=70 charge_end=90 writable=1 status=Honor · HWMI/I2EC · фактические показания

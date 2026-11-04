@@ -1,0 +1,127 @@
+Static cross-model FAN transition review / 2026-10-20
+
+Scope and evidence
+Read AGENTS.md, docs/DEVICE-ARCHITECTURE.md, src/platform/windows/FAN_MODES.md,
+the Honor/GM6/HYDROC READMEs and the actual adapters. No tests, builds, GUI,
+OEM programs, SSH, hardware access or commits were run by this agent. This
+report describes source reasoning, not new hardware confirmation. Wujie UI
+geometry, cards, theme, typography and scrolling are unchanged.
+
+Authorized modified production files (exclusive subagent scope):
+  src/gui/windows/FansPage.cpp
+  src/devices/mechrevo/gm6ir0c/ControlWindows.cpp
+  src/devices/huawei/hlyl-wxx9/FanControlWindows.cpp
+Root owns common DeviceOperation/EcAccess/dump scheduling changes; Wujie agent
+owns its separate transition changes. No Linux production source was changed.
+
+Closed defects
+
+F1 / P2: stale Windows typed observations after a newer GUI request.
+FansPage.cpp:814,844 now increment a UI admission generation for GM6/Honor
+requests; JobResult/SensorSnapshot carry it. completeSensors:1162 discards a
+sample started before the newer request, rather than overwriting current
+command readback with old Default/Manual/PWM. completeWorker:1034 rejects an
+older typed completion without resetting the newer pending intent. Sensor
+poll busy gating alone was insufficient because an earlier poll could already
+be executing. Sources: typed request workers and completeSensors/completeWorker.
+LIMIT: this is a GUI-request generation, NOT a global backend epoch. An external
+dump/default or a firmware change does not increment it. Fresh typed readback
+and backend ownership checks remain necessary; no full external-epoch fix is
+claimed. The current single command worker/busy admission prevents overlapping
+local requests; the completion check is defensive for that future extension.
+
+F2 / P2: old GM6 online telemetry/failure could drive or stop a newer session.
+ControlWindows.cpp:195 captures onlineGeneration before releasing gate to read
+temperatures; :201 discards it on generation mismatch after re-lock. stopOnline
+:154 invalidates even an empty/failed stop, and Max pause/resume:489-490 also
+invalidate. Thus an old telemetry failure cannot call stopOnline on a newly
+admitted online request. Existing guarded RAM/flag ownership, masks and rollback
+are preserved. There is no transfer of Wujie RAM semantics to Honor/HYDROC.
+
+F3 / P2: Honor FAN success did not include checked configuration-port exit.
+FanControlWindows.cpp formerly relied on HlylI2EcSession destruction, while
+I2EcWindows.cpp:16 logs exit failure and the destructor cannot report it.
+The public session contract requires finish before successful publication.
+Auto no-op/ownership-lost/applied branches now finish first, as do fixed PWM,
+rollback, public read, watchdog ownership sample and Max sample. A failed finish
+is propagated rather than returning a successful mode/read. Fixed owns the
+attempted pair before finish; a separate HlylI2EcFinishError catch keeps pending
+cleanup and never performs new target writes on that poisoned session. A
+rollback whose baseline readback passed but exit failed retains pending owner
+context and reports unknown, not 'restored'. Fresh-session cleanup still checks
+manual bit and exact owned pair; foreign targets are not overwritten.
+Readback of PWM remains distinct from measured RPM response or physical cooling.
+
+Passive dump scheduling integration
+FansPage.cpp:1135 uses root passiveEcReadsPaused only for the two optional typed
+sensor observations. SensorSnapshot.typedObservationSkipped preserves existing
+Honor known/actual mode on intentional skip instead of treating absence as
+failed read. GM6 absent optional snapshot likewise does not overwrite its mode.
+Provider monitoring still runs. Controller read()/command readback, online,
+watchdog, rollback and Max cleanup are not suspended by this UI-only skip.
+HlylControl::read()/lighting was intentionally left unchanged in this scope.
+
+Model/OS matrix
+
+Honor HLYL-WXX9 / BIOS1.09:
+  Default = typed firmware Auto. Manual = fixed two-channel runtime PWM;
+  Max = fixed100/100 with native guards, watchdog and ownership-aware cleanup.
+  No autonomous Uniwill RAM curves, Wujie flags4/7 or firmware-table emulation.
+  automatic(false) checks live target pair and returns OwnershipLost without
+  writes if a different owner controls Manual. Explicit Default is a separate
+  user command. Existing mutex serializes setter/read/watchdog paths. Newly
+  checked finish covers successful completion of those I2EC sessions.
+
+GM6IR0C:
+  Own typed Default/Manual RAM/Boost/online protocol. stopOnline checks all
+  captured expected masked fields before restoring its baseline; mismatch
+  preserves needsRestore and does not blindly replay a foreign RAM snapshot.
+  Inactive original RAM is not restored as zeros. No exit Default replay.
+  Online telemetry epoch protection is now local to the backend session.
+
+HYDROC-16 G2:
+  Profile.cpp:11 disables general FAN write capabilities. The narrow recovered
+  factory diagnostic path is not a public Manual/online implementation. Do not
+  enable GM6 setters solely from matching RamFan1.5 capability bits. Windows
+  FansPage availability requires a real controller before applying presets.
+
+Unknown:
+  src/devices/unknown/Profile.cpp:4 has no EC protocol/capabilities. The common
+  UI can show saved draft curves; it must not report them as applied firmware
+  tables. Manual/preset handlers already require a controller; no writer added.
+
+Linux:
+  src/gui/linux/FansPage.cpp:54-91 has a single monitoring worker and lifetime
+  guard; it only publishes telemetry. update:113-120 disables mode/link buttons
+  and removes actual-selection highlight. Saved curve edits are draft data,
+  with explicit unavailable status:94-99. No actual fan setter/rollback request
+  exists, hence no corresponding old-writer completion to fix. A future typed
+  Linux writer needs the same request generation and ownership contract, not
+  Wujie EC addresses or Windows I2EC port transport.
+
+Remaining common evidence/contract limitations (proposals, not new fixes)
+
+1. DeviceOperation.h:36-48 serializes admitted application operations but is
+   not a request revision or exclusive lease against external firmware/OEM.
+   PassiveEcReadPause is bandwidth scheduling only. Keep controller ownership
+   checks even when GUI busy or deviceOperations owns a lease.
+2. Gm6State commandReadbackConfirmed/fanResponseConfirmed are session evidence:
+   ControlWindows.cpp:371 can set readback for CPU-only PL, :440-443 publishes
+   generic session flags and :514-517 records prior Max probe response. They do
+   not prove a newly selected Manual request physically executed. Current UI
+   checks actual typed mode/curves separately; do not relabel these generic
+   flags as per-request enforcement. A future shared result should scope them
+   by feature/requestId/observation time/provider context.
+3. Minimal future shared transition result should separately retain requested
+   mode + requestId, fresh actual/readback + revision/time, response evidence
+   (RPM/power, source/time), and unknown/error/ownership-lost. Accept only a
+   completion belonging to the current request. Never turn missing telemetry
+   into Default and never turn a saved INI/CSV intent into applied state.
+4. Cleanup must revalidate the exact owned masked fields/target pair and must
+   not write after ownership loss. Explicit user Default remains separate from
+   automatic rollback and must not be silently triggered by an old completion.
+
+Validation performed
+Static source/diff review and git diff --check for the three modified sources
+and this report. No compilation or runtime/hardware claim. Root handles the
+common build, portable staging, hashes and detailed commit after integration.

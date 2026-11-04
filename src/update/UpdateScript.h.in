@@ -1,0 +1,4 @@
+#pragma once
+namespace mc::update::platform {
+inline constexpr char installerScript[]=R"MC_UPDATE(@MC_UPDATE_SCRIPT@)MC_UPDATE";
+}

@@ -1,0 +1,67 @@
+Wujie X5SP4NAG — исправления временной индикации и admission подсветки
+Дата:20.10.2026. Общие core/lifecycle правки выполняет родительский агент.
+
+Изменены в этой части:
+  src/devices/mechrevo/x5sp4nag/windows/ConfigurationRestoreWindows.cpp
+  src/platform/windows/LightingOwnershipWindows.h (новый общий inline adapter)
+  src/devices/mechrevo/x5sp4nag/README.md
+  этот отчёт.
+Общие KeyboardBacklight/GUI/MainWindow/INI этим агентом не редактировались.
+
+1. Read-only ownership API
+namespace mc::windows:
+  LightingOwnership { bool writable; std::string status; }
+  inspectLightingOwnership()
+  ensureLightingWritable()
+SCM открывается только с CONNECT, services только с QUERY_STATUS. Проверяются
+reviewed GCUBridge/GCUService/AiStoneService. Любой status кромеSTOPPED,
+ошибка перечисления/доступа/SCM query означают decline, не permission.
+Затем переиспользуется общий uniwillControlOwner для checked Toolhelp walk:
+GCUService.exe/AiStoneService.exe, в том числе оставшийся child при остановке
+wrapper service. Никаких start/stop/install/process kill или драйверных операций.
+Отсутствие этих имён не гарантирует эксклюзивный lease; exact profile/identity
+по-прежнему проверяются аппаратным backend. Общий core подключает preflight
+перед writes/rollback, отдельные restore writers также вызывают admission.
+
+2. Adapter flash: desired не выводится из temporary effective Off
+Удалена запись KeyboardLevel из наблюдаемого liveBrightness в device-settings.ini.
+78C.1 при сохранённых level bits не считается командой пользователя выбрать0.
+Initial capture берёт selected level из bits7:5; неизвестные5..7 не clamp-ятся
+к выдуманному4. Это защищает также миграцию отсутствующих preference fields.
+
+Flash разрешён только при свежей supported подсветке, положительном selected
+level, без effective blank и без сохранённого явного Off. До него читается fresh
+before; временная команда задаёт Mono/level4/red либо green с expected=before.
+После ожидания1с:
+- сон запрещает replay снимка;
+- admission проверяется заново;
+- свежие RGB/pulse/Rainbow сравниваются с нашим успешно применённым flash;
+- чужая смена отменяет возврат старого эффекта без дополнительных EC writes;
+- если selected level ещё наш4, возвращаются прежние level bits с новым общим
+  powerDisabled=fresh78C.1; временный idle blank остаётся blank;
+- если Fn изменил level, яркость не пишется и не сохраняется;
+- цвета/эффект возвращаются из собственных fresh before/applied, а не из INI
+  или чужого позднего snapshot. Общий core выполняет masked writes/readback
+  и caller-visible rollback; физический ответ светодиодов этим не доказан.
+
+3. Координация с host cycle
+Один KeyboardLightingPause создаётся после получения DeviceOperation и EC guard
+на всю operation ConfigurationRestore. Adapter-only success, включая no-op,
+вызывает complete(fresh readKeyboardBacklight). При обычном restore complete
+вызывается после успешных lighting steps; ошибка APU отдельно не блокирует его.
+Failed lighting scope не complete-ится: общий lifecycle оставляет cycle unknown/
+остановленным вместо слепого возобновления. Не добавлено startup autoplay.
+Shared API предоставлен родителем; геометрия/карточки/scrollbar не менялись.
+
+4. Что не утверждается
+Не найден и не включён writable аппаратный inactivity timeout. Текущая работа
+не использует741.2/6FA, не переключает общий741.0 из подсветки, не меняет FAN/APU.
+Host idle нельзя эмулировать setLevel(0): explicit Off и временный disable —
+разные операции. Новый общий powerDisabled сохраняет выбранный уровень.
+OEM process timer с keyboard+mouse и исторические31с native/DC наблюдения
+не объявляются одной доказанной причиной. Их различия остаются в исследовании.
+
+Проверено только статическим чтением изменённых веток и git diff --check.
+Тесты, сборки, GUI/CLI/OEM, EC/HID/UEFI/SMU, службы, установка драйверов, SSH
+и коммиты не выполнялись. Portable этим агентом не обновлялась; выполненность
+общей сборки и реальное аппаратное поведение должен сообщить владелец сборки.

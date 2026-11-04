@@ -1,0 +1,10 @@
+From: 00d61294 To: 005cea06 Type: INDIRECTION Op: 0 ANALYSIS null
+From: 00fd5e64 To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 010c51b0 To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 010c51bb To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 010c51c0 To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 010c51cc To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 010c5384 To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 010c5389 To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 010c538e To: 005cea06 Type: DATA Op: 0 ANALYSIS null
+From: 005d2019 To: 005cea06 Type: UNCONDITIONAL_CALL Op: 0 DEFAULT FUN_005d2015

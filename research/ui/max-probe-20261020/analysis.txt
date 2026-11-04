@@ -1,0 +1,47 @@
+User dump0.1.96 / active Max feedback pause correction — 2026-10-20
+
+Existing user evidence: dump-20261020-122349-0 and MagicControl-2.jsonl.
+No assistant-initiated dump, hardware probe, GUI or test run.
+
+Restore verification from the user's run (times Moscow UTC+03):
+15:23:51: DiagnosticPrepare captured previous=Manual, then confirmed Default.
+15:27:26: restore admitted after generation/epoch/fresh-Default guards.
+15:27:27: CPU RAM compare1366ms, changed_bytes0, GPU table untouched.
+15:27:28: Manual armed, configuration readback confirmed, restore JSON
+attempted=true/confirmed=true/superseded=false/cancelled=false.
+15:27:29: UI status updated to autonomous EC_manual, not stale Applying.
+Following runtime telemetry records CPU~2350RPM/27% and at other instants
+GPU~2180RPM/25%, with other GPU samples0. No equality of channels or complete
+curve execution is inferred. Register/table proof and physical samples remain
+separate. The original missing automatic request is now present and completed.
+
+The dump preserved a complete minute: fast span121957ms,62 complete passes,
+0partial/failed provider passes; user-evidence.json retains the summary.
+
+Separate observed Max defect:
+29saved Max samples, last elapsed22172ms; peak6160/5956RPM, command_applied=true,
+response_observed=true, settled=false, restored=true. Status was
+'fan observation cancelled: observations are paused', not cancellation of the
+whole dump. The live log places the probe at15:25:24–15:25:47.
+
+Source cause and narrow correction:
+MaximumProbe runs as an admitted command in the existing single fan worker,
+with DeviceOperation ownership. Its RPM/PWM callback nevertheless passed
+observation=true to EcAccess::readFanFeedback. This optional-poll mode throws
+if another EcAccess::Transaction increments observationPauses while waiting
+for the gate, including between the stable samples of our already running
+read. PowerDiagnostics readEc is one such passive Transaction source. The
+exact concurrent thread is not identified by the old journal; the exception
+and misclassified callback path are explicit.
+
+Only that active callback now passes observation=false. EcAccess still takes
+the same local and backend/cross-process locks, verifies coherent RPM/PWM and
+returns errors for invalid/unstable I/O. Power/ownership checks surround the
+sample; common measureMaximumFans still respects cancellation and always runs
+verified cleanup. It holds30s unless a real error/cancel occurs. UI telemetry
+retains observation=true and its existing skip behavior. No pause is globally
+disabled; no register write, map, table, threshold or UI geometry changed.
+
+Both platform variants are compiled/staged by root and artifact/settings/UI
+hashes checked separately. No new hardware proof of the corrected30s hold is
+claimed. This report analyzes the already collected user package only.

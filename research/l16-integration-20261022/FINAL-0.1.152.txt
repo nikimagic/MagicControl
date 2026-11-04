@@ -1,0 +1,22 @@
+Final refinement0.1.152
+
+Numeric arrows and validation share model bounds; L16 first field reaches145W.
+EC logger recognizes4A2/4A3 LE16 temperature and explicitly shows observed native
+platform6. New captions are translated in all four UI languages. Existing layout,
+fonts, vector geometry and DPI behavior are unchanged.
+
+Corrected BIOS identity: exact GetBiosProjctID reads74C, not740. Owner EC dump
+has740=1A,74C=DD,7CA=01; low6 DD&3F=29 corresponds to ID6. Profile now probes
+740/78E/74C/7CA and shared L16-only admission verifies the same fields for
+FANs/RGB/battery and diagnostic opening. Earlier0.1.151 IDK label was erroneous;
+it never changed the EC Project pin or another model's control protocol.
+
+L16 saved-upper restoration reuses the existing bounded wake retry only for
+transient pre-write failures. Any attempted write consumes retry permission.
+Imported4/7/DBD-restart preferences fail before any L16 battery restore writes.
+
+Common build0.1.152 and working portable GUI/CLI Windows/Linux verified; see
+VERIFICATION-0.1.152.json. Compile warnings remain, no warning-free claim.
+No tests, GUI launch or live EC commands performed by the agent. Native factory
+profile cycle/mailbox, unproven lower restart and4/7 ROM policy remain unavailable
+on L16; shared FANs/CPU/RGB/upper APIs are connected with stated admission.

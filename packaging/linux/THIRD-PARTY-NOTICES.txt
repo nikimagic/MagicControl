@@ -1,0 +1,32 @@
+MagicControl — сторонние компоненты / Third-party notices
+Собственные компоненты MagicControl: Copyright (c) 2026 NikiMagic.
+
+Noto Sans SC — SIL Open Font License 1.1.
+Copyright 2014-2021 Adobe; Reserved Font Name: Source.
+Полный текст: fonts/OFL-NotoSansSC.txt. Шрифт не изменён.
+https://github.com/google/fonts/tree/main/ofl/notosanssc
+
+Noto Sans TC — SIL Open Font License 1.1.
+Copyright 2014-2021 Adobe; Reserved Font Name: Source.
+Полный текст: fonts/OFL-NotoSansTC.txt. Шрифт не изменён.
+https://github.com/google/fonts/tree/main/ofl/notosanstc
+SC/TC загружаются приватно для UI; системная установка не выполняется.
+
+AMD ADL ABI references — AMD MIT notice included conservatively:
+licenses/AMD-ADL-MIT.txt.
+https://github.com/GPUOpen-LibrariesAndSDKs/display-library
+Драйверы AMD/Intel/NVIDIA, OEM ACPI-драйвер и их установщики не включены.
+Используемые установленные драйверы остаются под лицензиями их правообладателей.
+
+gtk4-layer-shell — MIT/Expat, Sophie Winter and contributors.
+Полный текст: libgtk4-layer-shell.LICENSE.txt.
+https://github.com/wmww/gtk4-layer-shell
+
+GTK4, GLib, Pango, Cairo, Fontconfig, PulseAudio, glibc, libstdc++ и остальные
+системные зависимости динамически загружаются из ОС; их двоичные файлы не
+включены в этот архив (кроме отдельно указанного gtk4-layer-shell).
+Сохраняются права, предоставленные лицензиями этих компонентов, включая
+замену LGPL-библиотек и отладку изменений. Тексты лицензий и исходники
+установленных системных версий предоставляет дистрибутив Linux.
+
+DRM UAPI declarations: licenses/DRM-UAPI-NOTICES.txt. No kernel module is shipped.

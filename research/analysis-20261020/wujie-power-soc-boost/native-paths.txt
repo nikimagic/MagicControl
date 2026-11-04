@@ -1,0 +1,80 @@
+Wujie X5SP4NAG: SOC / power / transient-vs-sustained boost — static investigation
+2026-10-20. Wujie agent. Production source frozen during build 0.1.102.
+Only source/file reads performed. No EC/SMU writes, live reads, OEM execution, GUI, tests or builds.
+
+SOURCE AND APPLICABILITY
+R = C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Reference_w568w/GCUService
+M = C:/Users/admin/Documents/mechrevo_dsh/MagicControl
+R is the locally available fully decompiled w568w reference, with real method bodies rather than Runtime exception stubs. Its RAM Fan 1.5 class is relevant as the Uniwill protocol reference used for Wujie; it is not executable EC/BIOS firmware and does not prove that every generic method is called on X5SP4NAG. MyFanCtrl.cs:33-70 dispatches RAMFan1.5 versus legacy Intel/QC/Normal/CML based on capabilities/project. Never treat the old Intel class's calls as the AMD Wujie's runtime path.
+This investigation did not open or execute OEM applications. No exact compiled EC instruction consumer for the SOC-dependent limiter has been established.
+
+MAIN FINDINGS
+1. There are separate numeric envelopes (SPL/SPPT/FPPT) and separate firmware policy flags. None of the inspected three Overboost/HighPower setters contains a duration/tau, SOC comparison or delayed reset.
+2. An additional native bit exists: 0x7A6.1 (mask02) is inverted dynamic-temperature Overboost admission, not a power timer: enabled->clear, disabled->set. The setters for 7A5.7, 7A5.4 and 7A6.1 have no call sites in the inspected RAMFan1.5 class; the legacy Intel/QC managers do call them.
+3. No exact SOC percentage threshold or short/long Turbo duration was found in this Wujie-relevant host code. Owner observation of lower-SOC EC limiting is credible input but remains a firmware behavior to correlate; it is not explained or disproved by absence of a C# comparison.
+
+NATIVE AC CALL CHAIN
+R/MyControlCenter/PowerModeEvent.cs:19-24 subscribes SystemEvents.PowerModeChanged.
+:27-44 StatusChange -> RefreshACLineStatus() -> MyFanCtrl.PowerStatusChange(g_ACLineStatus).
+:48-59 obtains Type-C status and Windows Offline/Online, sets 0/1. No BatteryLifePercent comparison here.
+R/MyControlCenter/MyFanCtrl.cs:201-203 forwards to selected manager.
+R/MyControlCenter/MyFan/MyFanManager_RamFan1p5.cs:1105-1108 PowerStatusChange ignores the argument and calls Init(false).
+:4574-4589 Init -> RefreshCurrentProfile(OperatingMode,false) -> SetUserProfile(OperatingMode,GpuTesting).
+:4837-4866 SetUserProfile changes mode and selects FAN table (this is a coupled OEM path, NOT safe to call as a CPU-only setter).
+:4871-4887 AMD branch: Custom(mode3) writes currentProfile.CPU.AmdSPL/SPPT/FPPT, standard modes0/1/2 write zero overrides. Zero means firmware default, not zero watts.
+:5223-5238 SetPL1/2/4 write1923/1924/1925 = 783/784/785. Setter PL4 checks separate scaling capability first.
+:5242-5254 scaling support reads727.7; ReCheckCpuPLMinimumValueA:6232-6266 permits FPPT>=SPL/2 and >=SPPT/2 when scaling advertised, otherwise requires FPPT>=SPL and SPPT. Do not interpret byte names or /2 as a boost duration.
+
+THRESHOLDS FOUND, WITH CORRECT UNITS
+RAMFan1.5 :4878-4880 AmdSPL>=75 OR AmdSPPT>=75 -> SetCpuVrmCurrentLimit(65,120).
+:5216-5219 writes753=65 and754=120. The 75 comparison is a requested power value in watts, NOT battery SOC75%.
+The user-edit handlers at :1801-1803 and :1860-1862 additionally require g_ACLineStatus==1 for that VRM-current operation. This does not establish SOC gating or actual current enforcement on this Wujie BIOS.
+R/Workaround/WKD_CriticalBatterySetting.cs:11-29 and:41 impose at least5% in Windows critical-battery power-plan settings, called from App.cs:587. This is OS critical-battery policy, not an EC Turbo/SOC activation threshold. No link from this5% constant to7A5/7A6/7C3 was found.
+
+FLAGS: EXACT IMPLEMENTATIONS AND CALLS
+A) RAMFan1.5 SetPowerStatus(bool bHigh), :5469-5493
+read1957=7A5; (fresh &127)+(bHigh?128:0). Own bit7 mask80 HIGH_POWER.
+No invocation of this private method in the inspected RAMFan1.5 class (only its definition/log label).
+B) RAMFan1.5 SetOverBoostMode(bool bEnable), :5441-5465
+read1957=7A5; (fresh &239)+(enabled?16:0). Own bit4 mask10 OVERBOOST forced.
+No invocation of this private method in the inspected RAMFan1.5 class.
+C) RAMFan1.5 SetOverBoostByDynamicTemp(bool bEnable), :5497-5521
+read1958=7A6; (fresh &253)+(enabled?0:2). Own bit1 mask02, enabled when clear.
+No invocation of this private method in the inspected RAMFan1.5 class. No temperature threshold value is present in setter; whatever thermal decision EC makes is outside this setter.
+D) Fan Boost is different: :5174-5187 writes751.6/mask40 and controls maximum fans, not proof of APU short-term Turbo.
+E) SetDynamicBoostforTurboMode :6344-6347 operates GPU feature APIs SetGpuDynamicBoostEnable/MaxinumTGP. Do not interpret NVIDIA TGP Dynamic Boost as AMD SPL/SPPT/FPPT timing or battery limiter. Definition is not evidence of Wujie execution.
+
+LEGACY INTEL CALL CHAIN — DO NOT TRANSFER AUTOMATICALLY
+R/MyControlCenter/MyFanManager_Intel.cs:489-502 PowerStatusChange selects AC versus DC index then Init.
+:2794-2805 mode setup -> SetSysPowerModeIndex -> SetModeProfileIndex.
+:3764-3783 writes7AB(profile index1/2/3; requested4 mapped1) then SetPowerStatus(true), which sets7A5.7.
+:3648-3706 IsFollowBiosIndex reads7A5.7 and, when set, follows7AB to saved AC/DC CPU/GPU/FAN profile triples.
+Thus bit7 can be an OEM profile-coordination/follow-BIOS flag; its name is not proof of a universal watt unlock.
+:2815-2848 SetDGpuModeWithOverBoost(P,G,F) dispatched asynchronously:
+- G==4 -> forced=true AND dynamic-temperature=true.
+- otherwise forced=false; dynamic-temperature=true only P==1 && G==1 && (F==1 || F==2).
+- calls SetOverBoostMode and SetOverBoostByDynamicTemp.
+This chooses forced versus thermally permitted boost, not a host-defined 'N seconds versus forever' timer. No seconds or SOC thresholds are used in this decision. Legacy Intel/QC implementation does not prove this branch's model admission on AMD X5SP4NAG.
+
+PLATFORM7C3, CURRENT APP, AND PHYSICAL EVIDENCE
+M/src/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp:45 defines7C3 whole-byte platform; :177 target automatic?7:4; :319-325 setBatteryAutomatic calls shared battery apply. Current label Turbo EC / Limiter EC is this platform policy, NOT either7A5 flag. Application callback paths: SettingsPage.cpp:1415/1693. It also couples to battery-threshold persistence, as the current BATTERY contract documents.
+M/src/protocols/uniwill/x5sp4nag/Registers.h:74-89 standard profile751, Turbo10, group90, SETs ownedmaskB0 preserving FanBoost40. Independent from7C3.
+M/src/core/src/POWER_MODES.md:82-100 exact-board measured mapping783->STAPM,784->Slow,785->Fast. Raw AMD OEM names SPL/SPPT/FPPT must not replace the measured physical mapping or imply an exposed duration API.
+M/tests/test_util/analysis/charger-rating-smu-20261016/REPORT.md:7-10 measured Turbo Fast/Slow/STAPM: DC platform4=45/40/40,DC7=60/54/54;AC65 both=40/35/35;AC100 platform4=55/50/50,7=70/65/65.
+:22-30 and:52-54 explain limits: repeated platform behavior and charger budget established; charge/SOC-dependent cutoff curve, sustained under-load power and charging/discharging effects were not measured. This table cannot provide the missing SOC boundary or duration.
+M/tests/test_util/analysis/highpower-overboost-20261016/REPORT.md:8-28:7A5.7 held but no SMU limit change in observed idle DC/AC100 and platform4/7;7A5.4 self-cleared; combined90 retained80 only. No proof of any effect under workload; no proof these bits are universally ineffective. FAN ownership remained autonomous Manual; this was not the coupled OEM Default path.
+
+TIME / SOC CONCLUSIONS AND GAPS
+- No exact 'SOC X% -> lower budget' threshold/hysteresis/delay was found in this reference host call chain. SOC-dependent EC firmware policy remains unknown, not contradicted.
+- No verified duration in seconds for short Turbo or long Turbo. Distinct Fast/Slow/STAPM values are measurable; time constants and EC thermal/SOC arbitration are not established by names.
+- CPU.cs has AmdSPL/SPPT/FPPT values but no corresponding AMD time-window fields in this reference model. Stopwatch elapsedMilliseconds around FAN/profile async operations (RAMFan1.5:5764-5802 etc.) measure operation latency, not power boost duration.
+- 7C3 can change firmware budgets depending on supply rating and likely other firmware inputs; SOC effect cannot be reduced to platform4/7 without controlled evidence.
+- No new hardware experiment is authorized by this task. If future owner asks, evidence should correlate actual SOC, AC/Type-C rating,751,7C3,7A5,7A6, overrides, actual SMU Fast/Slow/STAPM and measured power over time while preserving FAN ownership. Exact EC firmware consumer/thermal timing remains the source-level evidence needed for absolute thresholds; raw ec.bin is a RAM snapshot, not that executable.
+
+SHA256 OF INSPECTED PRIMARY REFERENCE FILES
+R/MyControlCenter/PowerModeEvent.cs F7B0CEB4ADBA890A1F7535AE057EA9D5E4DA1E77709E0A14C596D68B55FBC48E
+R/MyControlCenter/MyFanCtrl.cs 2C34A50B2525AC0E8FD50DFD3B0AF4FD63AD5CB96D9B6070A684858FFD6A8281
+R/MyControlCenter/MyFan/MyFanManager_RamFan1p5.cs F468417794AF08E141C88F9F73BF337621D9FB0D6CC14BA3EBE7B7C5B34B50DF
+R/MyControlCenter/MyFanManager_Intel.cs 5D771A134F0B5684F7D0E5F1833B0E63F6D64C979402E5D6BAF80D5FE9E46DC9
+R/MyControlCenter/MyFan/CPU.cs BB4472DD947AF822E8E4A1B02EB643042F083EA8A6170740949458E8D5820FA3
+R/Workaround/WKD_CriticalBatterySetting.cs 7AED950E39609FF1EBFFEA174C95BCD10F6270C5CDE0E64E3B4EA74474593E7B

@@ -1,0 +1,220 @@
+Wujie X5SP4NAG — верхние100/95/85 и нижний80: доказательства и границы
+Дата:20.10.2026. Production baseline:237e520, portable0.1.86.
+
+0. Область
+Только статическое чтение исходников, OEM-декомпиляций, ACPI и уже имеющихся
+физических журналов. Ничего не запускалось на устройстве: ни GUI/CLI/OEM,
+ни EC/UEFI/SMU, ни службы/драйверы, ни тесты/сборки/SSH/коммиты.
+Изменены только этот отчёт и его JSON. Внешний вид карточек и скролл не менялся.
+Прочитаны AGENTS.md, README модели, BATTERY.md. Последнее пожелание владельца
+трактуется как общий пользовательский контракт: stop100/95/85, restart80.
+Наличие этого контракта отделяется от доказанного физического поведения платы.
+
+1. Что действительно измерено
+
+1.1 Верхний85: физическая остановка подтверждена
+ИсточникA:
+  C:\Users\admin\Documents\mechrevo\Fan_X15Pro\Diagnostics\Battery\
+  platform-activation-verification-20261004.json:10–44,100–128.
+  При SOC98.000444% выбор85/platform4: battery rate0W/0A, gate742=26,
+  live7B9=D5, WMI85; две устойчивые фазы184с и140с.
+ИсточникB — более близко к границе:
+  tests/test_util/analysis/platform-charge85-matrix-20261016/REPORT.md:19–38;
+  ac100-run1/samples.jsonl:2–11,13–27,29–38 и остальные профили.
+  Windows85%, Battery Class84.9997981266%, ёмкость84211/99072mWh.
+  7B9low7=85,7D0low7=80 оставались неизменны. При platform4 —0W,
+  при7 —~35W, после возврата4 — снова0W. Это повторено Office/Balanced/
+  Turbo/Manual. Устойчивая часть исключает первые переходные отсчёты.
+  Это доказательство действующего upper85 около отображаемых85, а не только
+  чтение цифры в EC. Но это не измерение точного оператора >= или >.
+
+1.2 Верхний95: физическая остановка выше95 подтверждена
+  platform-activation-verification-20261004.json:72–99:
+  при том же SOC98.000444% выбор95/platform4 дал6снимков за~10с,0W/0A,
+ 742.2=1,7B9=DF,WMI95. Raw первичный журнал существует:
+  C:\Users\admin\Documents\mechrevo\Fan_X15Pro\ReleaseEC\Diagnostics\Battery\
+  charge-limits-20261004-184010-2084.jsonl:126–131 —95/platform4,0W.
+  В этом аудите строки действительно разобраны, а не только пересказан summary.
+  Подход к95 снизу и момент прекращения при переходе94→95 не записаны.
+  Нельзя утверждать, что точный stop95 уже измерен по зарядной траектории.
+
+1.3 «100%»: доказано разрешение заряда, а не общий гистерезис80–100
+  Тот же первичный журнал:117–124 и summary:44–71:
+  при SOC98.000444% старый C# выбор100 переводил platform7/rawupper0,
+ 742.2=0; заряд вновь появился до18.791W. Затем95/platform4 его остановил.
+  Это подтверждает снятие процентного ограничения в старом варианте100,
+  а не физическую точность отключения ровно при100 и не restart80.
+  Diagnostics/Battery/balanced-full-charge-20261002.json:1–114 дополнительно
+  содержит пользовательское наблюдение достижения100 и независимые capacity
+  snapshots100% после отключения AC. Запись не содержит AC траектории до100.
+  Более того, там был native Balanced7A6, а не наш процентный95: путать нельзя.
+
+1.4 Нижний80: запись/readback есть, физический restart не установлен
+  Матрица16.10:7D0=80 во всех фазах, SOC не опускался до80; REPORT.md:40–47
+  прямо говорит «физический запуск ниже80% НЕ проверялся». В конце SOC84,
+  замечание пользователя о возможном старте при84 — не записанная проба AC.
+  Пользовательский контракт20.10 требует80; существующие logs не доказывают
+  его исполнение или точность <80/<=80 на этой прошивке.
+  Точный источник замечания84: REPORT.md:42–46 и комментарии текущего
+  BatteryChargeWindows.cpp:35–38. Это пересказ слов владельца, не журнал
+  измеренного подключения при84; timestamp исходного сообщения не сохранён
+  в этих артефактах. Старый C# BatteryChargeLimiter.cs:244–254 не пишет7D0;
+  этот эталон доказал верхний контроль, но не реализацию нижнего80.
+
+1.5 Важное доказательство перезагрузки
+  C:\Users\admin\Documents\mechrevo\BatteryLimitLab\Результаты-20261003.md:64–75;
+  State/reboot-check-result.json содержит Rebooted=true,Confirmed=false.
+  Перед reboot upper50/platform4 давал0W; после Windows startup сохранённые
+  WMI87F и7B9 остались50, но platform стал7,742.2 исчез и заряд пошёл выше50
+  мощностью33.785–34.93W. Лимит повторно не применялся в read-only проверке.
+  GCUBridge после reboot уже работал, поэтому отдельно обвинить EC firmware
+  или OEM службу в сбросе нельзя. Хранение порога не равно хранению активации.
+
+2. Точный транспорт/поля текущего кода
+Файлsrc/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp:
+ 151–163: только exact capability/protocol X5, live identity454=82/456=72/740=26,
+ исходная platform4/7 и ROM770=FF. Другие платы этими адресами не управляются.
+ 176–177: upper100 кодируется0;95/85 — соответствующим числом; три пресета
+ теперь выбирают4, отдельно automatic100 выбирает7.
+ 187–201: upper7B9 &7F и lower7D0 &7F=80, соседний bit7 сохраняется;
+ сравнение с baseline и masked write/readback под коротким общим transaction.
+ 103–125: WMI logical87F — не raw EC адрес. AcpiTest_MULong/GetSetULong,
+ чтение bit40, запись адрес+(16-bitword<<16). Сохраняется соседний byte,
+ old bit7 и другие поля, до3попыток/readback. DSDT WKBC пишет CMDL/CMDH,
+ поэтому сохранение соседнего byte обоснованно.
+ 203–210: WMI upper сохранение, затем whole-byte platform4/7; ROM read-only.
+ До первого7→4 durable pin82/72/26 7 4 вbattery-enforcement-platform.txt.
+ 218–235: три последовательных readbackupper/lower/platform/ROM/gate,
+ ожидание до10с. На DC отсутствиеEnabled допускается как pending, не физический
+ stop.742.2 не записывается,7B9.7 Reached не выставляется вручную.
+ 238–298: rollback собственных полей сравнивает ours/original, чужие поля
+ сохраняются; неопределённый откат явно присутствует в exception.
+ 301–313: Auto сохраняет последний явный upper отдельно отChargeAuto.
+ ConfigurationRestoreWindows.cpp:33–37,188–192,236–238: сохранённый upper/Auto
+ проверяется при startup/resume тем же API; lower80 жёстко задан в API,
+ самостоятельного persisted LowerThreshold нет. Обычный просмотр ничего не пишет.
+
+Статусы, которые нельзя смешивать:
+  saved/configuredUpper != configuredLower != Enabled742.2 != Reached7B9.7
+  != физический поток батареи != гарантированное восстановление после reboot.
+
+3. OEM и firmware: что именно доказывают
+
+3.1 OEM-аналог Reference_w568w
+  C:\Users\admin\Documents\mechrevo\Decompiled\GCUService_Reference_w568w\
+  GCUService\MySystem\BatteryProtection2.cs:391–424:
+  SetBatteryChargingLimit_Up пишет decimal1977=7B9, сохраняет bit7,
+ 100→low7zero; getterzero→100.
+ 428–438: private SetBatteryChargingLimit_Down пишет decimal2000=7D0,
+ сохраняет bit7, допускает1..95. Getter441–454 zero→95, иначе читает весьbyte,
+ а не maskedlow7. Это само по себе не определяет оператор сравнения EC.
+ Поиск имени SetBatteryChargingLimit_Down в DefaultTool и Reference tree дал
+ только определение, не вызывающую ветку. Наличие метода с названием Down
+ не доказывает выбор этой ветки установленной Wujie службой.
+ Native HealthProtection0/1/2 пишет7A6.4–5 (346–378), это voltage profile,
+ не доказанное отображение100/95/85. Старый пользовательский опыт Balanced
+ до100 это различие уже выявлял.
+
+3.2 Точная ACPI Wujie
+  C:\Users\admin\Documents\mechrevo\Fan_X15Pro\Diagnostics\ACPI\
+  20261001-153930\01-DSDT.dsl:8666–8667:7B9low7 называетсяCGLM.
+ 9819–9836: _BST проверяетCGLM1..99 и выставляет дополнительный статусbit3
+ в отчёте батареи. Это не код физического компаратора stop/restart.
+ 8691–8693:7D0=DBD1,7D1=DBD2. Поиск всех.dsl этого снимка нашёл declarations,
+ но не consumer, который используетDBD1 как зарядный нижний порог.
+ Название aliasDBD1 само по себе также не доказывает альтернативное назначение.
+ Нельзя трактовать имяgenericDown как восстановленный exact EC алгоритм.
+ 10631–10737: RKBC/WKBC только mailbox transport; внутреннегоcharge state
+ machine и сравнения SOC с lower в этих методах нет.
+
+3.3 Нет exact EC firmware для восстановления компаратора
+  C:\Users\admin\Documents\mechrevo\Firmware\N.1.20MRO15\README.md:1–18:
+  точный пакет этой BIOS не получен, каталог404/NXDOMAIN в прошлом исследовании,
+  скачанной прошивки в папке нет. EC RAM dumps4096байт не являются исполняемой
+  EC firmware. Поэтому из этих материалов нельзя извлечь < или <= для80.
+
+4. Реальные пробелы и границы нынешнего обещания
+
+WBT1 [P2, представление]: BatteryChargeWindows.cpp:229–231 пишет в результате
+restart_below=80%, хотя код только записал и прочитал80. Exact boundary и работа
+нижнего компаратора не установлены. Для общего API нужны раздельные состояния:
+requestedRestart80 / configuredRestart80 / restartExecutionVerified=unknown.
+Слово below в format string не является доказательством EC алгоритма.
+
+WBT2 [P2, preflight/rollback]: строка179 читает storedBefore без проверки диапазона,
+а203 специально допускает FF. Старый C# BatteryChargeLimiter.cs:125–127 отвергал
+low7>100 как недостоверный baseline. При частичной ошибке текущий rollback274
+может вернуть low7=127 из FF или иной invalid value, отсутствующий в supported API.
+Нужно либо отказывать до записи при неизвестном baseline, либо отдельно оформлять
+инициализацию неизвестного состояния; не обещать безопасное восстановление
+невалидного threshold. В этой работе исходники не менялись.
+
+WBT3 [P2, полнота подтверждения]:225 проверяет EC upper/lower/gate, но не свежий
+WMI87F в трёх финальных readback. stored=verified означает предыдущий readback
+или только начальное совпадение. Если OEM изменит WMI во время ожидания, итоговая
+фраза может устареть при ещё совпадающем live upper. Для строгого результата
+нужно поле lastStoredReadAt/value или конечное ограниченное перечитывание WMI.
+Это статический сценарий, не новая воспроизведённая аппаратная неисправность.
+
+WBT4 [граница100]: raw0 по OEM и старому C# отключает процентное ограничение.
+Current100/platform4 отличается от старого100/platform7, поэтому старый A/B
+не подтверждает current combination4+upper0+lower80. Обычный полный заряд через
+BMS не доказывает заданный программой80–100 гистерезис. Поддержка restart80
+при100 не следует из одного readback7D0.
+
+WBT5 [политика питания]:7C3 меняет не только зарядку. Измерено на DC и AC100W:
+  tests/test_util/analysis/battery-platform-smu-20261016/ALL-MODES.md:7–24;
+  tests/test_util/analysis/charger-rating-smu-20261016/REPORT.md:7–28.
+На DC platform4 сводит native APU режимы к Fast/Slow/STAPM45/40/40; при7 они
+различаются. В проверенном наборе AC65W эффект отсутствовал, AC100W — был.
+Нельзя переносить4/7 на другую плату как универсальный battery-enable.
+Current API правильно не компенсирует эту политику скрытыми APU/FAN записями.
+Дополнительный voltage cap7A6 также может ограничивать эффективный upper:
+старый C#155–157 снимал его для изолированной пробы, current API его осознанно
+не трогает. Preserve/OEM policy и конкретный percentage preset — разные функции.
+
+5. Перенос общего пользовательского контракта
+Можно унифицировать карточку, логическую цель и typed pair restart80,
+stop{100,95,85}. Нельзя переносить Wujie7B9/7D0/WMI87F/platform4 на Honor/GM6/
+HYDROC/Unknown только ради одинаковой семантики. Нужны независимые capability,
+точные setter/readback активации, valid range и OEM policy. Native7A6 профили
+нельзя переименовать в100/95/85 без подтверждённой процентной функции.
+Для Wujie upper85/95 выше порога физически подтверждены; current lower80 —
+configured/readback. Контракт владельца сохраняется, executionVerified — unknown.
+
+6. Минимальный будущий эксперимент restart — только описание
+В этой работе не выполняется. На exact Wujie с устойчивым AC/температурой и без
+OEM перехвата зафиксировать config80/85, platform4,ROMFF,gate и Battery Class
+поток; получить исходную подтверждённую остановку около85.
+1) Отключить AC, разрядить до81, подключить тот же адаптер. Без нового setter
+   записать реальный ток/мощность, SOC gauge4AB и capacity ratio, upper/lower,
+   platform/gate/reached. Старт при81 опровергнет правило «не раньше80» для
+   повторного подключения, даже при7D0=80.
+2) Если81 не запускает заряд, отдельно повторить на80 и79 с устойчивыми отсчётами
+   после перехода. Различать continuous-AC recharge и adapter-reconnect:
+   подключение адаптера может иметь отдельную политику, один опыт не покрывает оба.
+3) Для100/95 повторить как отдельные пары, не экстраполировать85. Чтобы установить
+   строго <80 или <=80, нужны SOC квантование/внутренняя шкала либо exact EC
+   компаратор; целого Windows процента и mWh ratio мало для точной границы.
+Сохранение после sleep/reboot — отдельная серия: раньше измерено хранение WMI
+числа при потере platform/gate. Записи статуса742.2,ROMID, неизвестных битов
+или firmware для такого наблюдения не нужны. Новые пробы не запускались.
+
+7. SHA256 источников
+src/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp
+  53c852972b00a2dd6777364aa804135cd8b39fd40fec30a7c84c99d4263c3c92
+
+C:/Users/admin/Documents/mechrevo/Fan_X15Pro/Diagnostics/Battery/platform-activation-verification-20261004.json
+  b34a0dd35968909efdac11ea2b81fb8ac4375978e11ae1d6bb569c932d5fa1ce
+
+C:/Users/admin/Documents/mechrevo/BatteryLimitLab/Результаты-20261003.md
+  5745309e267288d4e98e05abfeffe3c23c44ef93503d2fbd9628c155b5846ea5
+
+tests/test_util/analysis/platform-charge85-matrix-20261016/ac100-run1/summary.json
+  131dc7cd6900d12bbe92222d3e30d05bddbaed88d17b12e5488ab2438b9868b0
+
+C:/Users/admin/Documents/mechrevo/Fan_X15Pro/Diagnostics/ACPI/20261001-153930/01-DSDT.dsl
+  5b1ffa32b261c30e196e79ef7bf8afe98caad7dc4655cc49e5aeeec5b8bcbf42
+
+Итог: код не может обещать исполнение80 лишь по generic названию Down или byte80.
+Общий requested/configured контракт и проверенное исполнение — отдельные факты.

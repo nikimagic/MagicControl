@@ -1,0 +1,139 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\NvFlash-driver-2.reference.sys
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha256): AB9154072C89993A5421518FF91CAB62996CF546FB7D33BEB118147E6285E6A2
+
+Signing Certificate Chain:
+    Issued to: NVIDIA DVS Dev Intermediate
+
+    Issued by: NVIDIA DVS Dev Root
+
+    Expires:   Fri May 14 19:20:32 2038
+
+    SHA1 hash: D524D1431254AD5E2814274C53D5B5FFA26A6196
+
+
+        Issued to: NVIDIA DVS Dev Signing
+
+        Issued by: NVIDIA DVS Dev Intermediate
+
+        Expires:   Fri Nov 22 18:55:21 2024
+
+        SHA1 hash: 4193E6EACAE1C203C3BCFB3761B4B5AB8D980D90
+
+
+The signature is timestamped: Tue Oct 15 09:25:13 2024
+
+Timestamp Verified by:
+    Issued to: DigiCert Assured ID Root CA
+
+    Issued by: DigiCert Assured ID Root CA
+
+    Expires:   Mon Nov 10 03:00:00 2031
+
+    SHA1 hash: 0563B8630D62D75ABBC8AB1E4BDFB5A899B24D43
+
+
+        Issued to: DigiCert Trusted Root G4
+
+        Issued by: DigiCert Assured ID Root CA
+
+        Expires:   Mon Nov 10 02:59:59 2031
+
+        SHA1 hash: A99D5B79E9F1CDA59CDAB6373169D5353F5874C6
+
+
+            Issued to: DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA
+
+            Issued by: DigiCert Trusted Root G4
+
+            Expires:   Mon Mar 23 02:59:59 2037
+
+            SHA1 hash: B6C8AF834D4E53B673C76872AA8C950C7C54DF5F
+
+
+                Issued to: DigiCert Timestamp 2024
+
+                Issued by: DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA
+
+                Expires:   Mon Nov 26 02:59:59 2035
+
+                SHA1 hash: DBD385EE62DBD23E7BE4F67148508724D5865B45
+
+
+
+Signature Index: 1
+Hash of file (sha256): AB9154072C89993A5421518FF91CAB62996CF546FB7D33BEB118147E6285E6A2
+
+Signing Certificate Chain:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Windows Third Party Component CA 2014
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Oct 15 23:41:27 2029
+
+        SHA1 hash: 1906DCF62629B563252C826FDD874EFCEB6856C6
+
+
+            Issued to: Microsoft Windows Hardware Compatibility Publisher
+
+            Issued by: Microsoft Windows Third Party Component CA 2014
+
+            Expires:   Fri Jan 10 23:09:15 2025
+
+            SHA1 hash: 6C582870828074ABF44AA0D61070E04036D9115B
+
+
+The signature is timestamped: Thu Oct 17 05:38:58 2024
+
+Timestamp Verified by:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+SignTool Error: WinVerifyTrust returned error: 0x800B010A
+
+	        .
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Time-Stamp PCA 2010
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Sep 30 21:32:25 2030
+
+        SHA1 hash: 36056A5662DCADECF82CC14C8B80EC5E0BCC59A6
+
+
+            Issued to: Microsoft Time-Stamp Service
+
+            Issued by: Microsoft Time-Stamp PCA 2010
+
+            Expires:   Wed Mar 05 21:46:02 2025
+
+            SHA1 hash: 6EFA062CD8B4616B9A453BBF60DCB91FC0A46728
+
+
+
+Number of signatures successfully Verified: 1
+
+Number of warnings: 0
+
+Number of errors: 1
+

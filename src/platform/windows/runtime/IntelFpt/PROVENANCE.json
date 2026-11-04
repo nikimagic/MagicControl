@@ -1,0 +1,35 @@
+{
+  "tool": "Intel Flash Programming Tool",
+  "version": "16.1.27.2181",
+  "source_url": "https://download.gigabyte.com/FileList/BIOS/nb-bios-g5_g7-vf-win11-64bit-ddr4-bios-fb10.zip",
+  "source_archive_sha256": "a8266663675b4580b2e2d7f148c6197a65ef85efc7a8dc62462227332514b170",
+  "member": "FPTW64.exe",
+  "bytes_unmodified": true,
+  "driver_reference_offset": 2404488,
+  "driver_reference_version": "1.0.0.105",
+  "files": [
+    {
+      "name": "FPTW64.exe",
+      "bytes": 2466352,
+      "sha256": "41fa119d68f15dc567df37d9513f433507680a6cdea200ac0cdff9cc88c68aae"
+    },
+    {
+      "name": "driver-reference.bin",
+      "bytes": 45816,
+      "sha256": "33abb3e6d36a101c89096d8d30173c79a9efe84f7780fc701fab35e398ac58b2"
+    }
+  ],
+  "fixed_commands": [
+    "-I",
+    "-d <new-output-file>"
+  ],
+  "flash_programming_requested": false,
+  "platform_table": {
+    "offset": 1501376,
+    "records": 31,
+    "record_bytes": 208,
+    "range_pairs_equal_to_version": "16.1.25.1871",
+    "only_other_change": "record21 offset0x68 ADL -> RPL"
+  },
+  "note": "Driver reference is inert Authenticode evidence; FPT extracts its own unchanged embedded driver. No OEM scripts or BIOS image included. WNPDriver conflicts abort capture; no automatic alternate reader."
+}

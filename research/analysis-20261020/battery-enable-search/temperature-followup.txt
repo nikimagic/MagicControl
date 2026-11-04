@@ -1,0 +1,212 @@
+GM6IR0C — температура батареи: продолжение поиска
+Проверено 20.10.2026. Статическое исследование локальных OEM-файлов, сохранённых
+дампов и открытых первоисточников. Без аппаратных вызовов, EC/SMBus/HID/UEFI
+записей, запуска OEM-утилит/драйверов, GUI, тестов, сборок или production-правок.
+
+1. Текущий вывод и степень подтверждения
+
+Подтверждено:
+- Точный активный GCUService именует EC 0x04A2 как ecBt1Temperature.
+- В четырёх разнесённых по времени точных GM6 дампах wordLE 0x04A2 равен
+  wordLE 0x0502 и wordLE 0x0504. Значения меняются 2950/3020/2940/3060.
+- Соседние поля 0x0506/08,0x050A/0C/0E/10,0x0514/16,0x0518/1A,0x051C/1E
+  согласуются с напряжением, током, SOC, remaining и full из Windows/ACPI.
+  Это сильная зацепка полного батарейного mirror, не одиночное совпадение.
+- XTP0/0x043A в точном DSDT имеет только объявление, значения всегда нулевые.
+  Его нельзя выдавать за температуру. _TMP относится к ECTZ, не к батарее.
+- В Windows BatteryTemperature возвращается Win32=1, температура отсутствует.
+
+Пока НЕ подтверждено:
+- Единицы именно GM6 зеркала 0x04A2/0502: стандарт SBS задаёт 0,1 K для
+  команды Temperature(0x08), но локального exact consumer, доказанного
+  копирования SBS0x08 в этот mirror или независимого физического показания нет.
+- Пересчёт3060/10−273,15=32,85°C — гипотеза SBS. Альтернатива /100=30,60°C
+  остаётся формально не исключённой. Оба ряда физически правдоподобны.
+- Поэтому нельзя объявить 32,85°C подтверждённой температурой GM6 или
+  внедрить единицы только по совпадению с соседней моделью.
+
+2. Точный OEM и прямая проверка активных вызовов
+
+Identity: MECHREVO / JiguangX Series GM6IR0C / board GM6IR0C,
+Project25(0x19), RAMFan1.5, BIOS N.1.05MRO09, EC SMBIOS1.12.
+Исходный GCUService-active.exe1.0.2.70:
+SHA256 8fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf.
+Полная активная декомпиляция build/research-gm6ir0c/all-active:
+- 02000053-Define.ECSpec.cs:131 — ecBt1Temperature=1186=0x04A2.
+- 020000A5-DynamicDesk.WindowW.cs:295–296 — Memory/Battery TempatureGrid
+  принудительно Collapsed. Наличие универсальной карточки не значит источник.
+- 020002E3-MyControlCenter.BatteryInfo.cs:13–15 — SOC из PowerStatus;
+  :60–67 — native cycle count1190/1191=4A6/7, температура не запрашивается.
+- 02000422-BatteryModel.BatteryInfo.cs:33–64 — Windows BatteryInformation
+  и BatteryStatus, затем Capacity/Voltage/DischargeRate; Temperature не читает.
+- 02000423-BatteryModel.Win32.cs:70 — имя enum BatteryTemperature присутствует,
+  но одного enum недостаточно для рабочего измерения.
+Поиск ecBt1Temperature/Bt1Temperature/1186/0x4A2 по полному активному C# дереву
+дал только определение константы. BatteryTemperature — только enum. Проверены
+также decompiled-default-active и decompiled-companion: decoder не обнаружен.
+Companion — отдельный пользовательский софт, не firmware-доказательство.
+Соседний HYDROC OEM5.23.51.56 содержит ту же константу, а не decoder. Ранние
+Runtime exception stubs не использовались как доказательство отсутствия пути.
+
+Точный DSDT build/research-gm6ir0c/samples/DSDT.dsl:
+:134536 XTP0word — только declaration; :134357 BTP0; :135465–135485 _BTP
+пишет BTP0 как capacity trip point, не XTP0/temperature.
+:135498 _TMP — внутри ThermalZone(ECTZ), источник XHPP/THOT.
+Нельзя подставлять в батарею ECTZ, PCH или CPU.
+
+3. Разнесённые raw-наблюдения, без нового чтения железа
+
+Все wordLE, mV/mA/mAh — согласованные соседние поля, не показания температуры:
+UTC dump             4A2  502  504  506(mV) 50A(mA) 514SOC 518rem 51Cfull
+2026-10-19 10:11:04   2950 2950 2950 12408   0       100    4300   4300
+2026-10-19 12:41:24   3020 3020 3020 12408   0       100    4300   4300
+2026-10-20 12:35:53   2940 2940 2940 12408   0       100    4300   4300
+2026-10-20 14:15:44   3060 3060 3060 12408   1666     86    3698   4300
+тот же dump после    3060 3060 3060 12408   1598     87    3741   4300
+
+Соответствующие источники:
+build/audit-20261019/logs/dumps/dump-20261019-101104-0/ec.bin
+build/audit-logs6-20261019/logs/dumps/dump-20261019-124124-0/ec.bin
+Downloads/Telegram Desktop/logs_GM6IR0C (2).zip — dump-20261020-123553-0
+Downloads/Telegram Desktop/logs_GM6IR0C (3).zip — dump-20261020-141544-0
+Бинарные оригиналы/полные логи в новый отчёт/коммит не копировались.
+
+Пересчёты для сравнения, НЕ опубликованные измерения:
+raw     0,1K (°C)    0,01°C (°C)
+2950     21,85        29,50
+3020     28,85        30,20
+2940     20,85        29,40
+3060     32,85        30,60
+Совпадение 4A2/502/504 и шаг10 усиливают SBS-гипотезу, но не доказывают
+единицы. Нужна точная трассировка или независимая опорная температура.
+
+4. Проверенные открытые первоисточники
+
+A. TUXEDO manufacturer-maintained Linux driver
+https://github.com/tuxedocomputers/tuxedo-drivers
+https://github.com/tuxedocomputers/tuxedo-drivers/blob/main/src/uniwill_interfaces.h
+https://github.com/tuxedocomputers/tuxedo-drivers/blob/main/src/uniwill_keyboard.h
+Скачан main ZIP20.10.2026, исходники прочитаны, ничего не запускалось.
+Реализованы battery cycle/design/full и native charging profile. Поиск по всему
+.c/.h дереву не дал battery-temperature decoder/4A2/273.15. Это не заявление
+о любых будущих версиях и не доказательство, что датчика не существует.
+
+B. Linux Uniwill community driver/daemon
+https://github.com/dumingqiao/uniwill-laptop-dkms
+Скачан main ZIP20.10.2026. uniwill-acpi.c/uniwilld.c дают battery sysfs и другие
+поля, но 4A2 decoder не найден. Ни демон, ни installer, ни tests не запускались.
+
+C. LibreHardwareMonitor
+https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/master/LibreHardwareMonitorLib/Hardware/Battery/Battery.cs
+Локально :244–254 запрашивает Windows IOCTL BatteryTemperature и выполняет
+/10−273.15. Это прямой decoder стандартного Windows ответа, НЕ Uniwill EC.
+Здесь нельзя его использовать для доказательства формата4A2. Nct677X.cs тоже
+содержит4A2, но это другой SuperIO register bank, к GM6 battery не относится.
+
+D. Tongfang JS970 replacement control center, иной target
+https://github.com/efebedelcigil/nextcalibur-control-center
+README: CasperExcaliburG870/TongfangJS970. Исходники скачаны/прочитаны;
+батарейного 4A2/temperature decoder не найдено. На GM6 не переносилось.
+
+E. Предметный новый lead: HydroControl HYDROC G1
+https://github.com/Gumwars/HydroControl/tree/fc4024ce
+https://github.com/Gumwars/HydroControl/blob/fc4024ce/WINDOWS-CAPTURE.md
+https://github.com/Gumwars/HydroControl/blob/fc4024ce/ec_state_capture.py
+https://github.com/Gumwars/HydroControl/blob/fc4024ce/baseline_capture.py
+https://github.com/Gumwars/HydroControl/blob/fc4024ce/EC-FIRMWARE-FINDINGS.md
+Скачан pinned ZIPfc4024ce. TargetREADME — HYDROC-16G1/i9-14900HX/RTX4090,
+EC117.ELUK. Это не наш GM6 и не новый пользовательский HYDROC-G2.
+- ec_state_capture.py:69–75:0502/0503 LE3030=29.85°C, labels0.1K.
+- WINDOWS-CAPTURE.md:179–180:0502/503=3030 battery temperature0.1K;
+  04A2/4A3=3030 copy feeding stress accumulator.
+- baseline_capture.py:48–49 именует обе пары.
+- EC-FIRMWARE-FINDINGS.md:584–592 упоминает firmware comparison с3030 и
+  температурный диапазон, но полная адресная трасса Temperature(08)→502→4A2
+  в проверенном опубликованном дереве не представлена.
+Firmware*.ELUK отсутствуют в pinnedgit; в чужих заметках image names и сумма
+не равны опубликованному payload/SHA. Это авторское исследовательское
+доказательство для G1 и полезное подтверждение семейного mirror, не exactGM6.
+Не принимать авторские вычисленные°C за независимую физическую калибровку.
+
+F. Wujie14XA research (другая плата; только lead)
+https://gist.github.com/w568w/957976b59906e0ce5d6c13ad342e1593
+Рассматривает N.1.14MRO50/MRO19 и политику напряжения/температуры EC,
+включая SBS-подобные29.85/39.85 пороги. Это не GM6N.1.05MRO09.
+Скрипты/платформенные флаги из gist не запускались и не переносились.
+
+G. Нативная Tongfang ECUtil из firmware21 (статический разбор)
+Discovery: https://www.reddit.com/r/XMG_gg/comments/1s6ojlu/xmg_neo_15_e21_battery_calibration/
+Artifact: https://drive.google.com/file/d/1SrCHmLOCUfU3s2E807l4GaXmBYC6TnNm/view
+ECUtil_XCO15IM21_XCO17IM21_batinfo.zip,181760B ecutil.exe,
+SHA256exe 1fd898a3338d94935928e0eca295f273f73597786c27e2a6af3b73acbe20b17c.
+PEtimestamp2022-01-05. Это экземпляр, опубликованный третьим лицом; подпись
+отсутствует, связь с точным GM6 не заявляется. Не исполнялся! Только dumpbin
+/headers,/disasm собственного инструмента Microsoft и чтение строк/байт.
+-batinfo печатает Voltage,RSOC,RC,Calibration,CheckPoint,Current (строкаVA
+1400274E9), -temp обслуживаетCPU/GPU. Батарейной температуры/4A2 decoder
+не обнаружено. Сам batinfo.cmd не запускался.
+
+H. SBS — только семантика стандартной команды, не адресного mirror
+https://sbs-forum.org/specs/sbdat110.pdf — §5.1.9 Temperature()0x08,0.1K.
+Не даёт отображения Uniwill0x4A2. Стандарт не закрывает отсутствующую трассу.
+
+Целевые запросы GitHub/китайских источников выполнены20.10.2026:
+ecBt1Temperature; EC0x4A2battery; Uniwill/Tongfang battery temperature;
+同方 电池温度 寄存器; 机械革命 电池温度 EC; 电池温度4A2/04A2/1186.
+Прямого публичного exactGM6 decoder в доступных результатах не найдено.
+Сайты рекламных статей/магазинов/посторонних Modbus устройств доказательством
+не использовались. grep.app API ответил429; отсутствие его результатов нельзя
+выдавать за глобальный полный поиск GitHub.
+
+5. Что именно ещё нужно и ближайший точный путь
+
+A. GMxIR7xN105MRO09_CAP.EXE из локального официального каталога — новый lead
+агента /root/poisk, версия совпадает с GM6N.1.05MRO09. Загрузка/вскрытие у него
+в процессе; совпадение имени версии ещё не доказывает board/project. Если
+payload совместим, проследить SMBus read-word command08 и запись502/504/4A2,
+не запуская CAP/flash/OEM код. Требуется imageSHA+version+project+callsite.
+B. Если exact EC firmware не извлечён: нужен нативный decoder с адресом4A2
+и явной формулой, либо независимая батарейная температура в том же окне raw
+(например документированный native BMS источник). Не заменять её thermalzone.
+C. Новая read-only минутная powerinput capture полезна для динамики/стабильности,
+но один rawряд без опорного decoder также не разрешает единицы.
+
+Блокер точный: нет подтверждённого для Project25N.1.05MRO09 отображения
+SBS Temperature(08)→0x04A2 или другого независимо калиброванного декодера.
+Это не означает отсутствие датчика. Имеется сильный native-address/mirror
+кандидат, но подтверждённого production°С сейчас нет.
+
+Скачанные артефакты (20.10.2026, не исполнялись):
+ECUtil_XCO15IM21_XCO17IM21_batinfo.zip SHA256 702ba25069f9f008ab83515cbb5c8bbdb95366f6388c68610a61f838da35bb92
+hydrocontrol-fc4024ce.zip SHA256 d93fe6fc86bf70b5407d89ae9470bcaa6ece19e673317c26756f36cdfb7573dc
+lhm.zip SHA256 4aaa22589ff8c7b4bbb6692fb5bf854a24c4c328e070fbd4874c98f08c950fa8
+nextcalibur.zip SHA256 9e045708f1b92ece84a23e677980806adaf2be8d60c573b525ff0f5e33f534d4
+tuxedo-drivers-main.zip SHA256 ac92fb5ba1f9afdcb6330bd3d4fb598fbe529824def2db1f6fe67b1dcf091166
+uniwill-laptop-dkms-main.zip SHA256 ce17d655114c37204e0a406efdb0095ede5cdeb843d4e1f78a208a1c3b8dd63c
+
+Дополнительный статический обход OEM-архива20.10.2026:
+В точном Mechrevo-Research-GM6IR0C ZIP проверены ASCII/UTF-16 строки отдельных
+GCUUtil.exe, SensorsData.Analytics.dll, GCUServicePlugin.dll, ACPIDriverDll.dll
+и обоихUWACPIDriver.sys: явных battery/temperature decoder имён не выявлено.
+Это только отрицательный strings-result, НЕ полная декомпиляция nativeDLL и
+НЕ доказательство отсутствия любого скрытого пути. Никакие бинарники не запускались.
+
+Дополнение: точный firmware lead и доступность20.10.2026
+https://tieba.baidu.com/p/9552813086 содержит тот же опубликованный OEMURL:
+https://driver.mechrevo.com/d.mechrevo.com/driver/MECHREVO2024/Test/GMxIR7xN105MRO09_CAP.EXE
+Агент Поиск проверилHTTPS(timeout) иHTTP(200text/html PageVerification,
+X-Tengine-Error=denied by custom_acl,10369B, неMZ). Это НЕ полученный firmware.
+Независимо найден точный mirror-анонс:
+https://bbs.azurekiln.cn/forum.php?mod=viewthread&tid=56
+22.08.2025: GMxIR7xN105MRO09_CAP.zip,10170133B,
+MD5BC449A4C0A25F9702836FF75647AF669,
+SHA1382EB10281EFA2761ED6A18754DA5C3655C13D93.
+Этот hash только опубликован автором форума, локального matchingZIP нет.
+Ссылка mirror скрыта заreply/login; ограничения не обходились, сообщений никому
+не отправляли. Видимая official-ссылка ведёт в route jiguangxaqbios104offical,
+не105. Комментарий23.12.2025 сообщает об отзыве105/наличии104: это сообщение
+автора комментария, не подтверждённое заявление производителя. Версионный
+анонс ещё не даёт ни доказательства boardProject25, ни firmwarecode.
+Таким образом staticтрасса4A2не закончена из-за отсутствующего payload,
+не из-за отсутствия дальнейшего поиска. Следующая доказательная единица —
+доступный exactGM6EC image; нельзя закрывать пробел чужими G1/Wujieформулами.

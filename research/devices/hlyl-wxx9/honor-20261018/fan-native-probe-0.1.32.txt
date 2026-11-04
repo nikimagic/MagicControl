@@ -1,0 +1,7 @@
+manual=1 PWM=50/50 RPM=5586/4053 status=Honor: ручной PWM подтверждён; контроль температуры активен
+manual=1 PWM=50/50 RPM=5629/4068 status=Honor: ручной PWM подтверждён; контроль температуры активен
+manual=1 PWM=50/50 RPM=5571/4060 status=Honor: ручной PWM подтверждён; контроль температуры активен
+manual=1 PWM=50/50 RPM=5363/3899 status=Honor: ручной PWM подтверждён; контроль температуры активен
+manual=1 PWM=50/50 RPM=5121/3667 status=Honor: ручной PWM подтверждён; контроль температуры активен
+AUTOMATIC RESTORED; original targets confirmed
+flags=0 period=200 duty0=0 duty1=0 candidate_target0=0 candidate_target1=0 writes=0

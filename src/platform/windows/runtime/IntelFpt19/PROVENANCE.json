@@ -1,0 +1,35 @@
+{
+  "tool": "Intel Flash Programming Tool",
+  "version": "19.0.5.1948",
+  "source_page": "https://www.colorful.cn/igamecenter/",
+  "source_url": "https://download.colorful.cn/iGameCenter/iGameCenter-2.0.0.82-2026.09.12-Installer_Prod.exe",
+  "source_archive_sha256": "ce7f0b697dbc64662541838aed2d914508bb085db4b8e6186749b0dd4a4f8c53",
+  "member": "app/iGameAPI/Notebook/NotebookSDK/N15_25/FPT/FPTW64_8102.exe",
+  "original_filename": "FPTW64_8102.exe",
+  "bytes_unmodified": true,
+  "driver_reference_resource": [
+    10,
+    118,
+    1033
+  ],
+  "driver_version": "2508.0.23.0",
+  "files": [
+    {
+      "name": "FPTW64.exe",
+      "bytes": 2841008,
+      "sha256": "88491119862830235854cd29b9857de21870ac4dc16f74544b1a665f64d62807"
+    },
+    {
+      "name": "driver-reference.bin",
+      "bytes": 46368,
+      "sha256": "acd5d366a73e9d60c654f9b6d76397d0439606939d6b0c7ee24c4f397452899a"
+    }
+  ],
+  "fixed_commands": [
+    "-I",
+    "-d <new-output-file>"
+  ],
+  "flash_programming_requested": false,
+  "scope": "Actual HYDROC-16 G2 or YAOSHI X6AR55xY, GenuineIntel Ultra9 275HX, reviewed LPC and successful FPT -I",
+  "note": "Driver reference is inert Authenticode evidence. Vendor tool extracts its own embedded driver. No OEM installer, firmware payload or flash scripts are bundled."
+}

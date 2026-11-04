@@ -1,0 +1,78 @@
+Portable button timing review,26October2026
+
+Saved log bytes only; no application/device/driver/EC/SMU/HID commands executed.
+TIMINGS.json records captured file sizes/hashes and software action durations.
+These are settings.apply worker and dispatch-to-result times, NOT physical
+charging response or measured screen-paint latency. Live files may grow/rotate.
+
+Sessions:
+MagicControl-1:0.1.217,UTC11:15:53..11:17:58.
+MagicControl-2:0.1.218,UTC11:32:35..11:53:41.
+MagicControl-3:0.1.219,UTC12:27:32..12:42:17; Moscow+3.
+
+Fresh0.1.219:
+Category                  N   worker min/median/max ms   dispatch max ms
+Native battery modes      7   268.262/428.902/511.019     525
+Percentage battery       10   912.200/3028.414/3370.760   3386
+CPU profiles              5   317.722/446.748/520.537     534
+EC policy4/FF,7/04,7/FF   3   1578.280/1984.088/2067.505 2083
+Lighting effects          4   324.714/444.667/785.166     798
+No failed command_result in these captured settings.apply groups.
+This establishes recorded software/readback completion, not physical enforcement.
+
+Percentage commands by confirmed pair, not by guessing from screenshot:
+4/FF:2commands,3015.831..3109.571ms,median3062.701.
+7/04:4commands,912.200..951.761ms,median927.983.
+7/FF:4commands,3040.997..3370.760ms,median3181.557.
+Configured upper/ROM readback is NOT a guarantee of physical charge limiting
+under7/FF. The selected100% with native7/FF is a separate UI/policy semantic.
+
+Comparison:
+0.1.217 native modes:9commands,803.778..1210.198ms,median981.978.
+0.1.218 native modes:5commands,380.298..586.909ms,median427.776.
+0.1.219 native modes:7commands,268.262..511.019ms,median428.902.
+Thus the previous optimization is visible in real owner logs: median software
+processing roughly2.29times faster vs0.1.217. This is a sample comparison,
+not a guarantee for every future action/hardware condition.
+
+Precise observed bottleneck:
+Action179,0.1.219,85%,confirmed7/FF:
+380 uniwill.acpi_exchange calls total2093.588ms (sum at this one scope level).
+36 reads of address0x770 alone2060.399ms,up to61.117ms per call.
+Worker3218.510ms;LIMIT begin->confirmed2164ms.
+
+Action190,100%,confirmed7/FF:
+380exchanges2094.872ms;0x77036reads2060.591ms,max62.831ms.
+Worker3370.760ms;LIMIT begin->confirmed2164ms.
+
+Action182,95%,confirmed7/04:
+Same380exchanges,31.586ms;0x77036reads2.825ms,max0.230ms.
+Worker916.281ms.
+
+Action187,95%,confirmed4/FF:
+380exchanges2076.288ms;worker3109.571ms.
+Policy action189 consumes1479.519ms in battery.ec_policy and1984.088ms overall.
+
+Native action10 also spends339.924ms in6reads of0x770; action11 spends336.798ms.
+Remaining native response is therefore also influenced by the ROM-ID read path,
+not only UI telemetry collection.
+
+No single multi-second frozen GUI interval was established. UI dispatch is
+usually12..27ms; captured percentage queue maximum301ms. Most long latency
+belongs to repeated synchronous ROM-ID queries. Backend exchange measures a
+direct DeviceIoControl/read path here, not an artificial3second UI refresh wait.
+An observed FF value is valid data, not an error marker. The reason one
+FF-valued0x770 call takes~57ms inside the driver/ACPI/firmware path is not
+proved by these timestamps alone. Do not label it a firmware bug without tracing.
+
+Core source review:
+BatteryChargeWindows uses stored WMI access,upper/lower/context and repeated
+confirmation,including a final persistent/live check. Its only explicit pauses
+here are50ms after a stored write,25ms between matches or250ms for mismatches.
+Those alone do not explain the~2.06s difference; logged address-specific calls do.
+No checks,rollback,lower autosave,persistence,platform or ROM-ID were changed.
+Do not change to7/04 just for speed or replace fresh security/context checks
+with a stale global ROM-ID cache.
+
+Results preserved in TIMINGS.json,GAPS.json,BREAKDOWN.json and analyze.py.
+No product source/build/release modification in this read-only review.

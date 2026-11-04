@@ -1,0 +1,110 @@
+Honor HLYL-WXX9 — исправления подсветки
+20.10.2026. Исходный frozen research:
+research/analysis-20261020/keyboard-backlight-agents/honor.txt иhonor.json.
+
+Границы
+Изменены только разрешённые модельные Backlight/I2Ec/lighting и timeout методы,
+model README и согласованный pure protocol KeyboardTimeout.h. Общий
+LaptopControlSnapshot дополняет родитель, он же делает UI/dumper integration.
+Production GUI, геометрия, шрифты, карточки и scrollbar этим агентом не менялись.
+Wujie остаётся внешним эталоном. INI/CSV и portable не изменялись.
+Тесты, сборки, GUI/CLI, EC/HID/SMU/UEFI, драйверы, службы, SSH, OEM программы
+и commit не запускались. Изменения не объявляются аппаратно подтверждёнными.
+
+K1. Native выбранная яркость отдельно от actual PWM
+BacklightWindows.cpp расширяет snapshot timeout0318:0319, elapsed02F8:02F9,
+known aux02F5/delayed02F7 и прежними17hardware/7safety observations.
+Многобайтные слова читаются bounded high-low-high. Classifier:
+- steady: selected0/1/2, согласованный shadowC0 и duty0/50/100;
+- native_idle_fade: selected1/2, согласованный shadow, exactperiod200 и прежние
+  guards, timeout1..36000 raw кратен10, elapsed>=timeout и<=timeout+10,
+  duty только из рассмотренной убывающей sequence (шаг20);
+- native_idle_off: тот же проверенный контекст, duty0,elapsed>=timeout;
+- resume_retained_high: прежняя узкая сигнатура level0,shadowC0=80,duty0,
+  с неизменёнными BIOS/ID/power/config guards.
+Все другие расхождения остаются unknown/failclosed. RetainedLOW либо
+произвольные duty не добавлялись. Прошивочные GPIO output levels не замораживаются.
+
+HlylBacklightState возвращает selectedlevel, actualDuty,period,phase,status.
+ControlWindows::read() переносит actualDuty/period/keyboardStatus в согласованные
+shared fields. Pure readTelemetry() по-прежнему не создаёт I2EC/PawnIO/PNPCFG.
+Rawelapsed не добавлен в ежесекундно меняющийся UI текст; он есть в диагностике.
+
+Setter допускает обычное firmware продвижение по рассмотренной fade sequence
+между двумя snapshots, но не внешнюю смену selected/shadow/timeout/guards.
+После явного setter selected/shadow обязаны совпасть с целью; actual PWM может
+быть рассмотренным native fade/idle. Это подтверждение политики, не обещание
+постоянно горящего света. Activity counter не сбрасывается и host activity не
+имитируется. Mirror проверяется при фактически ненулевом PWM, не только level.
+Существенная граница: после истечения native fade window явный raw brightness
+setter не является доказанной keyboard activity и не перевзводит elapsed counter.
+Таймер может ждать следующего настоящего firmware activity. При полном PWM и
+уже истёкшем window статус явно отмечает это; постоянное повторное применение
+или недоказанная запись counters не добавлялись. Реальное rearm надо наблюдать
+на устройстве, а не обещать по успешному selected/readback.
+Только этот guarded controller opt-in откладывает точное равенство immediate
+1804 readback до полного snapshot/classifier: native fade может изменить duty
+между принятой записью и немедленным чтением. Level/shadow остаются строгими,
+default transport API не ослаблен; неизвестный final PWM не принимается.
+
+K2. Resume source validity независима от target
+Одна и та же принятая сигнатура retainedHIGH может служить baseline для
+OFF/LOW/HIGH. Цель не определяет допустимость исходного состояния. Addresses
+и masks записи не расширены: только02F4/03FC/1804. Low6 bits03FC сохраняются
+fresh RMW на транспортном уровне, включая rollback.
+
+K3. Checked PNPCFG finish
+HlylI2EcSession::finish() сообщает failure выхода/ISA release. При неудаче
+сохраняется ownership до fallback попытки destructor; target writes после
+failed finish не выполняются. Constructor cleanup тоже сообщает uncertainexit,
+а не скрывает его за первой ошибкой проверки identity.
+Общий checkedSession в BacklightWindows закрывает конфигурационный режим до
+возврата read/diagnostic/setter результата. Success log перенесён за finish,
+включая no-op. Ошибка finish не запускает rollback в неопределённом transport.
+Ошибка обычного setter делает условный возврат лишь собственных полей, с
+проверкой контекста/service и сообщений rollback unknown. Оптическое
+подтверждение из совпадения register snapshot не выводится.
+
+K4. Typed read-only diagnostic API для родителя
+Объявлен в src/devices/huawei/hlyl-wxx9/BacklightWindows.h:
+  std::string mc::windows::readHlylKeyboardDiagnosticJson();
+Caller — parent dump, не изолируемый/принудительно завершаемый telemetry worker.
+JSON содержит:
+- exactmodel/BIOS/identity/canary/SPCTRL1 и checkedexit;
+- selected02F4,shadow03FCraw,actualPWM1804,actualperiod1801;
+- timeoutticks,elapsedticks, aux/delayed fields в raw observations;
+- все hardware/safety rules с address/mask/expected/raw/passed(null приошибке),
+  per-read uptime/error и GPIO mirror1661 single observation;
+- legacy service known/stopped/query status;
+- GKBT1206 raw/status/seconds, опрашиваемый после выхода из PNPCFG;
+- phase/status, target_writes0/read_onlytrue/sfr_sweepfalse.
+Snapshot не атомарный. Неизвестные/непрочитанные значения сериализуютсяnull,
+ошибки сохраняются. fixed reads не дают разрешения generalwriter/SFRsweep.
+Доказательство pinned runtime берётся из активного транспорта, который проверяет
+SHA до load; родительский dependencies.json сохраняет отдельные файлы/метаданные.
+Интеграцию в DiagnosticDumpWindows выполняет root.
+
+K5. Legacy service availability
+Один query-only helper определяет HuaweiKeyboardLight known/stopped/status.
+Read state writable=false при активной/неизвестной службе; setter повторяет
+проверку перед target writes и rollback. Службы не останавливаются, права не
+меняются. Это не эксклюзивный lock против OEM/firmware, которые не используют
+наш ISA mutex. Третьи/чужие значения при rollback не перетираются.
+
+K6. Один общий timeout алгоритм Windows/Linux
+С согласования root добавлен src/protocols/huawei/KeyboardTimeout.h.
+applyKeyboardTimeout(Read,Write,Pause,Log) использует два совпадающих чтения,
+максимум6attempts с адаптерной паузой100мс, freshbefore compare и explicit
+native write. При ошибке возвращает только свой target либо no-op при уже
+исходном значении; третье значение не переписывается. Rollback readback обязателен,
+ошибки/unknown включены в exception и log. Никакие brightness/activity поля
+из timeout API не меняются. Единицы0..3600 секунд, rawconversion делает native
+SKBT или фактически предоставляющий sysfs driver. Windows использует только
+1206/1106; современные Honor1306/1406 не включены. Linux parser общий для
+getter/setter и отвергает trailingjunk, отсутствие узла не выдаёт за поддержку.
+
+Статическая проверка
+Изменённые методы и вызовы вычитаны. git diff --check не показывает whitespace
+errors; Git предупреждает только о будущей нормализацииLF→CRLF. Компиляция,
+pure tests, newhardware readback и измерение таймера не выполнялись.
+Окончательная общая сборка/portable/commit принадлежат root по поручению пользователя.

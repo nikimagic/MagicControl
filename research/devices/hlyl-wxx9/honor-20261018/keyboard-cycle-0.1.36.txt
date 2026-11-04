@@ -1,0 +1,11 @@
+LEVEL 0
+keyboard_level=0 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания
+LEVEL 1
+Keyboard level not confirmed
+строка:1 знак:316
++ ...  if($LASTEXITCODE -ne 0){throw "Keyboard level not confirmed"};Start- ...
++                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Keyboard level not confirmed:String) [], RuntimeException
+    + FullyQualifiedErrorId : Keyboard level not confirmed
+ 
+RESTORE HIGH

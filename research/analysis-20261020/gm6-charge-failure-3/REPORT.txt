@@ -1,0 +1,193 @@
+GM6IR0C — почему зарядка не остановилась: независимый разбор logs (3)
+20.10.2026. Только offline ZIP/точный OEM/AML; никаких аппаратных обращений.
+Production, UI, INI, драйверы и службы не менялись. Тесты, сборки и коммиты
+не запускались. Исходные полные логи/дампы в git не добавлялись.
+
+ГЛАВНОЕ
+Пара85/80 записалась и наблюдалась устойчиво, но батарея продолжала получать
+18–21Вт при показаниях85–87%. Это не ошибка подтверждения записи и не
+наблюдаемая перезапись пары обратно. Одних7B9/7D0 оказалось недостаточно,
+чтобы подтвердить требуемую отсечку по относительному SOC85% на этой прошивке.
+Точный дополнительный firmware consumer/enable пока не установлен.
+Не делать из этих данных разрешение писать новые флаги/7C3/UEFI.
+
+1. ВЕРСИЯ, ВРЕМЯ И НАДЁЖНОСТЬ ИСТОЧНИКОВ
+
+Архив: C:\Users\admin\Downloads\Telegram Desktop\logs_GM6IR0C (3).zip
+748356байт,100записей; SHA256
+9fb2bce06be6e8702a376da926d6cc6c6639051eec1a4177be18bdab4c348aea.
+Фактическая версия из startup и report.txt —0.1.98, НЕ0.1.99/100/101.
+Модель MECHREVO JiguangX Series GM6IR0C, Project25.
+
+Main log2988строк:13:51:53.245–14:17:05.669 UTC20.10.2026.
+Это16:51:53.245–17:17:05.669 Москва(UTC+3).
+Session.jsonl — перекрывающая main log архивная копия, не независимые
+повторные измерения; при подсчётах не суммировалась с main.
+Дамп dump-20261020-141544-0 стартовал14:15:44UTC/17:15:44Москва.
+Оба EC valid masks4096/4096; JSONL разбираются без ошибок.
+Sensors.jsonl70строк:61fast/9optional;14:15:49.014–14:16:49.729UTC.
+Компактные raw данные/хэши/времена/подсчёты находятся в evidence.json рядом.
+
+2. ЧТО НАЖАЛИ И ЧТО ФАКТИЧЕСКИ ЗАПИСАЛОСЬ
+
+В архиве только ОДНА экспериментальная команда —85%. Команд95/100 нет.
+Процент95 встречается как SOC во время разряда, не как нажатая кнопка95.
+
+13:54:16.387UTC (16:54:16.387Москва),seq338:
+  EXPERIMENT begin upper=85 restart=80; raw_before00/00;
+  context7A6=09,7C3=07,770=FF; no activation/profile/platform writes.
+13:54:16.411UTC,seq339, спустя24мс:
+  configured_confirmed raw_after55/50;context_unchanged=true;
+  enforcement_unverified=true,saved=false.
+
+До команды30 threshold observations:00/00, configured_upper/restart=-1,
+context09/07/FF. Первая13:51:55.232,last13:54:15.880UTC.
+После команды337 observations:55/50(85/80), тот жеcontext09/07/FF,
+13:54:16.431–14:17:04.604UTC — окно22мин48сек.
+Во всех этих наблюдениях percentage_writable=true. Не найдено rejected,
+rollback/failed, owner-block или третьей пары/контекста.
+Между дискретными опросами не заявляется непрерывное наблюдение каждого байта.
+
+Оба полных EC снимка также содержат:
+  7B9=55hex =>85;7D0=50hex =>80;
+  7A6=09(native mode0),7C3=07,770=FF,740=19hex=25,78E=EC;
+  741=81hex — APP-presence.bit0 УЖЕ1.
+Таким образом гипотеза «не выставили общий APExist» не объясняет этот дамп.
+
+UniWillVariable до/после180байт совпадает побайтно:
+SHA256cab5e41f963927a2fb820bd0b70b65f565743ddef33bfbbcafbaa0621f830a0c;
+candidate48/49/50 —FF/FF/FF. Никакой записи UEFI/persistence этим trial не было.
+Это не подтверждение применённого firmware threshold layout.
+
+3. ХРОНОЛОГИЯ ЗАРЯДА — ПОРОГ БЫЛ ДОСТИГНУТ
+
+В main361 power samples, три основных состояния:
+1)180samples:13:51:55.388–14:00:49.250UTC, AC=0,discharging,
+  SOC98→83.999%,rate−60.880…−33.784Вт.
+  Ближайший sample после команды85:13:54:17.249UTC, SOC93.999%,AC=0,
+  −33.784Вт. Само нажатие на батарее ещё не тестирует остановку зарядки.
+2)177samples:14:04:17.534–14:16:58.273UTC, AC=1,charging,
+  SOC78→87%,rate0…48.314Вт. Заряд начался после ухода ниже80, но это
+  НЕ доказывает исполнение restart80: обычная зарядка без limiter также
+  естественно зарядила бы батарею на78%.
+3)4samples:14:17:01.261–14:17:04.713UTC, AC=0,discharging,
+  SOC87%,rate−44.387…−34.569Вт. В конце внешнее питание отключили;
+  это не самопроизвольная отсечка при всё ещё подключённом адаптере.
+
+После достижения85:
+- Первая точка85%14:13:28.169UTC.
+- До14:16:58.273UTC60fresh samples cSOC>=85, ВСЕ имеют положительную
+  мощность18.064…21.206Вт, dynamic_stale=false.
+- Выше85%57samples:14:15:39.561UTC86.001%→14:16:58.273UTC87.0%,
+  ВСЕ18.064…20.432Вт>0, не только «зависший charging flag».
+- Windows Battery Class PowerState=00000005hex (online+charging).
+  Напряжение около12.408В, ток около1.45–1.65А в конце этого окна.
+Финальный battery.json также:86.999667%,18.457Вт,12.408В,
+1487.508мА, source WindowsBatteryClass+GM6ECfull/design.
+
+4. НЕЗАВИСИМЫЕ EC ДАННЫЕ И МАСШТАБ SOC
+
+                    До дампа       После дампа
+XIF1 Design402      5200           5200
+XIF2 Full404        4300           4300
+XST0 State432       2(charging)    2(charging)
+XST1 Rate434        1666           1598
+XST2 Remaining436   3698           3741
+XST3 Voltage438     12408          12408
+RSOC byte4AB        86             87
+CYCN word4A6        41             41
+ISDB byte497        45hex          45hex
+
+Адреса capacity/state/voltage определены exact DSDT ECXP=(ECMA+400);
+cycles независимым native BatteryInfo.GetECBatteryCycleCount;
+RSOC — exact Define.ECSpec.cs:133 ecBt1RSOC=1195=4AB.
+PowerUnit400=1 (ACPI mAh/mA). Положительный EC rate и выросший remaining
+подтверждают продолжение зарядки независимо от одного Windows charging bit.
+Remaining оценочный/квантованный показатель BMS, не лабораторный кулонометр.
+
+RelativeSOC =Remaining/Full:86→87%; совпадает с rawRSOC4AB и Windows.
+AbsoluteSOC =Remaining/Design:71.1154→71.9423%.
+Физический mapping самого threshold consumer в EC flash не раскрыт.
+Если прошивка сравнивает другую внутреннюю/absolute шкалу, её85 ещё не
+достигнуто. Но в приложении не обнаружена простая ошибка пересчёта displayed
+SOC: его86/87 согласуются с собственным полем EC RSOC.
+Нельзя автоматически «исправить» команду85 в70 по отношению ёмкостей без
+доказательства реального consumer. Это была бы новая недоказанная запись.
+
+ACPI маскирует здоровье до50циклов: DSDT135343–135359 приISDB=1/CYCN<50
+возвращаетOS full=design, а _BST135407–135420 масштабирует remaining через
+design/full. Именно поэтому Windows health100% отличается отEC82.6923%,
+но процент текущего заряда ОС всё равно совпадает с remaining/full/RSOC.
+Одна только подмена _BIF design не объясняет charging выше displayed85.
+
+5. ЧТО УСТАНОВЛЕНО О NATIVE ENABLE И ЧЕГО ПОКА НЕТ
+
+Новая registry-0001-DSDT.aml668509байт:
+SHA2561c2b99426121c578e0e61b45a700731e7fb044abc0fce4f45a262a562e99d737.
+От exact исходной DSDT из GM6 архива отличаются только checksum offset9
+и relocation GNVS base offset35361(8A21hex). Остальные method bytes,
+включая изученные батарейные пути, совпадают с прежним точным ASL.
+
+Exact активная цепочка GCUService1.0.2.70:
+- BatteryProtection2.Receive/Init/Resume вызывает native modes7A6.bits4–5,
+  а не percentage gate.
+- Private Set/ReadBatteryChargingLimit_Up/Down324–373 подтверждают codec
+  7B9/7D0, но активного caller в рабочей цепочке нет.
+- LoadBatteryLimitationDefault229–235 с mode1 — также dead branch;
+  наличие этого значения не доказывает безопасный enable.
+- NvramVariable.SetFwVars313–367 не содержит батарейных ключей. Ключ не
+  обновляет поле, однако дальше происходит wholesale cached WriteUefi.
+  Это не готовый setter; его нельзя копировать как RMW/activation.
+- MyFanManager_QC умеет процентный7B9, но не выбран Project25/RAM1.5.
+- MyEcCtrl.Set_APExistToEC304–310:741.bit0, уже1 в этом дампе.
+- CGLM=7B9.low7; _BST135393 выставляет limiting bit3 просто из диапазона1..99.
+  Поэтому reported-limiting flag не независимое подтверждение cutoff.
+- CTID7C3 участвует общей platform policy; перенос Wujie4/7 не доказан.
+- Ни _BMC/_BMD готового процентного API в сохранённом exact ACPI не найдено.
+
+В ownership snapshot14:15:48UTC:
+  Toolhelp enumeration_complete=true,owner_absence_confirmed=true,
+  GCUService.exe/AiStoneService.exe matches=[];
+  фиксированные SCM имена GCUBridge/GCUService/AiStoneService не установлены
+  (Win32=1060). Это не полная инвентаризация всех мыслимых EC writers,
+  но нет основания приписать данным сброс известной OEM службой.
+Фактически сброс пары ни разу не наблюдался.
+
+Статический итог: пока доказаны acceptance/readback полей и отсутствие
+требуемого удержания85relative в записанном окне. Не определён именно
+исполнитель/activation gate/внутренняя шкала. Нельзя обещать «EC вообще никогда
+не исполнит cutoff»: окно закончилось87%, дальнейший предел/допуски/задержка
+прошивки и неизвестный BMS MaxError этим архивом не измерены.
+Но объявлять этот trial успешной проверкой85% уже нельзя.
+
+6. ТЕМПЕРАТУРА БАТАРЕИ — НЕ XTP0 И НЕ THERMAL ZONE
+
+XTP0 word43A: в exact DSDT одно объявление, ни одного потребителя;
+в обоих новых снимках0. Это НЕ доказанный battery temperature.
+Соседний _BTP пишет BTP0=704, а _TMP135498 находится в ThermalZone(ECTZ),
+использует XHPP/THOT. CPU/PCH/ECTZ нельзя назвать температурой батареи.
+
+Сильная отдельная зацепка: exact Define.ECSpec.cs:131
+ecBt1Temperature=1186=4A2. В обоих EC snapshots слово4A2=3060(F4 0B).
+4A4 рядом содержит current1666/1598,4A6 cycles41; это согласуется с BMS block.
+Однако поиск active C# нашёл для ecBt1Temperature/1186 только definition,
+активного decoder/caller и подтверждения единиц этой EC копии пока нет.
+
+Первичный SBS стандарт: https://sbs-forum.org/specs/sbdat110.pdf
+§5.1.9, printed page23(PDF page28): Temperature() ReadWord0x08 выдаёт
+температуру pack в0.1K. При такой трактовке3060/10−273.15=32.85°C.
+§5.1.14/15 различает RelativeSOC(FullChargeCapacity) и AbsoluteSOC(DesignCapacity).
+Это первичная семантика SBS; ECoffset4A2 не является самим SMBuscommand08.
+Поэтому32.85 сейчас обозначается «native named EC temperature, SBS encoding
+candidate», не физически подтверждённый sensor и не новый production backend.
+Windows BatteryTemperature продолжает Win32=1/unavailable.
+Корректный следующий source шаг — доказать mapping/единицы именно4A2;
+никаких случайных адресов/температурных подстановок этим исследованием нет.
+
+КЛАССИФИКАЦИЯ ВЫВОДА
+Подтверждено:0.1.98, одна85команда, readback55/50,337удержанныхobservations,
+fresh AC зарядка85→87/18–21Вт, rawEC86→87/current>0, контекст09/07/FF,
+native APP bit уже1, известные OEM owner отсутствуют в snapshot.
+Не подтверждено:95/100, физическое действиеrestart80, полныйconsumer/gate,
+предел после87%, absolute-vs-relative consumer, точные единицыECtemperature.
+Никаких новых flags/7C3/WMI/UEFI/driver changes или source edits не сделано.

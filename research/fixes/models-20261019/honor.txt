@@ -1,0 +1,114 @@
+HONOR HLYL-WXX9 — исправления статической ревизии
+Дата19.10.2026; исходная база c4ad921 / portable0.1.76.
+
+Область правок — только exactHonor модель/протокол и HWMI/sysfs адаптеры.
+Общие страницы, геометрия карточек, Wujie renderer и scrollbar не изменялись.
+Исходные пользовательские INI/CSV не менялись. Тесты, сборки, GUI, EC/HID/SMU
+команды, SSH, драйверы и OEM программы не запускались. Commit не создавался.
+Новая физическая проверка не заявляется. Исходные OEM/BIOS материалы неизменны.
+
+H1. Честный результат возврата FANs
+- FanControlWindows.h объявляет HlylAutoResult{Applied,AlreadyAuto,OwnershipLost}.
+  setAutomatic() возвращает enum; старые callers могут игнорировать результат.
+  Watchdog/destructor/Max cleanup используют private automatic(false), который
+  не сбрасывает чужой manual. Explicit Default сохраняет своё прежнее значение:
+  пользователь явно выбирает Auto независимо от чужого старого manual.
+- При отсутствии manual bit сразу AlreadyAuto, без ненужных target/flag writes.
+  При чужой target pair manual остаётся нетронутым и возвращается OwnershipLost.
+  Watchdog не пишет «Auto восстановлена» после такого результата. releasePending
+  после частичного failed rollback сообщает свой отдельный cleanup результат.
+- Fixed rollback проверяет принадлежность обоих targets baseline/attempted pair
+  до записи. Третьи значения не перетираются; неизвестный откат не считается
+  нашим управлением без следующей проверки targets.
+- read() отвергает неизвестный period или target/duty>200 вместо вывода
+  фиктивногоPWM>100% с одним лишьwritable=false.
+
+H2/H3. Native disabled0/0 и проверяемый откат батареи
+- Новый src/protocols/huawei/BatteryThresholds.h общий для Windows/Linux:
+  valid pair включает0/0; два последовательных одинаковых чтения, максимум8,
+  с паузой150мс. Возвращается raw пара, disabled не переименовывается в100%.
+  В ошибке сохраняются ожидаемая/последняя пара и точные ошибки попыток.
+- В Windows read() стабильное0/0 оставляет chargeWritable=true и отдельный
+  status disabled. Явные кнопки100/95/85 по-прежнему задают95/100,90/95,80/85.
+  Public0/100 по-прежнему переводится в travel95/100, а не выключает защиту.
+- Перед setter фиксируется стабильный baseline. Restore raw0/0 идёт через
+  private setter без public travel normalization. При rollback Windows
+  перезаписывает лишь целиком ожидаемую пару; baseline означает no-op, третья
+  пара означает ownershipLost/unknown. После возврата обязательны два чтения.
+- Linux отслеживает каждый attempted component, сохраняет порядок start/end
+  и проверяет fresh expected pair перед каждой записью sysfs. Частичный успех
+  учитывается. Rollback допускает только исходные/свои attempted компоненты;
+  затем обязательно читает исходную пару. Его ошибка и причина неизвестного
+  состояния включены в exception и huawei_sysfs log, а не пустой catch.
+- Firmware/PCManager не участвуют в нашем lock, поэтому сравнение readback
+  не объявляется аппаратным compare-and-swap и не доказывает физическую остановку
+  тока. Неподтверждённый transport/внешняя пара остаются unknown без слепой записи.
+
+H5. Сохранение доказательств HWMI
+- protocols/huawei/Hwmi.h success() сообщает response size/needed/status/raw
+  header первых32байт. checkedCall() добавляет точный opcode и оба аргумента,
+  сохраняя исходное HRESULT/exception сообщение транспорта.
+- Все getters/setters данного Honor используют checkedCall. Отдельные ошибки
+  charge/Fn/Turbo/timeout/fan0/fan1/GTMP собираются в snapshot.status и журнал,
+  а не прячутся за «фактические показания». Некорректные RPM/sign/fraction/
+  decodedtemperature сообщают сырое проблемное значение.
+- Шесть ожидаемых GTMP SensorReading создаются до openSession; full-session
+  failure заполняет их явной unavailable-ошибкой, не удаляет каналы и не пишет0°C.
+  readBatteryTemperature() теперь логирует точную GTMP14 ошибку и передаёт её
+  наверх — battery-only caller сохраняет причину.
+- HWMI mutex изменён с Local.v1 на Global.v2, чтобы Windows sessions использовали
+  одну сериализацию. Это не блокировка чужого OEM PCManager.
+- Linux status дополнительно объясняет отсутствующие/неверные sysfs getters;
+  запись содержит path/value. Не меняются права/драйверы/узлы устройств.
+
+H6. Typed Max проба через существующее общее ядро
+- HlylFanController::measureMaximum(std::stop_token)->FanMaximumResult.
+  Сам резервирует DeviceOperation, но setFixed/setAutomatic повторного gate
+  не берут: внешние GUI операции резервирует общий caller.
+- Использует только measureMaximumFans, собственного таймера/цикла замера нет.
+  Общийhelper удерживает30сек, делает samples/peaks и всегда вызывает cleanup.
+  Adapter требует фактический Auto до пробы и ещё раз под ISA gate перед
+  записью, точные BIOS1.09/IT8987/power guards, CPU<80°C, target/PWM100/100.
+- Read callbacks получают свежие оба RPM/HWMI и actualPWM/I2EC. CPU>=80°C,
+  потеря telemetry/владения или PWM mismatch останавливают probe. Watchdog
+  остаётся активным; mutex controller не удерживается все30сек подряд.
+- Cleanup automatic(false) допускает Applied/AlreadyAuto; OwnershipLost
+  выбрасывает ошибку, поэтому общий result.restored=false. Чужие targets
+  не переписываются ради красивого success. Cancellation cleanup не пропускает.
+- Новые shared commandApplied/responseObserved/settled заполняет общийhelper,
+  adapter не выводит физический разгон из одного PWM/readback. RPM10000/15000
+  не посылаются — задаётсяPWM100%, реальные обороты только наблюдаются.
+- Подключение этого метода в общий DiagnosticDumpWindows и исправление GUI
+  DeviceOperation(H4) принадлежат родительскому агенту; здесь эти файлы не менялись.
+
+H7. Подсветка после resume
+- Resume HIGH сопоставляет shadow&0xC0 с0x80, а не весь shadow с0x80.
+  Соседние03FC[5:0] не становятся разрешением/запретом brightness.
+  Fresh masked write, canary/BIOS/SPCTRL1/power/config/PWM guards и проверка
+  собственного rollback остались. RGB/радуга/цветовой цикл Honor не добавлялись.
+
+Дополнение U2: изолируемая телеметрия не входит в PNPCFG
+- Windows HlylControl::readTelemetry() содержит единственную общую реализацию
+  HWMI getters charge/Fn/Turbo/timeout/fan0/fan1/GTMP, статусы и raw ошибки.
+  Она не создаёт I2EC/PawnIO/backlight сессии и не обращается к индексным портам.
+- Обычный read() вызывает readTelemetry() и отдельно добавляет guarded I2EC
+  backlight. Логика HWMI не скопирована. Ошибки backlight отдельно сохраняются
+  в status/log, brightness не подставляется из WMI acknowledgement.
+- Это позволяет диагностическому caller выбрать чистый getter path; изменение
+  не разрешает принудительно завершать active writers, I2EC RAM dump или
+  обычный full read() посреди конфигурационного режима. Изоляцию/timeout общего
+  worker и добавление virtualAPI в LaptopControl выполняют общий агент/родитель.
+
+Предложения общим контрактам для родителя
+- BATTERY.md: nativeHLYL disabled0/0 разрешён как наблюдаемый baseline;
+  stable readback/ownership-aware rollback Windows/Linux; не100% threshold.
+- DEVICE-ARCHITECTURE.md: Global HWMI mutex исключает другие наши sessions,
+  но не PC Manager; raw Uniwill backend у Honor по-прежнему отсутствует.
+- FAN_MODES.md/Honor раздел: typedAuto outcome, fixed100 diagnostic adapter
+  через общий30sec helper; общийoperation gate в GUI; отсутствие nativeRAM curve.
+- Никаких утверждений о новой проверке железа, успешной сборке, обновлении
+  portable или полном достижении100% зарядки на основании этих source edits.
+
+Статическая проверка: прочитаны итоговые изменённые методы; git diff --check
+не показал whitespace errors (Git предупреждает лишь о будущей LF→CRLF нормализации).
+Сборку и runtime проверку выполняет родитель в общем согласованном процессе.

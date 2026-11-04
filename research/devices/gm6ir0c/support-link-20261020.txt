@@ -1,0 +1,63 @@
+GM6IR0C — актуальная ссылка поддержки,20.10.2026 (Europe/Moscow)
+
+Цель: исправить общий адрес каталога, не выбирающий нужную группу драйверов.
+URL кнопки (общий Windows/Linux biosSupportLinks):
+https://www.mechrevo.com/cn/downloads?category=VGMSYq&serial=rR6Snr&display_product=rlESpy&author=277
+
+Проверено по публичному сайту/API, без запуска установщиков/GUI MagicControl:
+1. /cn/downloads: общий каталог, необходимо выбрать серию/модель.
+2. /cn/products/ji-guang-x/downloads: сейчас включает пакеты поколения2026.
+3. Публичный Nuxt module ByXOqeUv.js читает category/serial/display_product/
+   author из URL. author передаётся в drivers API как q[data_dict_id_is].
+4. GET https://gwapi.mechrevo.com/api/v1/client/home/download_categories:
+   gaming category VGMSYq; series极光 rR6Snr.
+5. GET /display_products?q[product_serial_id_is]=rR6Snr&limit=999:
+   极光 X -> rlESpy. Отдельной записи GM6IR0C/极光X2024 нет.
+6. GET /drivers/filter_options?q[by_display_product]=rlESpy:
+   AR/PR=277, AQ/IQ=278, U7-255HX=471, X6RP=645, X6PR=646.
+7. GET /drivers?q[by_display_product]=rlESpy&q[data_dict_id_is]=277&limit=100:
+   total=18,returned=18. Пути в основном MECHREVO2024/IDC; два audio ZIP
+   MECHREVO2024/Intel_RPL_Refresh/8L_H55. Полный список пары title/source_url
+   группы278 совпал с277 (18/18), сравнение без установки файлов.
+8. GET целевого URL: HTTP200, без redirect, query сохранён в Nuxt payload.
+9. Сохранённое свидетельство точной платы:
+   build/research-gm6ir0c/samples/board.json: GM6IR0C;
+   samples/companion.log:1 CustomizeTarget52, ProjectID25,
+   BIOS_PROJECT_ID=IDC. Это запись OEM, не догадка по маркетинговому названию.
+
+Это актуальная legacy группа драйверов, а не новый BIOS download/flash path.
+Официальная страница не именует группу277 буквально GM6IR0C, поэтому
+не утверждается эксклюзивность пакетов для этой платы или совместимость BIOS.
+Автоматическая BIOS-проверка остаётся false, пути прошивок не угадываются.
+Дизайн, расположение карточек/кнопок и скролл не изменены.
+
+Полные полученные HTML/JSON/JS сохранены локально в build/gm6-support-*.
+Исходные бинарные драйверы, службы и аппаратные настройки не менялись.
+
+Уточнение торгового имени от пользователя20.10.2026:
+MECHREVO Aurora X2024 (i7-14650HX / RTX4060). Для дальнейшего поиска использовать
+также Aurora X2024 Extreme, 极光 X2024 и JiguangX Series GM6IR0C.
+Первичный источник продавца LaptopAZ, SKU SP000623, содержит название
+Aurora X2024 Extreme и именно i7-14650HX / RTX4060:
+https://laptopaz.vn/new-100-mechrevo-aurora-x-16-core-i7-14650hx-16gb-1tb-rtx-4060-8gb-16quot-2k-165hz.html
+Карточка продавца подтверждает употребление названия/комплектацию, но не
+board ID или совместимость прошивки. Соответствие exact GM6IR0C остаётся
+основанным на присланном SMBIOS/OEM материале. Аппаратные guards не расширялись.
+
+Повторная проверка именно официального имени,20.10.2026:
+GET https://gwapi.mechrevo.com/api/v1/client/display_products/rlESpy
+возвращает name="极光 X",slug="ji-guang-x". Старый product roxSzV:
+https://gwapi.mechrevo.com/api/v1/client/products/roxSzV
+возвращает name="极光X" (без пробела), model_number=null,params={};
+название Aurora X2024 Extreme в этих официальных записях отсутствует.
+Проверены2157 публичных product records китайского сайта и187 display_product
+глобального каталога glbapi.mechrevo.com. Отдельную официальную карточку с
+совместным14650HX/RTX4060 и именем Aurora X2024 найти не удалось.
+Связанный с текущим display_product product NZSoxn уже имеет13700HX/RTX5060;
+это не свидетельство конфигурации2024. Старые product records со словом极光X
+часто не содержат данных конфигурации. Торговые синонимы выше — поисковые,
+не подтверждённое буквальное официальное имя старого SKU.
+
+По отдельному запросу пользователя Series убран только из displayName профиля
+и общей подписи меню моделей. productName/SMBIOS, id, EC protocol и board guards
+остались прежними; Windows/Linux получают общую подпись JiguangX GM6IR0C.

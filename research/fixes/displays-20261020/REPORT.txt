@@ -1,0 +1,110 @@
+Display evidence added to user-requested diagnostic dump — 2026-10-20
+Implementation owner: /root/hydroc. No hardware/GUI/monitor probe, tests, builds,
+commands against a display server, driver/OEM execution or commit performed.
+
+Contract
+src/platform/common/DisplayEvidence.h: shared typed DisplayEvidence/DisplayReading
+with current source pixel width/height, refreshHz plus rational, primary/active,
+scalePercent, effectiveDpi and per-field issue/source/errorDomain/errorCode.
+JSON schema1 includes UTC, readOnly=true, non-atomic snapshot marker,
+enumerationComplete separately from currentDataComplete, and metadata.
+Numbers are invariant JSON; GUI language never alters schema/value formatting.
+Invalid/missing fields are null; no EDID preferred mode is substituted.
+
+createDiagnosticDump keeps all existing call sites source-compatible with one
+optional trailing std::string displaySnapshot={}. The ordinary dump writes
+"displays.json" immediately after dependencies, before Default/EC/slow inventory.
+An absent pre-capture uses diagnostics::capturePlatformDisplays(stop_token).
+A getter exception becomes a structured failed-display record and does not
+skip the EC/telemetry dump. Snapshot has its own UTC; it is not simultaneous
+with the later minute of sensor observations. Existing UI/model guards unchanged.
+
+Windows
+WindowsDisplay.h/.cpp now expose one bounded readActiveDisplayConfiguration:
+QDC_ONLY_ACTIVE_PATHS, at most3 hotplug-size retries,128 paths/1024 modes.
+Existing built-in rotation selection and inventory activeDisplayRows reuse that
+read helper. The diagnostic getter does not call rotation/set display APIs.
+Each active target has a LUID/target-ID key, friendly name/path/GDI source,
+configured target refresh numerator/denominator, and current source resolution.
+EnumDisplaySettingsEx(ENUM_CURRENT_SETTINGS) with dmFields validation supplies
+physical pixels; validated current CCD SOURCE_MODE is an explicit fallback.
+GetMonitorInfo matches the exact GDI source for primary and HMONITOR. Clone
+paths may share a primary GDI source; this scope is explicitly documented.
+If CCD enumeration fails, EnumDisplayMonitors current-source evidence is retained
+with enumerationComplete=false, exact error, and integer-frequency precision.
+
+Shcore is dynamically loaded from System32. GetScaleFactorForMonitor output is
+accepted only on S_OK with a valid positive factor. Failed-call fallback output
+is discarded, preserving HRESULT. Process and thread DPI awareness are metadata;
+no process/thread awareness setters or monitor/config setters are invoked.
+The collected scale is the API-reported DEVICE_SCALE_FACTOR. effectiveDpi is
+explicitly DERIVED scale*96/100, not a separately measured physical DPI and not
+proof of exact arbitrary OS custom override. GetDpiForMonitor is deliberately
+not used: Microsoft documents awareness-dependent results and recommends
+GetDpiForWindow for per-monitor aware callers, while this getter has no HWND.
+Configured refresh is not instantaneous VRR/renderer presentation FPS.
+
+Linux GUI
+BiosPage captures read-only GDK evidence on the GTK main context owner during
+user click, before starting its worker, then passes immutable JSON into the job.
+The worker performs NO GDK/GTK calls. Capture refuses off-main-context use.
+Each GDK monitor has connector/model/manufacturer, validity, current reported
+refresh millihertz -> exact rational/1000, logical/application geometry,
+integer scale_factor separately, and optional monitor.get_scale(double).
+The >=4.14 function is gated by runtime gtk_check_version and looked up with dlsym;
+there is no new mandatory link/runtime dependency on that symbol for GTK4.12.
+The common GTK program already links dl through the existing platform dependency.
+A successful double monitor scale is recorded as reported coordinate-to-device
+scale; device dimensions=geometry*scale remain metadata with derived=true.
+Physical current pixel fields remain null because GDK geometry is NOT a queried
+physical compositor mode; primary is null because GDK4 does not expose it.
+Neither first monitor nor window's current monitor is assumed primary.
+Application GdkSurface scale is additionally recorded for the dump action window
+only, never copied to all displays. Fractional monitor scale unavailable does
+not become a guessed rounded integer user scale. effectiveDpi derived from the
+reported GDK scale is explicitly an application convention, not panel DPI.
+The GUI snapshot concerns actual monitors, independently of selected preview model.
+
+Linux CLI/platform fallback
+There is no compositor/XRandR reader in the platform worker. Without a GUI
+snapshot, bounded sysfs DRM connector evidence retains status, encoder-enabled
+raw value and the first SUPPORTED mode as explicitly NOT CURRENT. Active/primary,
+physical current resolution, refresh and user scale remain null with exact
+reason. No xrandr/compositor utilities are invoked, no GTK is initialized in the
+worker and no new dependency is introduced. No assumption from EDID size/mode.
+
+Sources / API semantics reviewed
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-querydisplayconfig
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumdisplaysettingsexw
+https://learn.microsoft.com/en-us/windows/win32/api/shellscalingapi/nf-shellscalingapi-getscalefactorformonitor
+https://learn.microsoft.com/en-us/windows/win32/api/shellscalingapi/nf-shellscalingapi-getdpiformonitor
+https://docs.gtk.org/gdk4/method.Monitor.get_scale.html
+Root supplied the GDK >=4.14 scale semantics. Windows documentation was read
+through web, not by running monitor/API probes. Display APIs read OS topology
+only; firmware/EC/driver control capabilities are not changed.
+
+Changed production files
+src/core/include/MagicControl/DiagnosticDump.h
+src/platform/common/{DisplayEvidence.h,DiagnosticDumpInternal.h,DiagnosticDump.cpp}
+src/platform/windows/{WindowsDisplay.h,WindowsDisplay.cpp,
+InventoryDetailsWindows.cpp,DiagnosticDumpWindows.cpp}
+src/platform/linux/DiagnosticDumpLinux.cpp
+src/gui/linux/{Ui.h,Ui.cpp,BiosPage.cpp}
+No CMake source entry required (new shared file is header-only).
+No change to card geometry, scrollbar, font roles, baseline or control styling.
+Root owns the coordinated build/portable update/commit. Runtime API behavior,
+DPI edge cases and rendering remain unverified until separately authorized.
+Independent static review follow-up
+GDK get_item null is handled as a partial enumeration issue, with no getter/unref
+on a missing item. This is defensive; no hotplug race was reproduced. is_valid
+only populates connected/availability: active remains null with an explicit
+reason, because physical monitor validity is not a compositor active-path query.
+Linux fallback marks cancellation before an empty/error sysfs scan and again at
+completion. Windows EnumDisplayMonitors FALSE is recorded even when the API
+provides no extended error (zero), instead of silently treating it as success.
+Final review: Windows fallback enumeration now checks cancellation per monitor
+and at serializer boundary. GDK optional double-scale lookup is runtime-gated,
+not compile-header-gated: a GTK4.12-header build can use an installed >=4.14
+runtime without adding that optional symbol to mandatory imports. Added null
+checks to existing new toplevel-list font refresh loops as defensive hygiene.
+No hardware/GUI/test/build commands were executed during these follow-ups.

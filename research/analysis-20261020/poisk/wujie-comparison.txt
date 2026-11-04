@@ -1,0 +1,139 @@
+Сравнение механизма Wujie с GM6 и HYDROC G2
+Дата: 20.10.2026. Только статическое чтение. Ни одного аппаратного вызова.
+
+Ответ на вопрос владельца
+Да, механизм Wujie — предметный кандидат для исследования. В нём есть
+дополнительные стадии, которых нет в нашей попытке GM6 thresholds-only:
+сохранение через WMI и выбор исполняющей платформы. Но перенести значение
+платформы4 сейчас нельзя: это целый platform/customer byte с побочными
+эффектами, а exact GM6/HYDROC firmware consumer ещё не получен.
+
+Сопоставление
+
+Поле / путь       | Wujie X5SP4NAG                 | GM6 IR0C                    | HYDROC G2
+------------------|--------------------------------|-----------------------------|-----------------------------
+Идентичность      | EC454=82,456=72,740=26          | Project25, N.1.05MRO09       | Project26, N.1.13ELU11
+7B9 low7          | upper;100=0,95=5F,85=55         | та же OEM-кодировка          | та же OEM-кодировка
+7B9 bit7          | firmware Reached; не писать    | при85/80 cutoff не было      | физическая проверка отсутствует
+7D0 low7          | restart80=50; readback есть     |85/80 удержались22мин          | пара подтверждается чтением
+7D0 physical      | пользователь видел restart84; | не подтверждено              | не подтверждено
+                  | точный80 пока не доказан        |                             |
+WMI stored upper  | logical87F через RKBC/WKBC      | AML frontend существует;     | одна DLL не доказывает
+                  | работает на exact Wujie        | exact EC handler неизвестен | тот же internal stored address
+7C3 whole byte    |7→4 включает, Auto100→7          | native7; AML называет CTID   | native13; не считать flagmask
+770 ROMID         |FF, только чтение               |FF, только чтение             | не переносить ROMID writer
+742.2             | наблюдаемый Enabled, read-only | нужно correlate runtime      | семантика exactbuild не доказана
+7A6 bits4–5       | отдельный voltage profile      |native0/1/2, не100/95/85      |native0/1/2, не100/95/85
+
+Production Wujie: точный активный caller и последовательность
+
+src/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp
+ :150 applyBatteryChargeLimit(EcAccess&, int percent, bool automatic).
+ :157–160 проверка exact capability и 82/72/26.
+ :165–181 разрешены исходныеplatform4/7 приROMIDFF; invalidstored отсекается.
+ :186–188 до изменения платформы сохраняется durable ownership pin.
+ :191–205 fresh masked7B9.low7 и7D0.low7=80, соседние биты сохраняются.
+ :207–208 firmware.writeStored(raw,0x7F,storedBefore).
+ :210–214 wholebyte7C3→4 либоAuto→7 с проверкой неизменного контекста.
+ :216–250 ожидание live/readback/gate; pending наDC отделён отenabled.
+ :253–318 ownership-aware rollback; чужое изменение не затирается.
+ Это не мёртвый OEM private method, а наша действующая typed реализация.
+
+Исторический C#:
+C:/Users/admin/Documents/mechrevo/Fan_X15Pro/BatteryChargeLimiter.Activation.cs
+ :13–18 описывает физический A/B50→95→50 и wholebyte platform4.
+ :25–28 pin строго82/72/26, original7/active4.
+ ВАЖНО: старая C# политика приraw0 возвращалаpin.original, а текущая C++
+ политика100/95/85%=platform4, отдельныйAuto100%=platform7. Не копировать
+ старую ветку100=disabled в актуальный продукт как будто поведение совпадает.
+
+Небатарейный эффект того же поля
+
+src/platform/windows/BATTERY.md:216–255 и комментарий C++:18–35:
+Wujie наDC platform4 меняет SMU Fast/Slow/STAPM штатных режимов. На100WAC
+тоже есть изменения. Поэтому ни тип поля «platform», ни совпадениеnative7
+уGM6 не разрешают ставить4 наIntel. Батарея не должна скрыто писатьFAN/APU.
+Exact GM6 DSDT независимо подтверждает широкую роль CTID:
+build/research-gm6ir0c/samples/DSDT.dsl:132294–132309 метод PWUP приCTID4
+меняет SGOV и NPCF.DBAC, делает Notify. Это graphics/power policy, не
+узкобатарейная переменная.
+
+WMI transport: арифметика проверена статически
+
+Production C++:104 storedWord(): invoke(0x10000000000ULL +0x87F).
+Это (0x0100ULL <<32)|0x87F =0x000001000000087F, selectorbit40.
+НЕ0x010000000000087F из ошибочного prose-примера чужого репозитория.
+
+GM6 DSDT:
+ :132808–132825 AC00 dword0=SAC0, dword1=SAC1; bytes0..3=SA00..SA03.
+ :133260–133268 WMBC method4 принимаетArg2 какAC00, вызываетOEMG.
+ :133292–133309 OEMG: SAC1==0x0100 ->RKBC(SA00,SA01).
+ Адрес87F раскладывается SA00=7F,SA01=08.
+ :133381–133443 RKBC кладёт адрес вEC LDAT/HDAT, ставитRFLG,
+ ждётDRDY до20*50ms и возвращаетCMDL/CMDH вSA00/SA01.
+ ОшибкаBFLG/ECOK/ECON/timeout отдаётFEFEFEFEFEFEFEFE.
+
+Write argument =logicalAddress | ((preservedWord &FFFF)<<16).
+SAC1=0 ->WKBC(SA00,SA01,SA02,SA03).
+ :133446–133510 WKBC кладёт адрес LDAT/HDAT и два dataбайта CMDL/CMDH,
+ ставитWFLG, ждётDRDY. Поэтому сохранять соседний байт слова обязательно.
+C++:111–122 именно fresh WMI word read/mask/write/readback, не полный0xFF.
+
+GM6 DSDT:134610–134620 помещает LDAT/HDAT/RFLG/WFLG/BFLG/DRDY/CMDL/CMDH
+в обычную hostwindow. Но это door к EC-internal logical address, а не
+доказательство, что чтение hostMMIO(base+87F) даст то же stored значение.
+И наличие универсальногоRKBC не доказывает, чтоinternal87F имеет одинаковый
+батарейный смысл в каждой ECпрошивке. ДляG2HydroControl автор заявляет
+перемещение scratch087F→9164; особенно нельзя уравнивать эти пространства.
+
+Что доказано и что осталось
+
+Доказано статически: GM6 AML содержит совместимый frontend WMI mailbox,
+разделение read-selector/write и word semantics. Совпадает не только имя
+драйвера: провереныSA offsets иOEMG dispatch.
+
+НЕ доказано: valid internal stored upper87F наGM6, activationconsumer
+platform4 наGM6/G2, безопасность всех влиянийCTID, exact125.ELUK==нашG2,
+реальныйrestart80 и физический cutoff95/85 надвухIntelплатах.
+
+Предметный следующий шаг: получить exact ECimage и проследить
+RKBC/WKBC handler ->stored upper ->gate ->live7B9 ->chargeIC/SBS output.
+Если image недоступен, собирать только отдельные read evidence существующей
+typed диагностикой. Пустой/FF hostMMIO87F не считать валиднымinternalstored.
+
+Статус найденного OEM-пакета GMxIR7xN105MRO09_CAP.EXE:
+HTTPS HEAD30s иGET90s timeout. HTTP вернул200 сtext/html иTengine
+denied by custom_acl,10369байтPageVerification вместоMZ. HTML сохранён как
+sources/GMxIR7xN105MRO09_CAP.http-denied.html; это НЕ скачаннаяпрошивка.
+Никакого запуска или обхода доступа не выполнялось.
+
+Дополнение: что означает кнопка Turbo EC в нашем коде
+
+UI label / caller               | Фактическое поле / API             | Подтверждённый смысл
+--------------------------------|------------------------------------|---------------------------
+SETs Turbo EC / Limiter EC       | setBatteryAutomatic ->              | Выбор той же platform7/4;
+kApuPolicyOff/kApuPolicyOn       | applyBatteryChargeLimit,7C3wholebyte | не отдельный hardwarebit
+Кнопки батареи100/95/85          |7B9.low7,7D0.low7,WMI87F,platform4     | ExactWujiepercentagepath
+ОтдельныйAuto100                |7B9raw0 +platform7,lower80stored      | Firmwareautomaticpolicy
+7A5.7 HIGH_POWER                | кандидат в чужой/родной карте        | Не setter этой UIкнопки
+7A5.4 OVERBOOST                 | кандидат в чужой/родной карте        | Не setter этой UIкнопки
+
+src/gui/windows/SettingsPage.cpp:1690–1696 обрабатывает Wujie kApuPolicyOn
+через windows::setBatteryAutomatic(*ec,on). ДляHuawei там отдельный typed
+oemControl->setNativeTurbo(on); это другойtransport/model, неWujiebit.
+BatteryChargeWindows.cpp:319–330 читает remembered upper и вызывает
+applyBatteryChargeLimit(enabled?100:remembered, enabled), сохраняетChargeAuto.
+POWER_MODES.md:261–271 прямо фиксирует переименование Auto→LimiterEC/TurboEC
+с сохранением политики7/4 и общегоsetBatteryAutomatic. Это не догадка поlabel.
+
+В пределах старого C:/Users/admin/Documents/mechrevo/Fan_X15Pro bounded
+поиска C# не найден отдельный setterTurboEC/APUPolicy/ChargeAuto; найден
+BatteryChargeLimiter.Activation.cs и policy7/4. Этот snapshot может быть старше
+переименованияUI; отрицательныйпоискневыдаётсязаанализвсехисторическихверсий.
+Найденный old setter не использует7A5.7/7A5.4. Локальныепробы этихcandidate
+битов, указанныеrootвотчётах16.10, неустановилинужноеSMUдействие; яих
+повторноне запускал. Корректныйвывод: отдельнаякнопкаесть, но текущая
+реализацияпереключает общий7C3platform, отдельныйбезопасныйбитнепоказан.
+
+Отсутствие новогоsetter в исследовании не повод удалять кнопку или менять
+Wujie. И неизвестныйIntelgate нельзяобходитьперепривязкойFAN/APUкнопок.

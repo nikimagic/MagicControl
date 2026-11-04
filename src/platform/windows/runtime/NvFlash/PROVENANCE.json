@@ -1,0 +1,25 @@
+{
+  "version": "5.867.0",
+  "os": "windows",
+  "source_page": "https://www.computerbase.de/downloads/systemtools/grafikkarten/nvflash/",
+  "archive_sha256": "e158da4a6f2138d2268452c6b5fa315c8fdebe827d9e556fa52e310c448c38d4",
+  "oem_package_match": false,
+  "hardware_executed": false,
+  "files": [
+    {
+      "name": "nvflash64.exe",
+      "bytes": 23535616,
+      "sha256": "c0620a7be0ffdad3782d9ddf238d1a19c31b587cbcfee7036819c8a50e2d89cd"
+    },
+    {
+      "name": "driver-1.reference.bin",
+      "bytes": 45776,
+      "sha256": "79050454d06ab7b6607bca09386f704df021c3c367cc0743de6845301bb192ac"
+    },
+    {
+      "name": "driver-2.reference.bin",
+      "bytes": 48848,
+      "sha256": "8c2d9847b70c3dc1aac5d9e5330c67deb86f369dcd3ca85845adf2a001088dde"
+    }
+  ]
+}

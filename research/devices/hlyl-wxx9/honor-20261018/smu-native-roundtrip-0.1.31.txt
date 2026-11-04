@@ -1,0 +1,13 @@
+stapm=31.500000 slow=37.800003 fast=54.000004 pm=3604483 stale=0 status=PawnIO / SMU
+SAVED mW 31500/37800/54000
+APPLY 20/25/30 W
+Requested limits not confirmed
+строка:1 знак:737
++ ... f($LASTEXITCODE -ne 0){throw "Requested limits not confirmed"}; Start ...
++                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Requested limits not confirmed:String) [], RuntimeException
+    + FullyQualifiedErrorId : Requested limits not confirmed
+ 
+RESTORE EXACT OEM mW
+FAN STATE
+flags=0 period=200 duty0=0 duty1=52 candidate_target0=0 candidate_target1=0 writes=0

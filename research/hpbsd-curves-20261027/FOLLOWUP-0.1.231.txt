@@ -1,0 +1,9 @@
+MagicControl0.1.231 — universal fan input bounds
+Completed common Windows/Linux GUI+CLI build, both working portable verified.
+Temperature inputs20..100C and PWM/nominalRPM5..100 inclusive, all devices.
+Validators store user100C points; independent EC maximum stages stay separate.
+HPBSD offline:7456 interrupted restoration prefixes and positive20/100 inputs.
+This intermediate build was not deployed. The owner requested a stronger code
+comment/compile-time lock after compilation; that header remains in the working
+tree for the next common build. Index contains the exact0.1.231 header, matched
+to application_inputs SHA256. No user change or current comment was overwritten.

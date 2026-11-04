@@ -1,0 +1,355 @@
+MagicControl 0.1.75 — статическая ревизия MECHREVO Wujie 15X Pro
+Дата: 19.10.2026. Профиль WUJIE Series-X5SP4NAG, EC 82/72/26.
+Корень проекта: C:\Users\admin\Documents\mechrevo_dsh\MagicControl
+
+Границы ревизии
+Прочитаны исполняемые ветки текущего C++, согласованный пользовательский C#
+эталон Fan_X15Pro, OEM-декомпиляции и сохранённые аппаратные отчёты. Проверены
+файлы portable и хэши, а не работа приложения на устройстве. Не запускались
+сборки, тесты, GUI, CLI, OEM-программы, драйверы, SSH, EC/HID/SMU команды.
+Изменён только этот UTF-8 отчёт. Внешний вид Wujie остаётся эталоном всех моделей;
+исправления ниже предлагаются без изменения геометрии, карточек и скроллбара.
+
+1. Точная идентификация и источники
+
+1.1 Текущий профиль и допуски
+  src/devices/mechrevo/x5sp4nag/Profile.cpp:6–21:
+  id=wu-jie-15-xpro, manufacturer=MECHREVO,
+  baseboard=WUJIE Series-X5SP4NAG, protocol=uniwill-x5sp4nag,
+  EC backend=windows-acpi-driver, SMU=windows-pawnio-amd-smu.
+  Три identity probes:454=82,456=72,740=26; все пять возможностей включены.
+  DeviceRegistry выбирает реальную SMBIOS; UI preview не подменяет её.
+  BoardIdentity.cpp:24–56 сверяет профиль/transport до probes, EcAccess.cpp:335–357
+  кэширует подтверждение до invalidation. Battery, Manual power и backlight
+  дополнительно проверяют живую identity. FAN recovery отдельно перепроверяет её.
+  BackendFactoryWindows.cpp:10–11 не пропускает GM6 в legacy обработчики X5;
+  HYDROC battery-only и Huawei typed API не становятся Wujie transport.
+
+1.2 Различать классы доказательств
+  A. C:\Users\admin\Documents\mechrevo\Fan_X15Pro — наш C# эталон,
+     согласованное поведение и опыт на Wujie; это НЕ исходный OEM-сервис.
+  B. C:\Users\admin\Documents\mechrevo\Decompiled\DefaultTool\ и
+     Decompiled\GCUService_Reference_w568w\ — OEM-декомпиляции. Название
+     Reference_w568w само по себе не доказывает ту же установленную сборку/ветку.
+  C. C:\Users\admin\Documents\mechrevo\EC-WritePath\Fan-ID0-100-Verified.md:3–25
+     связывает установленный Control Center5.56.51.62/GCUService1.0.2.70 с
+     подтверждённым применением точки CPU ID0, а не постоянными100% ротора.
+  D. tests/test_util/analysis содержит выполненные ранее опыты с исходными данными.
+     Их выводы не являются новым аппаратным подтверждением0.1.75.
+
+  SHA256 прочитанных первичных файлов:
+  Fan_X15Pro\EcBoardIdentity.cs:
+    c8c01b64405a86c9b17356c659fdece09aacb64e7f7739315d2c99fba7142d1c
+  Fan_X15Pro\EcFanCurveController.cs:
+    b16d20dd1b26f062488fbe0e8c264450202d2b360d41c081c3e067ffb057c814
+  Fan_X15Pro\BatteryChargeLimiter.cs:
+    2bf54c601cd74c278c611cc0a2abc625eb41a0133959c73fcdc12c0a4d774394
+  Fan_X15Pro\PawnIoSensorReader.cs:
+    c759ca191075191357535358a7fb93c1027d417bacb962649c6a991224443af9
+  Fan_X15Pro\HardwareTemperatureReader.cs:
+    c9cf88a3bd8bc70ff02cbbb2168f9865e58be0b699ef68fe3b0faf4602726f70
+  Decompiled\DefaultTool\MyControlCenter.MyRgbKeyboard\SingleZone.cs:
+    03f02fdfee9e200867d8d280a617e6661c2dd222d11765f04d0f5758ff541574
+
+1.3 Transport и runtime
+  src/platform/windows/uniwill-acpi/BackendWindows.cpp:20–31,104–130,166–205:
+  \\.\ACPIDriver, read/write IOCTL9C40A488/9C40A48C, обычный пакет8/16байт,
+  bounded5с общий Global\MagicControl.EcTransactions.v2, ошибка IOCTL/длины
+  не подменяется считанным нулём. Объект открывается только при создании backend.
+  OEM C# identity: Fan_X15Pro\EcBoardIdentity.cs:45–70 — та же плата/82,72,26.
+  Низкоуровневая OEM-декомпиляция SYS:
+  Research\UWACPIDriver_Map\UWACPIDriver.c:646–652 — соответствующие IOCTL.
+  Статический файл текущего компьютера C:\Windows\System32\drivers\UWACPIDriver.sys:
+  46352байт, SHA2566e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235.
+  Это хэш файла на диске; загрузка именно этого образа ядром здесь не проверялась.
+  Wujie backend не пинит конкретный SYS hash/service image. Это граница защиты,
+  а не доказанная несовместимость установленного драйвера.
+  PawnIO — отдельные AMD SMN/MSR/SMBus/SMU пути, НЕ замена всего EC транспорта.
+  Runtime portable:
+  AMDFamily17.bin10652B dae74615761b78bdf064dfb3e136252ddcc6fc727d88f14738d0e5800d427a91
+  SmbusPIIX4.bin42404B 91f9b4b1c39e3d399ce48477a89d8f6bd3e58a2241064a4daec3a1513dff56e5
+  RyzenSMU.bin50764B 301d9ca397108e09f31bfbd5ac4c9bb4f352a5de68532c32db3ba7ddcde93450
+  cmake/PawnIORuntime.cmake:3–18 содержит полный общий runtime, RyzenSMU не потерян.
+  Его hash/notice проверяются stager; AMD Family17/PIIX4 загружаются штатным
+  PawnIO module loader. Наличие файлов не доказывает работающий сервис/PawnIO.
+
+2. Матрица пяти областей
+
+2.1 Драйверы / identity / concurrency
+  Реализовано: точная SMBIOS+EC identity, feature/protocol guards, masked RMW,
+  readback, recursive внутрипроцессный и общий межпроцессный transaction gate;
+  отдельные FAN ownership mutexes и остановка/возврат только GCUBridge.
+  Подтверждено источниками: карта X5 и пакет IOCTL; C# названия owner mutexes.
+  Неизвестно/ограничено: реально загруженный SYS и его версия не исследовались
+  новым SCM/kernel snapshot. GUI/CLI имеют Global SingleInstance.v2 owner lease;
+  Linux EC transport отсутствует.
+
+2.2 CPU/APU/GPU/RAM/SSD/батарея и прочие датчики
+  Windows MonitoringWindows.cpp:464–524:
+  - CPU Tctl/Tdie: PawnIO SMN59800; резерв ADL PMLog32; независимые driver/Tctl
+    поля. ADL выбирает один согласованный adapter, предпочитая CPU sensor32.
+  - iGPU Radeon: ADL Edge8, затем GFX28, частота1, load19, GFX power30;
+    ADLX дополняет недостающие показатели только при единственном AMD GPU.
+    Общие dGPU Radeon/NVIDIA readers не превращают iGPU в дискретную.
+  - CPU load: ADLX либо Windows GetSystemTimes. CPU clock: AMD PMLog34.
+  - CPU cores power: сумма per-core energy MSR; APU Package power отдельно
+    AMD package energy. SMU Fast-window power и STAPM/Fast/Slow limits отдельно.
+    Package включает встроенную графику; GPU W нельзя прибавлять повторно.
+  - SMU: точный профиль и PM5D0009 до float0/2/3/4. Мониторинг лимиты не пишет.
+  - DDR5: только два подтверждённых SPD hubs SMBus port0/50/51; проверяются
+    AMD1022:790B, SPD5118 identity/capability/config, signed temperature31.
+  - SSD: Windows Storage temperature и NVMe SMART composite+sensor1..8;
+    diagnostic сохраняет отдельные источники/raw. UI — до2накопителей.
+    Разные temperature channels одного диска не становятся разными дисками.
+  - Battery: Battery Class IOCTL plus X5 EC4A2(0.1K),4A6 cycles,438mV,434mA;
+    циклы/вольты/температура проверяются отдельно, DWORD unknown не равен0.
+  - NPU: ADL72/71, ADLX activity/frequency; мощность — отдельный XRT examine
+    helper с timeout3с; подтверждённой температуры NPU нет.
+  - Experimental EC44C — предполагаемое системное питание, stale отмечен в
+    MonitoringSnapshot, но GUI подвал не учитывает этот признак (частьW3).
+  Подтверждено прежними логами:
+    tests/test_util/analysis/TEMPERATURES-FULL-REPORT.md:10–19,24–39,58–98;
+    CPU31.75–56.88C, два независимых DDR5 канала37.25–61.25C;
+    EC43E — CPU-кристалл, не независимый GPU/DDR/SSD датчик.
+  Неизвестно: новые измерения0.1.75 и температурный NPU канал; NAND/controller
+  семантика vendor SSD sensors не установлена по одному номеру/величине.
+  Linux: k10temp/amdgpu/spd5118/NVMe hwmon/power_supply, read-only sensor list.
+  Windows-only PawnIO и EC fallback не изображаются работающими на Linux.
+  Проблемы stale/provenance и ограничения общих dump см.W3 и раздел4.
+
+2.3 FANs Default / Manual / Max / online / CPU=GPU
+  src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp:
+  - Default448–464: только commit/custom/727gate/boost off. RAM и APP presence
+    не очищает. Native state decoder FanCurve.cpp:121–154 отличает mixed отDefault.
+  - Max934–942: только751.6; без Default и очистки/переписи таблиц перед Max.
+  - Manual1009–1045: общая автономная CPU table Up[16]/Down[16]/Duty[16],
+    split off, GPU table не читается/не пишется, Down[0] сохранён, commit/presence
+    activation. Защитная85C/100% добавляется buildAutonomousFanTable.
+  - online1049–1114: собственные кривые/гистерезис, split ALWAYS1, software link
+    использует max(CPU,GPU), PWM×2, CPU emergency tail, fresh-source check10с,
+    при85C —100%; температурный сбой ведёт к Default, не нулевому PWM.
+  - request259–261 не разрешает CPU=GPU внеonline. Переключение кривых применяет
+    cache только при совпавших режимных полях. FAN telemetry не определяет владение.
+  - Startup/resume сохраняют explicit choices, не запускаются от tab/tray/hide;
+    Manual после подтверждённого сна rearm даже при сохранившихся флагах.
+  - Exit1202–1207: EC writes0, только освобождение leases/возврат GCUBridge.
+  Основа OEM: EC-WritePath\Fan-ID0-100-Verified.md и JIT-ApplySequence файлы;
+  алгоритм самостоятельногоonline — наш C#, не вызов OEM SetUserProfile.
+  Подтверждённая граница: readback таблицы/boost != физическая кривая/максимумRPM.
+  FAN_MODES.md:147–177 прямо оставляет отдельный опыт автономности после выхода
+  и CPU-only GPU response невыполненным. Нельзя объявлять их проверенными0.1.75.
+  Дефекты владения/восстановления см.W1,W5.
+
+2.4 Батарея upper / lower / WMI / platform / Auto
+  BatteryChargeWindows.cpp:136–239: только100/95/85, Autoтолько100; live7B9low7,
+  нижний7D0low7=80, WMI logical87F с сохранением соседнего byte; whole-byte7C3
+  требует4/7 и ROM770=FF; pin original platform до7→4. Три последовательных
+  подтверждения, deadline10с; DC pending отдельно отEnabled и физического тока.
+  Явные пресеты выбирают4; Auto выбирает7, не пишет fans/APU/voltage profile7A6.
+  Сохранение DevicePreferences после успешной команды, явные ChargeLimit/ChargeAuto,
+  startup/resume через тот же API. Никакого restore при обычном просмотреSETs.
+  OEM native BatteryProtection2 режимы7A6.4–5 — ДРУГАЯ функция. Не подменять ими
+  процентный X5 API и не объявлять их эквивалентами100/95/85.
+  Физически подтверждено прежней матрицей:
+    tests/test_util/analysis/platform-charge85-matrix-20261016/REPORT.md:9–36:
+    около85% platform4 battery power0W, platform7 ~35W, возврат4 сноваstop.
+  Побочный эффектplatform4 на штатную APU policy доказан, не спрятан:
+    battery-platform-smu-20261016/REPORT.md:3–24, ALL-MODES.md,
+    charger-rating-smu-20261016/REPORT.md;65W и100W имеют разные результаты.
+  Нижний80% подтверждён только readback; физический цикл restart80→upper ещё
+  не доказан; пользователь сообщал старт84%. Нужна отдельная контролируемая проба.
+  Ошибки и реальное отображение см.W2,W4; это не повод менять внешний вид карты.
+
+2.5 Подсветка / эффекты / цикл6 / таймаут
+  Общий core KeyboardBacklight.cpp и SingleZoneBacklight.h:
+  точные X5/GM6 guards+live identity;766.2 runtime support; RGB769..76B0..50,
+  brightness78C maskE2/strobe10, rainbow767.7/strobe20, pulse7C5mask07.
+  Соседние fan split/USB/lightbar bits сохраняются. Journal проверяет принадлежность
+  поля перед rollback. Итоговый readback отдельно, физический эффект не выдуман.
+  OEM DefaultTool\SingleZone.cs:852–890 — RGB/rainbow;1066+ — pulse preset;
+  922–935 ManualInterval×1000 и timer, не аппаратная скоростьBreathing.
+  Наш C# Set2EcSettings.Keyboard.cs:74–119 — те же masking/цвет/эффекты.
+  Palette pulse white/red/green/blue привязана к физическим наблюдениям Wujie,
+  а не бездумно к аналогичной GM6 OEM нумерации.
+  Цикл6 общий: interval1–3600с,6UI RGB, background DeviceOperation, expected
+  RGB/effect останавливает цикл при внешней смене; exit оставляет последний цвет,
+  startup autoplay нет; новый UI для Wujie не создаётся.
+  Activity wake FanControlWindows.cpp:486–500: только текущий положительный
+  brightness, zero-mask strobe без возврата cached-level; ручнойOff сохраняется.
+  Таймаут Wujie намеренно disabled SettingsPage.cpp:1214–1218: аппаратный setter
+  времени, сохраняемый после выхода, не доказан. Родной KeyboardCloseTimer —
+  процессный таймер, а ITE HID1A относится к иной клавиатуре. Не писать741.2 как
+  уставку секунд. Предыдущие483EC snapshots фиксировали~31с/741.2 как наблюдение,
+  не writable timeout. См.keyboard-ec-timeout/report.md:5–44,
+  timeout-control-search.md:12–39. Отсутствие этой команды — известный предел,
+  не заглушка, которую допустимо заполнять чужим регистром.
+
+3. Конкретные замечания
+
+W1 [P1] Проверка владения FANs пропущена в online и «отвоёвывает» Manual.
+  Source: src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp:584–609,
+  1049–1056,1068–1097,1146–1149; flagsMatch405–415; recovery678–698.
+
+  A. Обычный online: верхний watchdog работает только ecManual/recovering;
+  check(true) ниже вызывается только command||reload. После активации reload=false,
+  поэтому обычный цикл не читает даже commit/boost/split. Если другой владелец
+  или прошивка отключат RAM/включат Boost, код продолжит менять Duty по температуре
+  и публиковать confirmed=true. При прежнем target пропустит запись, но потерю
+  владения всё равно не установит. Это не ошибка телеметрии RPM.
+
+  B. Автономный Manual: при обычном 5с polling ecObservationDue=true; mismatch
+  без события сна переводит recovering=true (606–609), затем повторно включает
+  commit/gates и таблицу (678–698). Это «лечащая» фоновая запись после внешней
+  смены режима. Разрешённый wake-rearm при подтверждённом сне (597–600) — отдельный
+  сценарий и дефектом не объявляется.
+
+  C. flagsMatch вообще не сравнивает726.7/727.6/741.0, хотя они входят в исходный
+  fields36–40. Даже Manual watchdog пропустит сброс этих owned gates.
+
+  Exact reference: C:\Users\admin\Documents\mechrevo\Fan_X15Pro\
+  EcFanCurveController.cs:10,360–388,472,937–950: CheckOwned(Controls) в каждом
+  online цикле, masked compare owned control bits, подтверждающие повторные чтения
+  и остановка при внешнем изменении. Fan-Startup.md:9 прямо обещает остановку
+  программного управления при чужой смене. FAN_MODES.md:27 допускает восстановление
+  при запуске/подтверждённом сне, не превращает обычный poll в нового владельца.
+
+  Последствие: запись после потери действительного режима/нового внешнего выбора
+  и ложное подтверждение UI. Competing writer может получить перезапись RAM.
+  Предложение: masked read-only проверка всех owned gates перед online изменениями
+  и периодически при прежнем target; ошибки чтения отличать от устойчивой смены.
+  На чужую смену остановить writes/confirmed без автоматического отвоевания.
+  Восстановление после подтверждённого сна оставить отдельной явной веткой.
+  Не возвращать полный обход96байт каждый тик и не менять UI.
+
+W2 [P2] Ошибка battery rollback теряется для вызывающего кода и legacy UI.
+  Source: src/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp:220–239;
+  src/gui/windows/SettingsPage.cpp:968–978,1075–1076.
+  Rollback catch пишет ошибку только в log, затем rethrows исходный failure.
+  В UI свежий read after failure разрешён только oemControl||gm6Controller||
+  nativeBattery; Wujie EcAccess туда не входит. Если возврат батареи неуспешен,
+  сообщение не содержит «фактическое состояние неизвестно», а старое выделение
+  может остаться, хотя upper/platform уже изменились. Успех не заявляется,
+  но важная информация о неполном возврате отсутствует в результате команды.
+  Exact reference: Fan_X15Pro\BatteryChargeLimiter.cs:200–239 включает
+  rollbackError.Message в выбрасываемую ошибку и перечитывает state после возврата.
+  Предложение: составной результат apply/rollback и свежий только-read для Wujie
+  после setter failure; при ошибке чтения снять actual confirmation, сохранённый
+  выбор оставить отдельно. Геометрию карточки не менять.
+  Дополнительный риск: BatteryChargeWindows.cpp:231–233 без сравнения expected
+  возвращает WMI/live/lower после чужой смены; только platform/ROM защищены от неё.
+  Предложение: журнал owned masked changes и compare-before-rollback, как уже
+  реализовано KeyboardBacklight.cpp:31–39; не replay старый threshold вслепую.
+
+W3 [P2] Неограниченно старое package/battery/system power выглядит текущим.
+  Source: src/platform/windows/pawnio/PawnTelemetryWindows.cpp:66–70,153–176;
+  src/core/include/MagicControl/Monitoring.h:32–53;
+  src/platform/windows/MonitoringWindows.cpp:469–470,479–494;
+  src/gui/common/MonitoringCards.h:157–159; src/gui/windows/FansPage.cpp:1173–1179.
+  Package: cachedApuPackagePowerWatts не сбрасывается при MSR error/reset и
+  выводится в недиагностическом sample до prepareCpu. Retry30с и последующие
+  сбои способны удерживать прежние W бесконечно без age/stale признака карточки.
+  Battery: retain переносит watts/mA/volts/temperature при каждом miss; затем
+  результат снова становится previous. Timestamp/TTL нет. Для C дописывается
+  status, но UI рисует число; для W/mA нет даже этой аннотации. Ошибки могут
+  сохранять прежний зарядный ток при новом источнике/flow. В diagnostic retention
+  выключен: это прежде всего live UI, не sensor timeline.
+  EC44C: stale отмечен в snapshot, но FansPage игнорирует его в потреблении.
+  Exact reference: Fan_X15Pro\PawnIoSensorReader.cs:30–53 возвращает watts=null
+  при ошибке/невалидном интервале, не предыдущие W. BATTERY.md:261 разрешает
+  сохранение при единичном пропуске, а не бессрочно; MonitoringSnapshot уже имеет
+  systemPowerStale, который можно учесть без новой карточки.
+  Предложение: monotonic timestamp и ограниченный TTL динамических чисел,
+  stale/unknown после TTL, current error/source отдельно от cached sample.
+  Статические health/cycles могут иметь иную политику. Не заменять пропуск нулём.
+
+W4 [P2] SETs скрывает включение лимита и выделяет85/95 только по raw7B9.
+  Source: src/gui/windows/SettingsPage.cpp:706–713,745–753,826–830,1248–1250.
+  batteryIndex не использует742.2/WMI/platform для85/95. batterySummary умеет
+  различать «включено»/«не подтверждено», но paint рисует details только при i==2,
+  поэтому эта строка батареи невидима. При7B9=85,7C3=7,742.2=0 кнопка85 остаётся
+  выделена, хотя ранее физически показано: такой threshold не останавливает заряд.
+  Exact reference: Fan_X15Pro\BatteryChargeLimiter.cs:15–25 различает
+  Enabled/Saved/SelectedPreset; tests/test_util/analysis/
+  platform-charge85-matrix-20261016/REPORT.md:9–36 доказывает различие raw85 и
+  активного ограничения. BATTERY.md:132–134 запрещает выдавать pending за Enabled.
+  Предложение: configured/pending/enabled/unknown в общей модели; при отсутствии
+  подтверждения не выдавать configured за applied. Причину показать в существующей
+  строке статуса или tooltip, сохранить геометрию Wujie; новый дизайн не нужен.
+
+W5 [P2] Ошибка восстановления APU блокирует независимое восстановление FANs.
+  Source: src/devices/mechrevo/x5sp4nag/windows/ConfigurationRestoreWindows.cpp:
+  213–220,279–282. При ApuMode step(false) performanceReady=false; fan profiles
+  вообще не ставятся в очередь, включая Max/Default, которым не нужны overrides.
+  Пример: после resume727.7=1 или ошибка чтения APU мешает applyManualPowerLimits,
+  но восстановление сохранённого boost/Default можно проверить независимо.
+  Legacy branch тоже связывает успех performance с restore fans.
+  Exact reference: src/platform/windows/FAN_MODES.md:18–25,137–144 и
+  src/core/src/POWER_MODES.md:35–44 фиксируют разделение FANs/APU.
+  C# EcFanCurveController.Native.cs:91–105 активирует FAN собственным протоколом;
+  применимость APU watts не является условием этой активации.
+  Предложение: независимые restore steps со своими guards/error status.
+  FanController сам проверяет допустимость текущего режима. Не применять APU
+  из FANs для обхода ошибки и не включать скрытый OEM SetUserProfile из SETs.
+
+Проверенная, но отвергнутая гипотеза о межсессионном ownership:
+  Local Fan_X15Pro mutexes сами по себе недостаточны для двух Windows sessions,
+  однако текущие src/gui/windows/main.cpp:75 и src/cli/main.cpp:720–722 держат
+  Global\MagicControl.SingleInstance.v2 до создания hardware writer. Доказанной
+  возможности двух актуальных GUI/CLI writers не найдено. Старый отдельный C#
+  эталон не знает Global lease; одновременное использование с ним — отдельный
+  сценарий, который нельзя объявлять проверенной совместимостью.
+
+4. Общие замечания Unknown: применимость к Wujie
+
+  unknown.txt прочитан. U2 (синхронный provider timeout), U3 (AC unknown как false),
+  U6 (SSD source заменяется SMART после property fallback) применимы к Wujie:
+  просмотрены MonitoringWindows.cpp:255–270,425–456 и общий dump recorder.
+  U1 (потеря второго AMD GPU) условен: на подтверждённом Wujie единственный880M.
+  U5 (активные FAN кнопки без backend) применим к Wujie на Linux и Windows без EC,
+  но не доказывает дефект рабочего X5 EC controller. U7 (несколько system batteries)
+  не проявляется на подтверждённом single-battery Wujie.
+  Общие проблемы подробно описаны unknown.txt и не считаются повторными находками.
+
+  Дополнение Wujie dump: DiagnosticDump.cpp:526 не копирует
+  battery-enforcement-platform.txt, хотя BatteryChargeWindows.cpp:153–163 проверяет
+  эту запись и её повреждение блокирует setter. Для разбора «Invalid original
+  battery platform record» полезно копировать этот файл в settings с раздельными
+  presence/read error. Не включать личные данные произвольных каталогов.
+
+5. Portable, Linux, границы подтверждения
+
+  Обе build-version.txt=0.1.75; рабочие бинарники совпадают с build SHA256:
+  Windows MagicControl.exe:
+    7f55881e552e60200edf9c311d8b81d2c39135f91835c5b2f8bd601c9cd43cb4
+  Linux MagicControl:
+    431364267fd36bc1693e2c4dc5379197659fca76ec762d888504f8ef614e07c2
+  cmake/StagePortableWindows.cmake:15–20 и Linux stager не переписывают существующие
+  fan-curves.csv/app-settings.ini. Другие пользовательские INI не удаляются.
+  Полный общий owner CSV — packaged default, а не реконструированная кривая.
+  GUI/FAN/SETs общие; аппаратная модель задаёт capabilities/данные/transport.
+  Linux BackendLinux.cpp:6–20 явно не предоставляет EC transport; Wujie APU/FAN/
+  RGB/charge writers не имитируются. Linux SettingsPage получает battery через
+  power_supply, не4A2. Native policies GM6/HYDROC не подмешаны процентному X5 API.
+  Разная аппаратная доступность Linux не означает отдельных страниц модели.
+
+6. Что остаётся гипотезой и требует отдельного разрешённого опыта
+
+  - Физическое исполнение CPU-only RAM-кривой после выхода и при нетронутой
+    GPU table; точные floor/hysteresis обоих роторов.
+  - Максимум RPM — наблюдаемый пик при30с Max, не паспортные10000/15000RPM.
+  - Физический restart ниже80% с разными upper; одного readback7D0 мало.
+  - Platform4/7 после сна и под нагрузкой для конкретных65/100W зарядок:
+    нельзя переносить одну матрицу на все USB-C устройства.
+  - Температура NPU и аппаратная уставка timeout Wujie не найдены. Это не
+    разрешает писать неподтверждённые регистры или ITE команды другой клавиатуры.
+  - Перехват online/gates и ошибки rollback сначала проверять отдельно
+    запрошенными программными fault-injection fixtures, без самовольных EC проб.
+  - Физический ответ цветов/пульсации0.1.75 в этом аудите не наблюдался;
+    есть исходники протокола и прежние наблюдения, не новый GUI/hardware прогон.
+
+Главный результат: Wujie имеет наиболее полный и аппаратно обоснованный профиль,
+но это не отменяет дефектов watchdog/rollback/stale/restore. Ревизия ничего
+не исправляла и не выдавала readback или сборку за физическое исполнение.
+
+
+

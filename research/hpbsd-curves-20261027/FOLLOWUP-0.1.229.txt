@@ -1,0 +1,16 @@
+MagicControl0.1.229 — HPBSD graph identity follow-up
+27.10.2026
+
+Own-app GUI verification on228passed Default->Manual->Default:22native fields visible,16normal fields editable inManual,6protected fields disabled; restoredDefaulthas0editable fields. Default andManual screenshots confirm populated native curves and actualPWM. Numeric text was read withWM_GETTEXT; cross-processGetWindowText cannot readEdit text and had caused an earlier diagnostic-only false rejection before anyManual action.
+
+The GUI screenshot caught one real label error: graph identity still depended on the oldHPBSD source-string prefix after telemetry labels were shortened. Use the knownHPBSD model flag instead; the second graph is System fan. No hardware policy, editor mechanism, data, geometry or font changes in229. Existing other-model source-based labels retain their previous behavior. All curve/PWM/settings fixes remain227/228.
+
+Build-All completed Windows/Linux GUI+mctl229; both working portable versions and SHA verified. Final mini-PC update and read-only screenshot follow. The successful228GUI hardware path does not need another physicalManual run for a label-only correction.
+Windows GUI 
+A128288B97DFDDC0207DFFC5CDE01E12CF6A51CE26B0DBE1F88F50FEDEAB0A5C
+Windows CLI 
+80AA2CDAFC86D876CAAA2421C207085CEB52E4A86931F83DA0081E362CA973DC
+Linux GUI 
+E5AB210345AAF4C178F9BB2F3760EC5475C28B9F28CDFB909F8CA6656175F7F8
+Linux CLI 
+24DC06BE3DEED6291C776BF413CB3C1B1439ABB7DD781F3B3DF0D6558D645DCB

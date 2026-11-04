@@ -1,0 +1,52 @@
+import uuid
+class Guid(C.Structure):_fields_=[('bytes',C.c_ubyte*16)]
+class Interface(C.Structure):_fields_=[('cb',W.DWORD),('guid',Guid),('flags',W.DWORD),('reserved',C.c_size_t)]
+setup=C.WinDLL('setupapi',use_last_error=True)
+setup.SetupDiGetClassDevsW.argtypes=[C.POINTER(Guid),W.LPCWSTR,W.HWND,W.DWORD];setup.SetupDiGetClassDevsW.restype=W.HANDLE
+setup.SetupDiEnumDeviceInterfaces.argtypes=[W.HANDLE,C.c_void_p,C.POINTER(Guid),W.DWORD,C.POINTER(Interface)];setup.SetupDiEnumDeviceInterfaces.restype=W.BOOL
+setup.SetupDiGetDeviceInterfaceDetailW.argtypes=[W.HANDLE,C.POINTER(Interface),C.c_void_p,W.DWORD,C.POINTER(W.DWORD),C.c_void_p];setup.SetupDiGetDeviceInterfaceDetailW.restype=W.BOOL
+setup.SetupDiDestroyDeviceInfoList.argtypes=[W.HANDLE];setup.SetupDiDestroyDeviceInfoList.restype=W.BOOL
+bat_handle=None
+def battery_ioctl(handle,code,words,size):
+ assert code in [0x294040,0x294044,0x29404c]
+ packet=(W.DWORD*len(words))(*words);buf=(C.c_ubyte*size)();n=W.DWORD()
+ if not k.DeviceIoControl(handle,code,packet,C.sizeof(packet),buf,size,C.byref(n),None) or n.value<size:raise C.WinError(C.get_last_error())
+ return bytes(buf)
+def battery_open():
+ global bat_handle
+ guid=Guid();C.memmove(C.byref(guid),uuid.UUID('72631e54-78a4-11d0-bcf7-00aa00b7b32a').bytes_le,16)
+ devices=setup.SetupDiGetClassDevsW(C.byref(guid),None,None,0x12)
+ if devices==C.c_void_p(-1).value:raise C.WinError(C.get_last_error())
+ try:
+  for i in range(16):
+   entry=Interface();entry.cb=C.sizeof(entry)
+   if not setup.SetupDiEnumDeviceInterfaces(devices,None,C.byref(guid),i,C.byref(entry)):break
+   required=W.DWORD();setup.SetupDiGetDeviceInterfaceDetailW(devices,C.byref(entry),None,0,C.byref(required),None)
+   if not 8<=required.value<=65536:continue
+   detail=C.create_string_buffer(required.value);C.cast(detail,C.POINTER(W.DWORD))[0]=8
+   if not setup.SetupDiGetDeviceInterfaceDetailW(devices,C.byref(entry),detail,required.value,None,None):continue
+   path=C.wstring_at(C.addressof(detail)+4)
+   candidate=k.CreateFileW(path,0x80000000,3,None,3,0,None)
+   if candidate==C.c_void_p(-1).value:continue
+   try:
+    tag=struct.unpack('<I',battery_ioctl(candidate,0x294040,[0],4))[0]
+    info=battery_ioctl(candidate,0x294044,[tag,0,0],36);caps=struct.unpack_from('<I',info)[0]
+    if tag and caps&0x80000000 and not caps&0x20000000:
+     bat_handle=candidate;return
+   except Exception:pass
+   k.CloseHandle(candidate)
+ finally:setup.SetupDiDestroyDeviceInfoList(devices)
+ raise RuntimeError('Native Battery IOCTL source unavailable; no charge test')
+def battery_sample():
+ if bat_handle is None:battery_open()
+ tag=struct.unpack('<I',battery_ioctl(bat_handle,0x294040,[0],4))[0]
+ info=battery_ioctl(bat_handle,0x294044,[tag,0,0],36)
+ status=battery_ioctl(bat_handle,0x29404c,[tag,0,0,0,0],16)
+ caps=struct.unpack_from('<I',info)[0];state,capacity,voltage,rate=struct.unpack('<IIIi',status)
+ full=struct.unpack_from('<I',info,16)[0]
+ if caps&0x40000000 or rate==-2147483648:raise RuntimeError('Battery rate is not reported in physical watts')
+ power=PowerStatus();k.GetSystemPowerStatus(C.byref(power))
+ return dict(percent=100.0*capacity/full if full else None,windows_percent=power.percent,state=state,
+  online=bool(state&1),charging=bool(state&4),discharging=bool(state&2),watts=rate/1000.0,
+  volts=voltage/1000.0,milliamps=rate*1000.0/voltage if voltage else None,
+  capacity_mwh=capacity,full_mwh=full,source='Windows Battery Class IOCTL')

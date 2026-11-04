@@ -1,0 +1,9 @@
+AMD ADLX SDK interface headers
+Revision:32b5a740d42295c5dfe9026b9f52683da0f3af91
+Source:https://github.com/GPUOpen-LibrariesAndSDKs/ADLX
+Headers are unmodified and used only by the AMD-specific backend.
+AMD driver DLLs are loaded from Windows System32 and are not redistributed.
+See LICENSE.pdf / LICENSE.txt and the accompanying product third-party notices.
+
+IPerformanceMonitoring1/2/3.h are unmodified SDK/Include headers from the same pinned revision.
+AmdTelemetryReader and RadeonGpu share typed ADLX interfaces/AdlxRef; no handwritten vtable offsets.

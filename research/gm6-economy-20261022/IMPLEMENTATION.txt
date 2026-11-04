@@ -1,0 +1,22 @@
+GM6IR0C Economy,22.10.2026
+
+Поручение: включить Economy через общий native-путь, без нового шага физической кнопки. FANs в Economy — пользовательские кривые Custom/Manual в EC, не Min и не host Manual online. Введённые ранее Custom PL должны сохраниться отдельно.
+
+Изменение только exact GM6IR0C: setEconomyPower вызывает applyNativeProfile(Custom,10/15/20,saveDraft=false,economy=true). Это прежний проверяемый путь FAN tables/flags/PL/commit с APP/board/OEM/AC/PL4/epoch/sleep guards и owned rollback. Онлайн-контроль завершается тем же native-переходом. Нового EC setter/worker/скрытого whole-byte gate write нет. GM5/L16 продолжают старую ветку.
+
+Временный transientEconomy устанавливается только после успешного общего readback. Economy не пишет power draft и не заменяет nativeCustomLimits/nativeCustomCurves. При уходе из временного Economy общий обработчик не принимает10/15/20 за прежний Custom. Это защищает память Custom и при повторном Economy. Другой успешный native apply снимает временный intent. Его значение не меняется при rollback/ошибке.
+
+Подсветка Economy в программе требует одновременно собственного временного intent, свежего EC Custom и тройки10/15/20. Сам Custom10/15/20 без такого intent не переименовывается в Economy. После restart намерение не угадывается по одинаковым байтам; новые startup/persistent restore keys не добавлены.
+
+Physical NativeProfile enum/nextNativeProfile не менялись. Цикл строгоOffice→Gaming→Turbo→Custom. Из Economy (аппаратноCustom) следующая физическая командаOffice. В дальнейшем возвращается собственный Custom из сессии либо сохранённого файла, не временный Economy.
+
+Статически прослежены пути:
+- Custom→Economy→Economy→Office→Gaming→Turbo→Custom: ручные PL/кривые не заменяются Economy;
+- fresh Office с сохранённым draft→Economy→native cycle→Custom: draft читается прежним helper;
+- Economy→программныйCustom: новые явные PL применяются и сохраняются обычным путём;
+- ошибка применения: прежний временный intent не меняется, работает существующий rollback.
+Это чтение кода, не запуск тестов и не аппаратное измерение.
+
+Геометрия/FANs кнопки/OSD прежние. CURRENT_CALC из0.1.154 сохранён. Физическое исполнение PL и оборотов на GM6 ещё не измерялось. Версии/хэши обновлённых Windows/Linux portable — в VERIFICATION-0.1.156.json.
+
+Итоговая0.1.157: GM6 power selection целиком остаётся в ветке native-профиля. Unknown/mixed native flags дают неизвестный выбор; native Office/Gaming/Turbo выбираются по native readback даже при оставшихся неактивных числах PL. Это исключает legacy fallback, который мог ошибочно показать Economy после FAN Default. Economy требует собственного intent и matching Custom/10/15/20. Custom10/15/20 без нашего Economy intent остаётся Custom.

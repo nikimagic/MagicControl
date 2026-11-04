@@ -1,0 +1,10 @@
+IntelMSR.bin: official signed PawnIO Modules0.2.11, unmodified.
+SHA256: D6ED85D65AB17A22F813EF98207D6D537155EE2DED5976A21CB48413C9B92E5F
+Copyright (C) 2025 namazso <admin@namazso.eu>
+License: LGPL-2.1-or-later; see COPYING in this directory.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+Archive: https://github.com/namazso/PawnIO.Modules/releases/download/0.2.11/release_0_2_11.zip
+Archive SHA256: 43608cb89bc84247fef1368a139013f7d043e17db6d6c8dfc9b46bf0905a81f4
+Local corresponding source retained: build/release-compliance/PawnIO.Modules-0.2.11/IntelMSR.p
+MagicControl uses only ioctl_read_msr for Package DTS/TjMax/RAPL on reviewed Intel CPUID models.
+No Intel MSR write export is called. Hardware readings require validation on the target laptop.

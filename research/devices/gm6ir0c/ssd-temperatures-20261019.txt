@@ -1,0 +1,71 @@
+SSD KINGSTON OM8PGP41024N-A0 / ELFK7N.7: температуры,19.10.2026
+
+Проверены код декодера, архивы logs5/logs6, скриншот HWiNFO и первичные спецификации.
+Оборудование не опрашивалось, нагрузка/тесты/изменение параметров не запускались.
+
+Идентификация из inventory.json logs6:
+Один накопитель, Windows PhysicalDrive0, KINGSTON OM8PGP41024N-A0,
+firmware ELFK7N.7,1024.21GB, NVMe.
+
+Поля SMART/Health log page0x02:
+- Composite: bytes1..2 little-endian Kelvin.
+- Temperature Sensor1: bytes200..201 little-endian Kelvin.
+- Temperature Sensor2: bytes202..203 little-endian Kelvin.
+Отсчёт bytes относительно начала NVMe log, после проверенного Windows
+STORAGE_PROTOCOL_DATA_DESCRIPTOR. У нас начало payload=8+ProtocolDataOffset.
+ДекодированиеC=K-273.15; разница температур не зависит от округления0.15C.
+Не смешаны byte ordering, каналы, физические накопители или поля порогов.
+
+Архив logs5,10:11:04–10:11:20 UTC:
+17 fast samples: Composite/Sensor1 raw299K(25.85C)15раз,
+300K(26.85C)2раза; Sensor2 raw332K(58.85C)во всех17.
+
+Архив logs6,12:41:28–12:42:05 UTC:
+39 fast samples: Composite=Sensor1=299K(25.85C), Sensor2=332K(58.85C).
+Во всех56 доступных SMART-замерах Sensor2 одинаков, между сериями около2.5ч.
+В обычных журналах основная температура меняется24.85–38.85C.
+Дополнительный Sensor2 вне диагностического режима сейчас не записывался,
+поэтому нельзя утверждать его непрерывную неизменность между этими сериями.
+На пользовательском HWiNFO: температура диска2≈30C, диска3=59C,
+минимум/максимум/среднее третьей строки59C. HWiNFO нумерует отображаемые
+поля отдельно: первая строкаComposite, затем дополнительные датчики.
+Совпадение подтверждает получение332K изнакопителя, не физическое назначение.
+
+Спецификация NVMe:
+Composite задаётся реализацией и может не быть температурой физической точки.
+Физическое место каждого дополнительного SensorN также implementation-specific.
+Официальный Kingston SMART Attribute Details описывает Sensor1..8 номерами,
+не утверждая для OM8PGP41024N-A0, какой из них NAND/контроллер/поверхность.
+Документ другой моделиOM8PGP41024Q-A0 не использовался как паспорт N-A0.
+
+Вывод:
+28 и59C — разные сообщённые температурные поля одного SSD.
+Признаков ошибки offset/единиц в нашем чтении не найдено.
+59C нельзя уверенно назвать температурой контроллера: постоянный332K
+может быть реальным стабильным/устаревшим/фиксированным firmware значением;
+имеющихся данных недостаточно, чтобы выбрать один из этих вариантов.
+В UI основным оставитьComposite; дополнительные сохранятьSensor1/Sensor2
+без ложных физических подписей и без автоматической замены основного максимумом.
+Для оценки перегрева нужны реальныйCritical Warning, времяWarning/Critical
+Temperature, WCTEMP/CCTEMP изIdentify Controller и counters thermal management.
+Текущий дамп сохраняет температуры, но не полный512-byte SMART raw/Identify
+пороги. Это диагностический пробел, выявленный исследованием.
+Ниже не заявлено, что59C является перегревом или гарантированно фиктивно.
+
+Первичные источники:
+https://media.kingston.com/support/pdf/ssd-smart-attribute.pdf
+https://nvmexpress.org/wp-content/uploads/NVM-Express-Base-Specification-2.0c-2022.10.04-Ratified.pdf
+Локальные доказательства: build/audit-logs6-20261019/logs/dumps/dump-20261019-124124-0/sensors.jsonl,
+inventory.json; logs5.zip sensors.jsonl; пользовательский скриншот HWiNFO.
+
+Дополнение: найдено объяснение постоянного Sensor2 у других Kingston.
+Автор HWiNFO Martin пишет, что неизменная Temperature3, вероятно, является
+максимумом за всё время работы. Это первичное мнение разработчика HWiNFO,
+но обсуждение относится к KC3000/Fury Renegade, не к OM8PGP41024N-A0.
+Для нашей модели исторический максимум59C — сильная рабочая гипотеза,
+а не подтверждённое физическое назначение или доказанный firmware dummy.
+https://hwinfo.com/forum/threads/ssd-temp-very-hot-kingston-kc3000-2tb.10723/
+https://www.hwinfo.com/forum/threads/ssd-temperature-reading.10679/
+Есть также пересказ ответа Kingston в другой теме; не использован как
+официальное подтверждение для нашей точной модели:
+https://hwinfo.com/forum/threads/kingston-fury-renagade-not-showing-correct-temp.8836/

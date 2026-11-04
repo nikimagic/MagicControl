@@ -1,0 +1,127 @@
+GM6IR0C — порт/адаптер/зарядная мощность/циклы/здоровье
+20.10.2026. Exact OEM + существующий dump; аппаратных обращений не выполнялось.
+По отдельному поручению root добавлен минимальный readonly supplementary getter
+в ControlWindows.h/.cpp. MonitoringWindows/common UI подключает root.
+Ни native policy, ни percentage/EC writes, ни GUI/INI этим агентом не менялись.
+Тесты, сборки, OEM/CLI/GUI, драйверы, службы и коммиты не запускались.
+
+ИСТОЧНИКИ
+logs_GM6IR0C (2).zip, SHA256
+eba56445074132b9587cdee1c282dc51db27af809af59ea9a1645af25057e7fb,
+dump-20261020-123553-0, версия0.1.90. До/после EC4096/4096 valid.
+Active GCUService1.0.2.70 SHA256
+8fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf.
+Точные исходники all-active/ и samples/DSDT.dsl в build/research-gm6ir0c/.
+Raw числа и ссылки сохранены рядом в gm6ir0c.json.
+
+1. ЧТО МОЖНО ДОСТОВЕРНО ПОКАЗАТЬ УЖЕ СЕЙЧАС
+
+- Windows Battery Class сообщает AC online=true, SOC100%, rate0Вт,
+  voltage12.408В. Это питание батареи/AC, НЕ измеренная входная мощность БП.
+- Temperature Windows Win32=1 остаётся unavailable, не подставлять CPU/ACPI.
+- Windows CycleCount не сообщается, но точный native EC counter даёт41 цикл.
+- Windows health100% объясняется маскирующим правилом BIOS; raw EC full/design
+  в этом же снимке равен82.6923%. Эти источники нельзя смешивать без provenance.
+- Фактический разъём/номер USB-C и negotiated PD watts по этому набору
+  не определяются. Не переносить Wujie-карту по совпадению адресов.
+
+2. ЗДОРОВЬЕ И ЦИКЛЫ — СУЩЕСТВЕННАЯ НОВАЯ НАХОДКА
+
+DSDT.dsl:134516–134539:
+OperationRegion ECXP SystemMemory=(ECMA+400), XIF1 design=word402,
+XIF2 full=word404, XST0 state432, XST1 rate434, XST2 remaining436,
+XST3 voltage438, XCIN adapter-present bit43C.0.
+ECXP:134631 CYCN=word4A6; independent active BatteryInfo.GetECBatteryCycleCount
+all-active/020002E3-MyControlCenter.BatteryInfo.cs:60–67 читает4A6low/4A7high.
+Это собственная exact карта GM6, не копия X5 registers.
+
+В обоих пользовательских снимках:
+  PowerUnit400=1; Design402=5200; Full404=4300; Remaining436=4300;
+  Voltage438=12408; State432=0; Rate434=0;
+  CYCN4A6=41; ISDB497=45hex => bit0=1.
+Unit1 соответствует mAh в ACPI _BIF; для full/design единицы сокращаются.
+Отношение4300/5200*100 =82.6923077%.
+
+Причина расхождения с Windows100 НЕ гипотеза по похожим числам:
+DSDT.dsl:135343–135359, _BIF, при ISDB=1 и CYCN<50 возвращает FullCapacity
+из XIF1(design), а не из XIF2(actual full). При CYCN>=50 выбирает XIF2.
+_BST:135407–135420 при той же ветви масштабирует remaining через design/full.
+Поэтому41 цикл + ISDB=1 заставляют OS видеть health100, хотя EC full=4300.
+Это firmware-reported masking, не ошибка деления нашего Windows reader.
+EC ratio — оценка сохранённой полной ёмкости, не прямое измерение химического
+здоровья и не гарантия реальной автономности.
+
+3. ПОРТ И РЕЙТИНГ АДАПТЕРА
+
+all-active/020000EC-MyECIO.MyEcCtrl.cs:105–140 GetAdapterWattFromEC:
+читает49F, берёт mask78hex. Таблица native descriptor:
+00=>330,08=>230,10=>180,18=>150,20=>120,28=>90,30=>65,38=>40,40=>280Вт.
+Для неизвестного кода OEM без доказательства возвращает default150;
+наше приложение не должно превращать такой fallback в измерение БП.
+Dump49F=0A, mask78=>08, соответствует native codec candidate230Вт.
+Единственный прямой caller getter — GetProject2ExID:486–496 в ветке23/24,
+а exact плата Project25. Это подтверждённый codec в exact сервисе, но
+его применимость как реального adapter rating для25 отдельно не измерена.
+Значение не является текущими ваттами из розетки и не заявляет USB-C PD.
+
+MyEcCtrl:143–154:
+  GetTypeCsatusFromEC читает7CC &36hex;
+  GetRoundSocketStatusFromEC читает7CC &01.
+PowerModeEvent.RefreshACLineStatus:55–72 действительно использует TypeC mask,
+но при значениях12hex/24hex переводит собственную g_ACLineStatus в0 даже
+при WindowsOnline. Это политика режима мощности, не универсальная истина
+об отсутствии AC или заряда батареи. TypeCSupport в companion=0.
+Названия физических USB-C1/2 и negotiated watts эта ветка не подтверждает.
+
+В свежем dump7CC=0,7CD=0,7CE=0 при подтверждённом WindowsAC=true.
+Следовательно нельзя писать «EC не подтвердил внешнее питание» как итог
+реального питания GM6 или использовать отсутствие этих битов как AC=false.
+Root может честно показывать «от сети, порт/тип не определён» из Windows.
+7CD/7CE не имеют найденных active C# getter/единиц для GM6; не выдавать их
+за Wujie PD watt поля. Read-only getter сохраняет их только raw диагностику.
+
+4. PMAX/PBSS/PSRC/DTTF
+
+Exact DSDT.dsl:134398–134401 в ECMG EC window:
+PMAX word7B3,PBSS word7B5,PSRC byte7B7,DTTF byte7B8.
+Названия и размер доказаны. В исследованном active C# дереве их потребителя
+с преобразованием единиц/номером порта нет. В актуальных снимках всё равно0.
+Не делать из PMAX/PBSS0 «адаптер0Вт», PSRC0 «работа от батареи» или
+из аббревиатуры DTTF готовый charge-rate API. Пока только raw evidence.
+
+5. МИНИМАЛЬНОЕ READONLY ПОДКЛЮЧЕНИЕ
+
+API: mc::windows::readGm6BatteryTelemetry(BatteryReading&,bool singlePhysicalBattery).
+Объявлен в src/devices/mechrevo/gm6ir0c/ControlWindows.h; реализация там же.cpp.
+Root вызывает его в MonitoringReader::readBatteryEc ДО legacy X5 early-return.
+Флаг передаётся только для завершённой enumeration с одной физической
+батареей. Getter сам исключает aggregate/пустойdeviceId/present=false/--no-ec,
+фактический SMBIOS сверяется с MECHREVO/GM6IR0C/JiguangX Series GM6IR0C.
+
+Используется только cached hard-read-only diagnostic backend и его общий
+глобальный transaction mutex. Нет gm6Controller/nativeBatteryController,
+нового worker, startup restore, setter/UEFI/WMI или управления службами.
+Project25/RAM1.5 проверяются до и после снимка; passive-read pause проверяется
+перед admission и каждым байтом. Слова читаются двумя равными low/high парами,
+до3 попыток; недостоверные/сменившиеся данные не публикуются.
+
+Cycles: только когда Windows не сообщил; zero допустим, FFFF rejected.
+Health: предпочитает валидное EC full/design; оба слова положительные,
+неFFFF, full<=design. Above-design ratio не clamp-ится — остаётся raw
+диагностикой, OS значение сохраняется до уточнения такой трактовки.
+OS original health/cycles, raw full/design/ISDB, ratio/acceptance и masking
+candidate сохраняются в BatteryReading.powerStatus; source добавляет
+«GM6 EC · full/design» либо «GM6 EC · cycles». Public wire не расширялся.
+Публикация через локальную копию после guard, на IO failure OS числа остаются.
+
+Рейтинг/порт по непроверенным источникам в BatteryReading не добавлены.
+Raw49F/7CC/7CD/E/PMAX/PBSS/PSRC/DTTF пишутся только в powerStatus diagnostics.
+Ни AC online, ни battery rate/voltage/current/flow этот getter не заменяет
+unproven EC port полями. Автоматическое OEM ownership не захватывается.
+
+СТАТУС
+Readonly source/helper готов; root подключает отображение без изменения
+геометрии/карточек/скролла Wujie и делает общий билд отдельно.
+Проверены только исходники, existing ZIP/valid masks и git diff --check.
+Реальный разъём, negotiated PD/rating, зарядка на95/85 и restart80 владельцем
+ещё должны наблюдаться отдельно; этот отчёт не объявляет их проверенными.

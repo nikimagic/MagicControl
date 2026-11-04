@@ -1,0 +1,33 @@
+MagicControl fan editor — final owner rule, 27.10.2026
+
+Editable temperatures: 30–80 C inclusive.
+Editable PWM / nominal RPM percent: 5–100 inclusive.
+Shared code: src/core/include/MagicControl/FanControlLimits.h.
+Durable instruction: AGENTS.md, first section.
+
+Both GUIs use the same bounds on creation, mode refresh, wheel/spin and
+committed input. Old protocol markers and factory observations remain raw;
+unused generic points are displayed blank rather than as editable255.
+Old draft temperatures are bounded in memory; coincident generic points
+retain the greatest duty. Existing files are not silently overwritten.
+
+HPBSD Manual: 7CPU + 2System ordinary points, 18 editable inputs.
+Mandatory final MAX is displayed separately on the graph and in the caption.
+The last ordinary upper/hot lower boundary can move EARLIER, never later
+than native93/83C. New ordinary temperatures are30..80. MAX bases51/40,
+hot upper100, hot slopes0, overrides and independent CPU>93 guard remain.
+Mutable policy34 fields, version4 receipt; legacy16/30 field recovery stays
+admissible. Draftv1 is normalized in memory, explicit save writesv2.
+Min preset still uses factory36/38%; these values do not restrict inputs.
+
+Offline: PASS7456 interrupted restoration prefixes on bothB1/B2 selectors;
+5/100 and30/80 edge checks; invalid4/101 and29/81 rejection; old v3-style
+endpoint admission; legacy draft normalization; hot-stage preservation.
+No low-speed5% physical test was performed. Nominal target is not a measured
+motor speed. GUI live verification and activation evidence are separate JSON.
+
+Max observation: CPU5026/nominal5100 =98.5% RPM; top86% is measuredPWM.
+System3529/nominal4000 =88.2% RPM at measured100%PWM. The nominal4000
+firmware target is not a calibrated measured maximum. No forcedPWM writes
+or artificial RPM rescaling were introduced.
+Live0.1.230: PASS Default22read-only -> Manual18editable -> Default restored -> Manual18editable. Actual numeric range readback30..80 /5..100. InstalledGUI59d54c...; all33package asset files match,9settings/backup files unchanged during update. GUI Manual then explicitly saved migrated draftv2. Current GUI PID9632/session2; screenshot reviewed.

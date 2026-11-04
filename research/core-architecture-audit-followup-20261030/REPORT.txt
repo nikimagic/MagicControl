@@ -1,0 +1,66 @@
+Ревизия маршрутов после отчёта86ff899e,30.10.2026
+База:3dd8b570 /0.1.402. Продолжение SETs/FANs, а не объявление полной
+миграции всего приложения. Проверка только исходниками и компиляцией.
+
+R1. Исправлено на границе CLI: slot1/2/3 ->0/1/2. Дальше прежний
+PowerWrite::Preset и useCustomPreset; лимиты и FAN-кривая одного слота.
+Область: все RAM-family модели в этой ветке, без изменения их кодеков.
+
+R2. Явные Wujie CLI power/limit/static keyboard после записи собирают
+новый SettingsSnapshot и вызывают тот же rememberSettingsChoice, что GUI.
+Используются прежние rememberObservedBattery/Power/LightingChoice и атомарный
+DevicePreferences writer. Второго INI writer в CLI нет. При отказе свежего
+чтения или сохранения команда возвращает ошибку, не обещает сохранение.
+Native GM/Honor persistence остаётся у их контроллеров. Цикл подсветки остаётся
+foreground-операцией. Восстановление и временная индикация не записывают
+новое намерение пользователя. Не добавлен общий startup restore CLI.
+
+R3. Wujie ConfigurationRestore больше не вызывает напрямую
+applyApuAutomaticLimits/applyApuStockProfile/applyApuAllowedLimits/
+applyKeyboardBacklight. Использует executePowerResource,
+applyStandardPowerProfile и applyLighting, как явные входы.
+Сохранены KeyboardLightingPause, expected snapshots, masking, readback,
+FAN-preserving arguments, transaction и прежние lifecycle retry/step policies.
+Штатный профиль восстанавливается через общий native entry без действия
+GUI, которое дополнительно меняло бы файл Custom selection.
+
+R4. ОТКРЫТО. GPU GUI admission/private worker и direct CLI provider path не
+исправлены этим коммитом. Нельзя считать весь проект переведённым на один
+command lifecycle. NVIDIA/Update/OSD/screen-flip GUI thread debt остаётся.
+
+R5. Linux primary GTK и записывающий CLI используют один OS flock lease до
+создания аппаратных контроллеров. Файл /tmp/magiccontrol.application-control.v1.lock
+не удаляется: иначе две стороны могли бы заблокировать разные inode.
+FD закрывается RAII, lease освобождается при завершении процесса, перед exec
+не наследуется. Symlink/nonregular/multilink отбрасываются; lock-busy отдельно
+от прочих ошибок ОС. Read-only CLI остаётся доступен. Без IPC/handoff/daemon.
+Область гарантии: новые сотрудничающие процессы0.1.403+ в одном host/tmp
+namespace. Старый GUI, сторонний CC и другой namespace не участвуют.
+Это application ownership, не гарантия физической атомарности firmware.
+
+R6. Capture использует общую BatteryUiPolicy: текущие100/95/85/60, raw0->100,
+плюс старый10 для чтения прежних настроек. Пользовательские файлы не мигрируют
+насильно и диапазон реально поддерживаемых записей не расширяется.
+
+Зависимости и удаление
+BatteryResourceState перенесён из GUI в core без второй реализации;
+потребители и существующий fixture переключены на новый путь.
+SettingsOperationsWindows больше не импортирует FooterStatus; UI-публикация
+идёт через main-thread view port, без доступа worker к native controls.
+Остальные pure GUI policy/message/encoding зависимости моделей ЕЩЁ ЕСТЬ.
+Поэтому снятие всех обратных зависимостей НЕ объявляется завершённым.
+Linux DiscreteSlider.h удалён после поиска потребителей. У Windows версии
+есть tests/offline/test_native_controls.cpp:2,22; она сохранена. Уточнение
+к исходному утверждению отчёта про два совершенно неиспользуемых заголовка.
+
+Сохранённое поведение
+Обе FANs страницы, FAN controllers, native profile codec и PageMechanics
+не менялись относительно0.1.402; source comparison в SOURCE-OBSERVATIONS.json.
+SETs renderer/layout меняются только include и публикацией footer-status:
+ни координат, ни отступов, ни механизмов прокрутки не меняли.
+Никаких запусков приложения, аппаратных утилит, тестов или запросов к EC.
+Полный билд и фактические хэши portable см.VERIFICATION.json после завершения.
+
+Итог: общий0.1.403 завершён; обе portable GUI/CLI обновлены, четыре SHA-256
+независимо сверены с build/bin. Компиляторы прошли с предупреждениями.
+Тесты и аппаратная проверка не выполнялись. Архивы/push не выполнялись.

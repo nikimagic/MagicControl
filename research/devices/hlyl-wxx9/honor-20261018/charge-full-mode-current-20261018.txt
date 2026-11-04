@@ -1,0 +1,10 @@
+FULL CHARGE 95/100
+charge_start=95 charge_end=100 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+{"Time":"2026-10-18T14:02:40.9005342+03:00","PowerOnline":false,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":3237,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:02:46.1999033+03:00","PowerOnline":false,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":3237,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:02:51.2713484+03:00","PowerOnline":false,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":3237,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:02:56.3180115+03:00","PowerOnline":false,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":3237,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:03:01.3644773+03:00","PowerOnline":false,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":3237,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:03:06.3966033+03:00","PowerOnline":false,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":3237,"RemainingCapacity":34265}
+RESTORE 70/90
+charge_start=70 charge_end=90 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL

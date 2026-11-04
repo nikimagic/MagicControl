@@ -1,0 +1,96 @@
+Eluktronics HYDROC-16 G2 — разбор данных от 19.10.2026
+
+Идентификация
+Производитель системы: Eluktronics Inc.
+Модель: HYDROC-16 G2; плата: HYDROC-16, производитель платы Eluktronics.
+BIOS: N.1.13ELU11 от 02.04.2025. Версия EC из SMBIOS: 1.12.
+CPU: Intel Core Ultra 9 275HX, 24 ядра / 24 потока.
+GPU: RTX 5090 Laptop, PCI 10DE:2C18, subsystem 60401D05;
+драйвер 617.42, VBIOS 98.03.5e.00.1e.
+iGPU: Intel Graphics, PCI 8086:7D67, драйвер 32.0.101.6129.
+RAM: два SK Hynix HMCG78AGBSA092N по 16 ГБ, DDR5-5600.
+SSD: CT1000P3PSSD8 / P9CR413 и KINGSTON SNV2S2000G / SBK00105.
+Панель: BOE NE160QDM-NM9 / BOE0D5A. Windows: 2560x1600, 300 Гц.
+
+Архив и полнота
+Архив dump-20261019-133850-0.zip: 45459 байт, 14 файлов.
+SHA256: 52018fef84e767a1d6c3746c446622de06f2e1a0d54bad5b5bed5ca89b123f4a
+Он совпадает с отдельными report/sensors/session/intel/nvidia побайтно.
+Версия сборщика: 0.1.59. Сбор: 16:38:50–16:38:52 МСК.
+Сохранены четыре fast-записи и одна optional_providers-запись.
+EC.bin, EC-valid, ACPI-таблиц и родных EXE/DLL/SYS в архиве нет.
+Неизвестный профиль не получил EC-транспорт; обе пробы Max пропущены.
+restored=true при attempted=false не подтверждает реальный аппаратный возврат.
+Снимок HWiNFO с i7-14650HX / RTX 4060 относится к GM6, не к HYDROC.
+Снимок MagicControl 0.1.59 с Ultra 9 / RTX 5090 относится к HYDROC.
+
+Что прочиталось
+RTX 5090: 50–51 °C, загрузка 4–10%, мощность 29.402–32.348 Вт,
+частота 742–1312 МГц. NVML сообщает около 23.89 ГиБ VRAM.
+Getter PowerManagementLimit не поддерживается, fan_count=0,
+температура памяти NVML field82 не поддерживается.
+Читаются enforced=150 Вт, default=95 Вт, maximum=175 Вт.
+Это не подтверждает возможность их изменения.
+
+Intel IGCL legacy: SUCCESS, в отличие от INVALID_ARGUMENT у прежнего GM6.
+Есть частота GPU 550 МГц, timestamp, gpu_energy и global_activity.
+После первого базового измерения рассчитаны три значения:
+мощность из gpu_energy 22.768–26.692 Вт, загрузка 2%.
+Это данные IGCL, их нельзя подставлять вместо CPU Package RAPL.
+В одиночном intel.json мощность null ожидаема: у отдельного reader нет baseline.
+
+SSD через Windows properties 51/52: Crucial 36–37 °C, Kingston 46 °C.
+Независимый NVMe SMART: 35.85–36.85 °C и 45.85 °C.
+Разница 0.15 °C соответствует округлению целокельвинового SMART.
+
+Батарея: заряд 100%, здоровье 82.8125%, напряжение 16.842 В, от сети, 0 Вт.
+Проектная ёмкость 99.07 Вт·ч, полная текущая 82.04 Вт·ч.
+Процент заряда и отношение полной ёмкости к проектной — разные показатели.
+ACPI ECTZ/TZ00: 69.05 °C, без доказанной привязки к CPU или батарее.
+
+Почему отсутствуют остальные показания
+1. CPU: IntelTelemetryWindows разрешает CPUID B7/BA/BF (Raptor Lake).
+   Ultra 9 275HX — другая архитектура. Status прямо сообщает:
+   «Intel DTS/RAPL: модель CPU пока не подключена».
+   Для Arrow Lake нужен проверенный профиль чтения CPUID/MSR.
+2. RAM: IntelMemoryReader разрешает I801 только на GM6IR0C.
+   Status: board/CPU permission guard: unavailable.
+   Это ограничение программы, а не доказательство отсутствия датчиков памяти.
+3. Батарея: BatteryTemperature возвращает Win32=1; циклы не сообщаются.
+4. Новый PCH/NVAPI из 0.1.67 этим дампом 0.1.59 не проверялся.
+5. RTX 5090 Blackwell нельзя назначать карту thermal-каналов RTX 4060 Ada.
+
+Режим графики
+DXGI сообщает NVIDIA primary=true, Intel primary=false.
+Основной экран в момент снимка обслуживала NVIDIA. Это не доказывает,
+какой именно режим MUX / Advanced Optimus был выбран в родном ПО.
+
+CSV
+Прислан старый файл Version,3 размером 2732 байта.
+Selected CPU/GPU = Default. В таблицах Default все точки 255/100:
+255 обозначает неактивную точку, а не фактический порог 255 °C.
+В Manual есть восемь рабочих точек, отдельного EcCurve/EcManual нет.
+Файл отличается от общего комплектного CSV владельца.
+Обновление поверх старой папки сохраняет личный CSV; новый EXE сам по себе
+не гарантирует замену старых настроек. Чистый пакет 0.1.67 содержит общий файл.
+
+Что требуется для EC
+Архив установленного на HYDROC Eluktronics Control Center:
+родные EXE/DLL/SYS, их версии, логи; PCI/USB/HID-идентификаторы и ACPI при наличии.
+Сначала нужно установить транспорт, getters и identity точной платы,
+затем разбирать setters и их физическую обратную связь.
+Карта GM6/X5/Honor не является разрешением на операции EC HYDROC.
+Производитель заявляет per-key RGB, фронтальную подсветку, MUX и LPP.
+Это отличается от SingleZone Wujie/GM6 и требует собственного аппаратного адаптера
+при общей реализации интерфейса и механики приложения.
+
+Официальные источники
+https://www.eluktronics.com/hydroc-16-g2-drivers/
+Для 275HX + RTX 5080/5090 указан ControlCenter_5.23.51.56_Eluktronics_V4.zip:
+https://drive.google.com/file/d/1V2QOEU8JiC4yTUSm3OQxXdjlv3bMV6eb/view
+https://www.eluktronics.com/HYDROC-16
+https://github.com/torvalds/linux/blob/master/arch/x86/include/asm/intel-family.h
+https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/master/LibreHardwareMonitorLib/Hardware/Cpu/IntelCpu.cs
+
+Выполнен анализ файлов и исходников. Аппаратные операции, установка драйверов,
+запуск GUI, тесты и перенос чужой EC-карты не выполнялись.

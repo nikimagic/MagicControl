@@ -1,0 +1,85 @@
+Unknown — keyboard discovery diagnostic fixes
+Date: 2026-10-20
+Research baseline: 5b1f092 / portable0.1.88. Integration/build owned by root.
+
+Scope and files
+1. src/platform/windows/NativeInterfaceInventoryWindows.h
+2. src/platform/linux/KeyboardLedInventoryLinux.h (new, header-only)
+3. src/platform/linux/InventoryLinux.cpp
+No UI renderer, geometry, controls, scrolling, settings, model writer or protocol admission changed.
+
+Windows: existing collector extended, not duplicated
+- Native metadata now starts with HID. Loop budgets are HID10s, SetupAPI5s,
+  SCM/image evidence4s with shared19s upper loop boundary. The existing isolated
+  native helper retains its20s parent hard deadline. A slow signature operation
+  therefore cannot prevent the HID phase from being attempted first.
+- These are cooperative phase boundaries between API calls, not claims that an
+  individual synchronous Windows API will return within its phase allocation.
+  Existing helper isolation is the hard overall boundary; streamed partial rows
+  remain available when that boundary expires.
+- Root HID setup, nonterminal interface/device enumeration failures, interface
+  detail/open/Attributes/GetPreparsedData/GetCaps failures, capability-array
+  parser failures, SCM/config/status/image/hash failures and missed deadlines
+  explicitly clear complete. Optional native metadata may remain absent and is
+  reported as absent. Zero descriptor cap counts are valid and are not errors.
+- Each HID interface has its exact PnP instance binding. ContainerId is read
+  through SetupAPI, and ConfigMgr provides at most8 native ancestors. Driver
+  package metadata is attached to those exact instances, not guessed from PID,
+  display name or the fact that PawnIO is installed. ConfigMgr is already linked
+  by platform CMake. ContainerId uses a local constexpr DEVPROPKEY, avoiding an
+  additional external GUID linkage requirement.
+- Read-only HidP_GetValueCaps/GetButtonCaps parse existing preparsed descriptor
+  data, recording input/output/feature ReportIDs, usage pages/ranges, bit sizes,
+  report counts and logical/physical limits. Max2048 value/button cap records per
+  type; overall60000 rows/16MiB text; oversized/partial descriptors stay explicit.
+- Existing access=0 HID opens retained. No GetFeature/SetFeature/WriteFile,
+  GENERIC_WRITE, report reads, LampArray acquisition, driver install/service start.
+- The pure HYDROC ITE descriptor candidate helper is attached after Attributes
+  and Caps. It explicitly remains candidate-only, permission=false, revision is
+  not FW80 and lightbar is not inferred to be a keyboard. Exact board, required
+  firmware/type getters, protocol and ownership remain separate admission work.
+
+Linux: ordinary inventory gains native keyboard LED evidence
+- Fixed /sys/class/leds discovery, documented kbd_backlight / zoned keyboard LED
+  function names only, with opaque original name hex, canonical source, native
+  parent and driver/module binding. No /proc sweep or arbitrary path request.
+- O_RDONLY/O_NOFOLLOW sysfs reads with trusted filesystem checks. Native class
+  symlinks are resolved lexically inside /sys, then opened component-by-component
+  without following further directory symlinks. Raw unusual bytes are preserved
+  in hex as well as a safe textual representation.
+- Fields: brightness/max_brightness, brightness_hw_changed, trigger,
+  multi_index/multi_intensity/multi_max_intensity, delay_on/delay_off, optional
+  bound-driver uevent. Read status and errno are retained, including permission
+  errors. Raw channel ordering/configured intensities are retained together;
+  no assumption that every multicolor array is RGB255.
+- 4096 directory entries,1024 keyboard nodes,16384 rows/4MiB text,64KiB max field
+  and3s cooperative loop budget. This in-process inventory does not promise a
+  hard bound for one synchronous kernel sysfs getter. No wire changes were made.
+- Missing trusted root/class, enumeration failure or access errors yield explicit
+  complete=false / not_available or partial status. Missing optional attributes
+  are retained as absent, not fabricated values.
+- Absence of multi_index does not prove white-only hardware; timer trigger is
+  not native rainbow or inactivity timeout; configured brightness/channel values
+  are not physical light-output proof. No setters, chmod, module or mount actions.
+
+Remaining intentional boundaries
+- Unknown still receives no generic EC/HID/LED writer. Device metadata and driver
+  presence do not establish a supported protocol, effect set or safe rollback.
+- Wujie visual layout remains unchanged. SingleZone cycle remains restricted to
+  real admitted writer paths; this fix does not imply arbitrary per-key support.
+- LampArray availability/ownership discovery remains future adapter work. No
+  LampArray session is acquired merely to inventory an Unknown laptop.
+
+Validation performed
+- Static source review and scoped git diff --check only: no whitespace errors.
+- Static search found no GetFeature/SetFeature/WriteFile/GENERIC_WRITE or Linux
+  RW/write/chmod/mount calls in these helpers.
+- No tests, builds, GUI/OEM execution, device experiments, drivers or commits.
+  Compilation and runtime behavior are not claimed verified by this report.
+
+Primary API references underlying the implementation
+https://learn.microsoft.com/en-us/windows-hardware/drivers/hid/value-capability-arrays
+https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getcaps
+https://learn.microsoft.com/en-us/windows-hardware/drivers/install/devpkey-device-containerid
+https://docs.kernel.org/leds/leds-class.html
+https://docs.kernel.org/leds/leds-class-multicolor.html

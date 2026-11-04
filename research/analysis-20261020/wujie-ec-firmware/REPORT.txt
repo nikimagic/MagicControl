@@ -1,0 +1,21 @@
+Итог поиска exact EC Wujie X5SP4NAG, 20.10.2026
+
+Точная исполняемая EC-прошивка для BIOS N.1.20MRO15 / EC SMBIOS1.18 / identity82/72/26 не получена. Writer0x522 и причина текущего снижения зарядного тока на ЭТОЙ прошивке не установлены. Записей в оборудование не делалось.
+
+Публичный официальный каталог MECHREVO:3673 уникальные записи,8страниц по500, все ответы200/SUCCESS. Exact Wujie BIOS/EC пакета нет. OTA catalog D9D24AA7mro.json: основной домен недоступен, восстановленный OEM backup112.80.53.142:3080 возвращает404. Известная exact модельная driver ZIP1.88GB вернула HTML custom_acl вместо диапазона ZIP; содержимое не исследовано. Сравнительный XMG E25 EC1.23 также закрыт403/Cloudflare; файл EC123.denied.html не является firmware.
+
+Поиск агентом: GitHub repository searchX5SP4NAG=0 (не глобальный code search); Wayback driver*MRO15*=пусто; OTA archive timeout не считается отрицательным ответом. RepairLap178.5KB оказался BoardView. Два локальных262400-byte BIOSOTA ресурса одинаковы и не имеют доказанной EC identity. Подробные запросы/ответы в search/REPORT.txt и evidence.json.
+
+Связанный разбор minortex/ec_reverse commit3a574dafe837571cc3176b4ed452a3fd84b3cd24 относится к GXxHXxx_21.200, НЕ к нашему X5SP4NAG. Публикация desired charging voltage522/523 LE описана для bank1:D1D1, sites1D406/1D41E. Функция уменьшает base030E/030F BE по циклам/high-voltage stress/health-profile и auxiliary input. Это подтверждённый опубликованными excerpts путь чужого образа, не exact дисассемблирование Wujie. Host RAM4KiB не раскрывает private XRAM. Новейший map называет0A54 shared scratch с caller seed1, а не температурой или доказанным возрастом батареи.
+
+Наши наблюдения: word522=17000 есть и при30–34Вт20.10, и при нынешних7Вт; значит это не новый записанный нашим билдом токовый лимит. История03.10 подтверждает33–35Вт при87–88% и lower0. Другая старая сессия уже показывала снижение до8–14Вт при87–89% и lower0. Lower80 как самостоятельная причина не установлен. Исторический17800 snapshot был AC-off и менял другие контекстные флаги; он не изолирует управление target.
+
+Статья владельца Wujie15XPro/H365 Zeeko от20.08.2025 описывает charging priority, но не указывает BIOS. Опубликованный patch цепочки Rikka→sund3RRR commit8b516120e67d7cb2c7fc87b9fc3cf472813a29e1 меняет лишь MECHREVO compatibility DMI. Карта charge-priority старого Tuxedo использует7CC.bit7; этот бит установлен И в нашем быстром, И в медленном дампе. Переключать его как найденную причину оснований нет.
+
+Пока точный consumer не найден, не менять522/520, health7A6, scratch/private counters, прошивку или зарядное напряжение. Новая явно запрошенная пользователем кнопка10/80 является отдельной UI/command задачей, а не исправлением установленной причины тока. Саму команду помощник не применял.
+
+Источники:
+https://github.com/minortex/ec_reverse/tree/3a574dafe837571cc3176b4ed452a3fd84b3cd24
+https://zeeko.dev/2025/08/improving-mechanical-revolution-15xpro-charging-speed/
+https://lkml.iu.edu/2610.1/08806.html
+https://lists.openwall.net/linux-kernel/2026/10/11/1090

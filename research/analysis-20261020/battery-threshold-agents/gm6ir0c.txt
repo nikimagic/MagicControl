@@ -1,0 +1,197 @@
+GM6IR0C: процентный stop100/95/85 и restart80 — продолжение исследования
+20.10.2026. Только статический анализ. Portable/production/INI/UI/EC не менялись.
+
+ЗАДАЧА
+Перенести известную политику Wujie: три верхних порога100/95/85%, нижний
+restart всегда80%, существующая карточка без новых UI-полей. Native режимы
+BatteryProtection2 не заменяют процентный API и рассматриваются лишь фоном.
+Результат: точный процентный codec и новое независимое ACPI-подтверждение
+верхнего7B9 найдены; способ активации/стойкого хранения и physical cutoff
+для exact GM6 пока НЕ доказан. Готового разрешённого backend ещё нет.
+
+1. EXACT ИСТОЧНИКИ И ХЭШИ
+
+Плата GM6IR0C, product JiguangX Series GM6IR0C, manufacturer MECHREVO,
+EC Project25. samples/report.json:30 содержит biosVersion буквально
+N.1.05MRO09 (в этой строке MRO09, не молчаливая замена на MR009).
+Исходный ZIP: build/research-gm6ir0c/Mechrevo-Research-GM6IR0C-20261017-215647.zip.
+GCUService-active.exe1.0.2.70:
+  SHA2568fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf.
+DSDT.aml668509байт:
+  SHA2562a4d766944f5416e275f0effbf478b90bdfa1e83d2875ae1aee11caac4bad4d1.
+Действующие тела — build/research-gm6ir0c/all-active/, а не ранние Runtime stubs.
+Перечень source hashes и offline PE metadata сохранён рядом в gm6ir0c.json.
+
+2. ЧТО ДОКАЗАНО В ТОЧНОМ OEM-КОДЕ
+
+all-active/020001C6-GCUService.MySystem.BatteryProtection2.cs:
+- SetBatteryChargingLimit_Up:324–332 пишет1977=7B9, сохраняетbit7,
+  percent100 кодирует0 вmask7F, остальные проценты непосредственно.
+- ReadBatteryChargingLimit_Up:334–347 маскирует7F; raw0=>100.
+- SetBatteryChargingLimit_Down:349–360 пишет2000=7D0, сохраняетbit7,
+  разрешает1..95. Значение80 попадает в диапазон codec.
+- ReadBatteryChargingLimit_Down:362–373: raw0=>95, иначе возвращает весь байт,
+  в отличие от setter и upper reader. Этот OEM getter нельзя механически
+  считать корректным masked readback, еслиbit7 установлен.
+- Поля Up_Default100, Down_Default95 — разные stop/restart, не три режима.
+  Требуемый restart80 задан владельцем; это не дефолт этого dead code.
+- По текущему полному C# дереву private Up/Down/Read/LoadDefault не имеют
+  активных прямых caller; Receive/Init/Resume вызывают только mode7A6.4–5.
+
+Возможные target encodings, не разрешение на запись:
+  stop100: (fresh7B9 &80) |00, restart: (fresh7D0 &80)|50(hex)
+  stop95:  (fresh7B9 &80) |5F, restart: (fresh7D0 &80)|50
+  stop85:  (fresh7B9 &80) |55, restart: (fresh7D0 &80)|50
+Маски7F, соседнийbit7 нельзя затирать. Эти байты сами по себе не доказывают
+включение firmware policy, стойкость после сна/перезагрузки или отсечку тока.
+
+MyFanManager_QC имеет другую процентную ветку60/70/80/90/100, но
+all-active/020002B9-MyControlCenter.MyFanCtrl.cs:27–72 выбирает для exact
+Project25/RAM1.5/noncommercial MyFanManager_RamFan1p5. QC не выбран.
+Нельзя включить QC setter на GM6 по одному совпадению7B9.
+
+3. НОВОЕ НЕЗАВИСИМОЕ ДОКАЗАТЕЛЬСТВО ACPI: CGLM И _BST.bit3
+
+samples/DSDT.dsl:134330–134410:
+  EC0.ECMA=FE410000, ECMS=10000; ECMG — SystemMemory регион EC window.
+  FieldECMG offset7B3: PMAX16,PBSS16,PSRC8,DTTF8, затем CGLM7bits.
+  Следовательно CGLM точно занимает7B9.bits0..6.
+samples/DSDT.dsl:135386–135410, _SB.BAT0._BST:
+  при CGLM>=1 && CGLM<=99 возвращает XST0|08 в BatteryState;
+  иначе возвращает исходный XST0.
+Это независимое от C# подтверждение значения7B9 как charge-limit threshold
+и firmware-индикатора лимитирования. Не просто адрес похожей платы.
+
+Первичная ACPI-спецификация:
+https://uefi.org/specs/ACPI/6.6/03_ACPI_Concepts.html#battery-charge-limiting
+раздел3.9.6: BatteryState.bit3 обозначает Battery Charge Limiting active;
+реальные charge/discharge остаются отдельными bit1/bit0. Состояние bit3=1
+и bit0=bit1=0 означает steady state, когда батарея не заряжается/не разряжается.
+Определение _BST:
+https://uefi.org/specs/ACPI/6.5/10_Power_Source_and_Power_Meter_Devices.html#bst-battery-status
+Поиск по первичному UEFI-домену вернул эти определения; полное открытие этих
+HTML страниц данным инструментом завершилось403, это не локальный runtime-test.
+
+Ключевое ограничение: exact ASL OR08 выполняется просто по диапазону CGLM,
+без проверки тока, достигнутого SOC или дополнительной activation policy.
+Следовательно bit3 после изменения7B9 даёт только reported-limiting indication,
+а НЕ независимое доказательство реальной остановки зарядки на95/85.
+Нельзя превратить этот новый сигнал в ложный success physical_cutoff=true.
+
+4. АКТИВАЦИЯ/СОХРАНЕНИЕ: ПОЧЕМУ NVRAM СВОЙСТВА ЕЩЁ НЕ ГОТОВОЕ API
+
+BatteryProtection2.cs:87–130 содержит private свойства, которые пытаются вызвать:
+  SetFwVars("ChargeMaximumLimit",byte),
+  SetFwVars("ChargeMinimumLimit",byte),
+  SetFwVars("BatteryLimitation",byte).
+LoadBatteryLimitationDefault:229–235 пытается выбрать LimitationMode1,
+если Up/Down отличаются от100/95, но активного caller не найдено.
+
+all-active/02000239-MyControlCenter.NVRAM_STRUCT.cs:58–67 действительно имеет
+BatteryLimitation/ChargeMaximumLimit/ChargeMinimumLimit. Расчёт последовательной
+C# структуры с byte ByValArray даёт logical offsets30/31/32(hex).
+Это расчёт marshalled layout, НЕ измеренный firmware ABI/проверка потребителя BIOS.
+
+all-active/0200023A-MyControlCenter.NvramVariable.cs:313–367:
+switch byte overload НЕ содержит трёх батарейных ключей. Поэтому они
+не присваивают соответствующие поля _fwvars. Однако после switch нет return:
+метод всё равно marshals cached _fwvars и вызывает WriteUefi(0,SIZE,array).
+Уточнение прежнего вывода: ключ игнорируется, но whole-struct UEFI write
+сохраняется. Это не работающий setter выбранного порога и не безвредный no-op.
+Старое cached значение может записаться обратно вместе с соседними полями.
+SetFwVarsForUninstall сначала GetFwVars; обычныйbyte setter свежего чтения
+перед каждой записью не делает. Нельзя копировать это как production механику.
+
+При возможной будущей реализации нужен отдельно доказанный consumer/activation,
+fresh read текущей UEFI variable, строгий size/ABI/GUID/attributes, RMW только
+доказанных полей, readback и проверка внешнего ownership. Никакого replay
+закешированной чужой структуры и изменения полей по guessed offsets.
+В этой работе ни UEFI variable, ни EC данные не читались через hardware API.
+
+5. EXACT UEFI_FIRMWARE.DLL — НОВАЯ МЕТАДАТА, НЕ ЧУЖАЯ DLL
+
+Все сведения ниже получены offline из ZIP bytes, PE export/import/string
+directories. DLL не извлекалась для запуска, не LoadLibrary/PInvoke, EXE не работал.
+
+Активное дерево Control Center/UniwillService/MyControlCenter/UEFI_Firmware.dll:
+  131080байт, x64, SHA256ded0f6263b87e48d75a8806452d412b20ef59c4fbdec6d94ae75f06f01b95931.
+  Только exports ReadUefi RVA1070 / WriteUefi RVA10C0.
+  Есть imports GetFirmwareEnvironmentVariableW/SetFirmwareEnvironmentVariableW.
+  UTF16 strings UniWillVariable, GUID{9f33f85c-13ca-4fd1-9c4a-96217722c593},
+  SeSystemEnvironmentPrivilege. В imports/exports/выбранных строках нет
+  самостоятельного BatteryLimitation/ChargeMaximumLimit/ChargeMinimumLimit API.
+  Это generic UEFI transport. Наличие genericwrite не раскрывает алгоритм EC.
+  Код/экспорты в gm6ir0c.json сохранены с RVA/fileoffset и первыми96bytes.
+
+В том же exact ZIP есть более новая другая ветвь
+Mechrevo Control Center/AiStoneService/MyControlCenter/UEFI_Firmware.dll:
+  193760байт, x64, SHA2564cfe064827dad6da7bf6fb9fc07dc00b4032f1881331d59bfa8d5937a6d534be.
+  Exports IsHighSpeedSSD,ReadUefi,ReadUefiExt,ReadUefiGPU,WriteUefi,WriteUefiExt.
+  Тот же GUID/UniWillVariable, но это другой binary/API. Не подменять им
+  активную DLL131080 и не смешивать её с HYDROC по равному размеру/имени.
+  ReadSwitchUefi/WriteSwitchUefi объявлены в managed active NvramVariable,
+  однако в этих исследованных native export lists их нет; активных caller
+  этих деклараций в данном managed классе не найдено. Декларация не путь.
+
+Companion.Platform/WindowsFirmwareVariable.cs независимо использует
+тот же UniWillVariable/GUID и Get/SetFirmwareEnvironmentVariableExW, но
+его рабочая задача — display mode, не процентная батарея. Это подтверждает
+имя/пространство variable, а не батарейную активацию или правильный offset.
+
+6. WMI87F, PLATFORM7C3 И СТАНДАРТНЫЕ _BMC/_BMD
+
+В exact DSDT существуют transport методы:
+RKBC:133381–133443, WKBC:133446–133568; WMBC:133239…, OEMG:133292…,
+OEMF:133567…. Они передают logical address/data через EC LDAT/HDAT,
+CMDL/CMDH, RFLG/WFLG/DRDY и ждут handshake. WKBC передаётДВАбайта.
+Существование такого транспорта не доказывает, что selector87F для этого
+BIOS хранит/активирует именно процентный threshold. Константа87F и конкретный
+батарейный consumer/activation в этих ASL методах не раскрыты.
+Нельзя подставить Wujie WMI87F только по одинаковому имени AcpiTest_MULong.
+
+Особенно важно: тот же DSDT FieldECMG называет offset7C3 какCTID
+(после AP01=7C0,AP02=7C1,AP10=7C2). CTID также используется graphics PWUP
+в DSDT.dsl:132301 для отдельной platform/customer ветки. Поэтому Wujie4/7
+не является универсальным battery-enable bit. Перенос4/7 на exact GM6
+независимо не доказан и может затронуть общую platform policy.
+
+Статический поиск _BMC/_BMD:
+- в DSDT.dsl нет определений/ссылок;
+- в исходном exact DSDT.aml count raw NameSeg _BMC=0,_BMD=0;
+- в единственном сохранённом SSDT.aml908байт также0/0,
+  SHA2567d9bf2acf8e4b1bdcc6c1654edc3e77a5ec9e6a08f50795431c8797e0c054c23.
+Значит в данном наборе ACPI evidence standardized control не найден.
+Это не утверждение об абсолютно всех динамически загружаемых firmware tables.
+Даже наличие temporary-suspend _BMC само по себе не задаёт95/85/80процентов.
+
+7. ЧЕГО НЕ ХВАТАЕТ ДЛЯ PRODUCTION ПОДКЛЮЧЕНИЯ
+
+Нужен consumer именно BIOS/EC этой платы:
+- реальное назначение/путь включения BatteryLimitation и low/high threshold;
+- точное отображение UEFI variable payload/87F на EC7B9/7D0;
+- применимость platform/customer policy и persist/reboot/resume semantics;
+- адрес/флаг, который действительно переводит зарядник в нужное состояние,
+  либо доказательство, что одной пары7B9/7D0 на этом firmware достаточно.
+
+Исходный архив содержит ACPI, OEM userspace и BIOS_OTA updater; полного
+исполняемого образа EC/точного BIOS firmware payload в рассмотренных записях
+не найдено. ACPI UEFI.bin72байта — таблица, не образ BIOS/EC. Поэтому generic
+UEFI DLL и структура не раскрывают сами по себе firmware charge algorithm.
+
+Критерий физического подтверждения (только план для отдельного поручения,
+никакие действия здесь не выполнялись):
+1) distinct evidence requested/saved/rawreadback/firmware-reported mode/physical.
+2) При подтверждённом адаптере и SOC ниже80 заряд действительно идёт.
+3) Для stop85 иstop95 зарядный ток прекращается около соответствующей границы,
+   SOC/ёмкость перестают расти в течение наблюдения; источник тока известен.
+4) Между80 иверхним порогом зарядка не возобновляется; ниже80 возобновляется.
+5) Повторить с baseline100, исключить thermal/full/BMS/noAC причины остановки,
+   проверить после сна/перезагрузки, не приписывать raw0mA unknown источнику.
+6) _BST.bit3 служит отдельным reported-limiting сигналом; bit0/1 и реальные
+   ток/энергия должны согласоваться. ОдногоOR08/readback недостаточно.
+
+ДОКАЗАНО: адрес/маска/codec, ACPI CGLM charge-limit indication, точный generic
+UEFI transport и факт ignoredkey+cachedwholewrite.
+КАНДИДАТ: BatteryLimitation/upper/lower firmware fields и WMI-backed persistence.
+НЕ ДОКАЗАНО: рабочая активация95/85/80, persist/реальный cutoff для exact GM6.
+Пороговые кнопки нельзя считать реализованными через native modes0/1/2.

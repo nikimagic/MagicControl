@@ -1,0 +1,135 @@
+Статический разбор драйвера ControlCenter5.57.1.2 / XY14PTL
+Дата:19.10.2026
+
+Краткий результат
+В указанном владельцем пакете найден UWACPIDriver11.2.18.347 от27.08.2024.
+Все три файла SYS/INF/CAT побайтово совпадают с уже исследованной тройкой
+HYDROC-16 G2. С ранее установленной на Wujie и найденной в GM6 тройкой
+10.48.11.331 совпадения нет. Это дополнительное OEM-происхождение существующего
+пакета11.2.18.347, а не новая бинарная версия драйвера.
+
+1. Исходный пакет
+Папка владельца:
+  C:\Users\admin\Downloads\XY14PTL_ControlCenter_5.57.1.2_Mechrevo_GX\
+  ControlCenter_5.57.1.2_Mechrevo_GX
+Installer:ControlCenter_5.57.1.2_Mechrevo_GX.exe
+Размер:180848088байт
+SHA256:bfdec6c10c637bbf9ec2b602f8b423f1eeaccdd1ac301df3a2c979ac15dd625a
+Get-AuthenticodeSignature:Valid, Authenticode.
+Signer:AISTONE GLOBAL LIMITED, Hong Kong.
+Signer thumbprint:2A4DCC1EBB98DFD8D5B0B1B6238E3AA6EFFEFE2E
+Timestamp signer:Globalsign TSA for Advanced - G4.
+
+setup.ini:658байт
+SHA256:fe9c553e030f3e5164b576fbba2088ca88b2e606cd96ed15d1ebae9e38ca3e64
+[APP]AppName=机械革命控制中心, AppPublisher=OEM, APPTarget=Customize.
+[Customize]CustomizeTarget=57, LanguageList=zh-cn.
+Торговое имя/папка XY14PTL и CustomizeTarget57 не доказывают идентичность
+WUJIE Series-X5SP4NAG и не дают разрешения переносить аппаратные команды.
+
+2. Метод извлечения, без выполнения OEM
+Независимый unpacker:
+  C:\Users\admin\Documents\mechrevo\.tools\innoextract670\innoextract.exe
+Версия:innoextract1.12-dev+e561d8c; распознан Inno Setup6.3.0 unicode.
+Выполнены только --list/--help и статическое извлечение:
+  innoextract.exe -e -I "app\ZipFiles\UWACPIDriver.zip" -d <build-output> <installer>
+Фильтр с прямыми slash не совпал с именем файла этого installer; повторён
+с точным backslash-путём. OEM installer ни разу не запускался.
+Затем PowerShell Expand-Archive извлёк обычный ZIP.
+
+Выходная папка:
+  C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\research-wujie-5.57.1.2
+Payload:
+  installer\app\ZipFiles\UWACPIDriver.zip
+Размер:34756байт
+SHA256:a478886ab26d1190e8e15ccda1e80a1ac66d39da6b7a940a787a3db4b2418dad
+Тройка:
+  driver\UWACPIDriver\UWACPIDriver.sys
+  driver\UWACPIDriver\UWACPIDriver.inf
+  driver\UWACPIDriver\uwacpidriver.cat
+Рядом сохранены setup.ini,manifest.json,signtool-sys-kp.txt,signtool-inf-pa.txt.
+
+Никакие OEM EXE/DLL, bootstrap/static initializers, Add-AppDevPackage.ps1,
+PreinstallKit/Install.ps1,devcon и install.bat не выполнялись. SYS не загружался,
+драйверы не устанавливались, EC/HID/firmware не читались и не записывались.
+Исходники/runtime/UI/config и рабочие portable этим заданием не менялись.
+
+3. Найденная тройкаA:11.2.18.347 из нового Mechrevo пакета
+SYS49096байт
+  e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2
+INF2033байт
+  265df0a2913627328365661867776db7e6331b99eacc27abd66fd5ae700b9b86
+CAT11324байта
+  97df04eab235f33e21e9a44b5c55a1c8b17b245d658664a3a8aa7b5e1c577444
+
+INF — точные поля:
+  строки9/77:Provider=ManufacturerName="Uniwill"
+  строка10:CatalogFile=UWACPIDriver.cat
+  строка11:DriverVer=08/27/2024,11.2.18.347
+  строки31–34:Standard.NTamd64, hardware ID=ACPI\INOU0000
+  строка44:AddService=UWACPIDriver,0x00000002,UWACPIDriver_Service_Inst
+  строка49:ServiceType=1(SERVICE_KERNEL_DRIVER)
+  строка50:StartType=3(SERVICE_DEMAND_START)
+  строка52:ServiceBinary=%12%\UWACPIDriver.sys
+  строка73:KmdfLibraryVersion=1.15
+  System class GUID={4d36e97d-e325-11ce-bfc1-08002be10318},PnPLockdown=1.
+  DeviceDesc="ACPIDriver",ServiceDisplayName="UWACPIDriver Service".
+Версия взята из INF, не выдумана из пустого PE FileVersion SYS.
+
+4. Подпись и membership — отдельные проверки
+Get-AuthenticodeSignature SYS:
+  Status=Valid,SignatureType=Authenticode
+  Signer=Uniwill Technology Inc.,Taipei,TW.
+  Thumbprint=DA4F6E6AF3FB681A772553E70A90062EADCCA031
+  Timestamp=DigiCert Timestamp2023.
+Get-AuthenticodeSignature CAT:
+  Status=Valid,SignatureType=Authenticode
+  Signer=Microsoft Windows Hardware Compatibility Publisher.
+  Thumbprint=BDC9B8C37C6B71791A584EC19F2069D98042DC0A
+  Timestamp=Microsoft Time-Stamp Service.
+INF/ZIP/INI не являются отдельными Authenticode PE; ответ UnknownError/
+unsupported subject form сам по себе не является повреждением этих файлов.
+Для INF ниже проверена именно принадлежность подписанному каталогу.
+
+Независимый verifier:
+  C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe
+Команды:
+  signtool verify /kp /v /c uwacpidriver.cat UWACPIDriver.sys
+  signtool verify /pa /v /c uwacpidriver.cat UWACPIDriver.inf
+Обе проверки:exit0,Successfully verified1file,0warnings,0errors.
+Оба файла действительно найдены в указанном CAT; это не одна лишь проверка
+наличия файла.cat. CAT timestamp29.08.2024. Проверка выполнена текущим trust
+store Windows; это не отдельная гарантия загрузки под каждым SAC/HVCI режимом.
+
+5. Сравнение без смешивания файлов
+ТройкаA (новая OEM provenance Mechrevo5.57.1.2):11.2.18.347/27.08.2024.
+ТройкаB (ранее исследованный HYDROC):
+  src/platform/windows/runtime/Uniwill/HYDROC-16-G2/UWACPIDriver.{sys,inf,cat}
+  Те же49096/2033/11324байта и те же полные SHA256 каждого из трёх файлов.
+  A==B по SYS,INF,CAT; перестановки или замены файла другой версии не было.
+
+ТройкаC (существующая Wujie/GM6):
+  src/platform/windows/runtime/Uniwill/UWACPIDriver.{sys,inf,cat}
+  INF10.48.11.331/28.10.2025:
+  SYS46352байта
+    6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235
+  INF2034байта
+    ed17fb99b0d9fab6eb116a603ea34a42b8aa38e1978f128c826f8856b13f5e8e
+  CAT11342байта
+    27a8c480c1d9cdaa1ce5c4c8c9963c9df519061ce1476e398e8f6cdab2bacf6b
+  A!=C для каждого файла. Число11.2 больше10.48, но INF date A старше датыC;
+  одно сравнение version numbers не доказывает лучший/новейший драйвер дляX5.
+
+6. Практический вывод
+Пакет11.2.18.347 имеет независимое подтверждение OEM-распространения как в
+Eluktronics5.23.51.56, так и Mechrevo5.57.1.2. Можно дополнить provenance уже
+известного пакета этими сведениями, не размножая одинаковую тройку в runtime.
+Нельзя автоматически заменить10.48.11.331, менять pinned guard HYDROC или
+выдавать пакетXY14PTL за доказанный драйвер точной платы X5SP4NAG.
+Другой AirplaneDriver/vhidmini.sys в списке installer — отдельный виртуальный
+HID/airplane пакет, не UWACPIDriver и не замена EC. Его файлы в эту тройку
+не включались. PreinstallKit UWP/MSIX тоже не является установленным EC driver.
+
+Итог:драйвер найден, вся signed SYS/INF/CAT тройка идентифицирована и проверена
+статически. Готовность к установке/аппаратному использованию остаётся отдельным
+явным действием; эта работа ничего не устанавливала и не запускала.

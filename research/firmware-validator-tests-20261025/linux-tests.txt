@@ -1,0 +1,91 @@
+UpdateCTestConfiguration  from :/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/DartConfiguration.tcl
+Test project /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+    Start 1: firmware_afu_synthetic
+
+1: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/firmware_validator_offline_tests "afu"
+1: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+1: Test timeout computed to be: 90
+1: PASS afu: 35 pure-buffer checks; no hardware/vendor code linked.
+1/7 Test #1: firmware_afu_synthetic ...........   Passed    0.09 sec
+test 2
+    Start 2: firmware_fpt16_synthetic
+
+2: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/firmware_validator_offline_tests "fpt16"
+2: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+2: Test timeout computed to be: 90
+2: PASS fpt16: 105 pure-buffer checks; no hardware/vendor code linked.
+2/7 Test #2: firmware_fpt16_synthetic .........   Passed    0.11 sec
+test 3
+    Start 3: firmware_fpt19_synthetic
+
+3: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/firmware_validator_offline_tests "fpt19"
+3: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+3: Test timeout computed to be: 90
+3: PASS fpt19: 105 pure-buffer checks; no hardware/vendor code linked.
+3/7 Test #3: firmware_fpt19_synthetic .........   Passed    0.12 sec
+test 4
+    Start 4: firmware_nvidia_synthetic
+
+4: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/firmware_validator_offline_tests "nvidia"
+4: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+4: Test timeout computed to be: 90
+4: PASS nvidia: 72 pure-buffer checks; no hardware/vendor code linked.
+4/7 Test #4: firmware_nvidia_synthetic ........   Passed    0.04 sec
+test 5
+    Start 5: firmware_real_files
+
+5: Test command: /usr/bin/python3 "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/tests/offline/firmware/verify_real_files.py" "--reader" "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/firmware_validator_offline_tests" "--repo" "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl" "--scratch" "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/real-fixtures"
+5: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+5: Test timeout computed to be: 120
+5: PASS pinned file: wujie-afu-pass1
+5: PASS pinned file: wujie-afu-pass2
+5: PASS pinned file: gm6-stock-full-file
+5: PASS pinned file: gm6-patched-full-file
+5: PASS pinned file: gm6-region-is-not-full-spi
+5: PASS 5 pinned local fixtures; 4 accepted structural files and 1 refused region; originals unchanged.
+5/7 Test #5: firmware_real_files ..............   Passed   10.35 sec
+test 6
+    Start 6: firmware_nvidia_contract
+
+6: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/nvflash_contract_offline_tests
+6: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+6: Test timeout computed to be: 90
+6: PASS 88 offline checks;14NVIDIA profiles/7GPU families. No platform/vendor/hardware code linked.
+6/7 Test #6: firmware_nvidia_contract .........   Passed    0.01 sec
+test 7
+    Start 7: firmware_nvidia_collector
+
+7: Test command: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/nvidia_collector_offline_tests "/mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux/nvidia-captures"
+7: Working Directory: /mnt/c/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/linux
+7: Test timeout computed to be: 90
+7: PASS synthetic scenario 0; saved=1; normal_reads=2; entire_reads=2
+7: PASS synthetic scenario 1; saved=0; normal_reads=2; entire_reads=0
+7: PASS synthetic scenario 2; saved=0; normal_reads=2; entire_reads=0
+7: PASS synthetic scenario 3; saved=0; normal_reads=2; entire_reads=1
+7: PASS synthetic scenario 4; saved=0; normal_reads=2; entire_reads=2
+7: PASS synthetic scenario 5; saved=0; normal_reads=2; entire_reads=2
+7: PASS synthetic scenario 6; saved=0; normal_reads=2; entire_reads=1
+7: PASS synthetic scenario 7; saved=0; normal_reads=1; entire_reads=0
+7: PASS synthetic scenario 8; saved=0; normal_reads=2; entire_reads=2
+7: PASS 9 real-collector synthetic scenarios; 337 checks; no native platform/vendor/hardware execution.
+7/7 Test #7: firmware_nvidia_collector ........   Passed    3.86 sec
+
+100% tests passed, 0 tests failed out of 7
+
+Label Time Summary:
+afu                 =   0.09 sec*proc (1 test)
+firmware            =  14.59 sec*proc (7 tests)
+fpt16               =   0.11 sec*proc (1 test)
+fpt19               =   0.12 sec*proc (1 test)
+nvidia              =   3.92 sec*proc (3 tests)
+offline             =  14.59 sec*proc (7 tests)
+private-fixtures    =  10.35 sec*proc (1 test)
+
+Total Test time (real) =  14.74 sec

@@ -1,0 +1,74 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\IntelFpt-driver-reference.sys
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha256): 5D67071DCB8A060517C51F03039BFAA1B807D354B734BD4F76E1EDD678C1C343
+
+Signing Certificate Chain:
+    Issued to: USERTrust RSA Certification Authority
+
+    Issued by: USERTrust RSA Certification Authority
+
+SignTool Error: The signing certificate is not valid for the requested usage.
+    Expires:   Tue Jan 19 02:59:59 2038
+
+    SHA1 hash: 2B8F1B57330DBBA2D07A6C51F70EE90DDAB9AD8E
+
+
+        Issued to: Sectigo RSA Code Signing CA
+
+        Issued by: USERTrust RSA Certification Authority
+
+        Expires:   Wed Jan 01 02:59:59 2031
+
+        SHA1 hash: 94C95DA1E850BD85209A4A2AF3E1FB1604F9BB66
+
+
+            Issued to: Intel Corporation
+
+            Issued by: Sectigo RSA Code Signing CA
+
+            Expires:   Thu Apr 06 02:59:59 2023
+
+            SHA1 hash: 6AED8E3DB918ED7C2DC154F5F8E69F36A9CB2988
+
+
+The signature is timestamped: Sun Feb 20 13:01:36 2022
+
+Timestamp Verified by:
+    Issued to: USERTrust RSA Certification Authority
+
+    Issued by: USERTrust RSA Certification Authority
+
+    Expires:   Tue Jan 19 02:59:59 2038
+
+    SHA1 hash: 2B8F1B57330DBBA2D07A6C51F70EE90DDAB9AD8E
+
+
+        Issued to: Sectigo RSA Time Stamping CA
+
+        Issued by: USERTrust RSA Certification Authority
+
+        Expires:   Tue Jan 19 02:59:59 2038
+
+        SHA1 hash: 02D65B95E28370C1570095FA88F923DD937FAD8F
+
+
+            Issued to: Sectigo RSA Time Stamping Signer #2
+
+            Issued by: Sectigo RSA Time Stamping CA
+
+            Expires:   Fri Jan 23 02:59:59 2032
+
+            SHA1 hash: 951137101D882F31BD513F949ADA4C68AD8C08F5
+
+
+
+Number of files successfully Verified: 0
+
+Number of warnings: 0
+
+Number of errors: 1
+

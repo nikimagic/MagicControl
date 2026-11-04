@@ -1,0 +1,122 @@
+Full OSD source audit,26October2026
+Windows/Linux,16 catalogue models plus Unknown,all existing UI modes/routes.
+Scope: static source and lifecycle review, both Release builds. No app,
+EC/SMU/HID/BLE/GPU utilities, device writers or firmware executed. No tests
+added/run: AGENTS.md requires an explicit user test request.
+SOURCE-INVENTORY.json records source hashes, call sites and model entries.
+It is a mechanical source superset, not a claim that every laptop was tested.
+
+Common contract
+- One existing OsdModel and Windows/GTK adapters; same dimensions/fonts/geometry.
+- Request key/title/icon/level belong to the action and target, not prior UI state.
+- Selected/user request is distinct from confirmed result. Failures retain error
+  colour and diagnostic detail. No new capabilities come from an OSD factory.
+- Unknown levels/maxima do not become Off or100%. Actual model maximum used.
+- Same-category new commands supersede old deferred results; newer observed
+  state beats older successful callbacks. Genuine failures remain visible.
+- Complete inherits request origin when caller omits it. Keyboard brightness
+  animation resumes from the last level after a non-level lighting message.
+- Linux desktop fallback closes expired notifications including late DBus
+  completions; commandline preview is a finite notification, not an orphaned job.
+- Model-view changes dismiss pending UI context so late results from a previous
+  view cannot resurrect an orphaned notification. Hardware jobs are not cancelled.
+
+SETs source matrix / corrected routes
+Native battery: Full Capacity/Balanced/Healthy contextual English labels,
+Battery icon,no SOC bar,existing fresh confirmation and command timing preserved.
+Percent battery:100/95/85/10 threshold subject; bar is configured threshold,
+not measured SOC; actual write/readback/enforcement limitations remain explicit.
+EC identity policy:4/FF,7/04,7/FF now says EC policy, not Turbo/Limiter.
+Honor's actual Turbo retains its own title. No identifier command changed.
+CPU: model labels from existing CpuPowerLabels; Custom edit/draft has no hardware
+OSD until applied. Enter-to-apply explicitly binds Custom's message too.
+Custom slots: requested slot1/2/3 identified. No prior lighting message inherited.
+Keyboard/Lightbar/Logo/Hinge: shared lighting message uses actual selected zone.
+Brightness uses model range; no keyboard label for strip/logo. Existing HID
+descriptor/writable/ownership admission remains authoritative.
+Mono/Pulse/Multi/Cycle6: exact action label. HID advanced menu overwrites stale
+notice with effect/speed/direction actually selected; cancel creates no job.
+Cycle6 colour editor identifies slot and chosen RGB, never a static White/Red
+palette name. Numbered, unconfirmed pulse presets remain numbered.
+Cycle6 success checks active timer and says the APPLICATION changes colours;
+not a promise that a complete autonomous EC cycle was read back.
+Custom RGB binds its chosen RGB and zone. Existing admitted HID-only UI route
+is no longer rejected as if no controller existed, and reads its own HID
+snapshot after the command. No raw HID writer or force-zone flag was added.
+Compact Keyboard/Lightbar/Logo/Hinge captions keep the chosen action readable
+within the original OSD size; no card,scroll or popup geometry was enlarged.
+Logger and hidden compatibility handlers keep explicit categories. Unknown
+future control IDs fall back to Information/Settings, never keyboard colour.
+Critical cross-category defect: WUJIE's generic percentage-success text could
+overwrite lighting/CPU/logger results whenever the old upper threshold was85/95.
+It is now restricted to actual percentage commands, including passive-poll exclusion.
+
+FANs
+Windows Default/Manual/Max/Manual online/CPU=GPU use existing controller jobs.
+OSD begins only for an admitted explicit command; it completes from the same
+typed job/readback or controller command revision. Errors/ownership/restore
+status remain the original result. Honor gains missing result notifications.
+Table reads/local draft edits do not falsely notify that a fan mode was applied.
+Shared vector Fan icon added; no separate window/layout or private font glyph.
+Model-independent wording CPU/GPU replaces hardcoded NVIDIA in GM online status.
+OEM167 is a fan event, not a CPU performance mode: exact recovered HYDROC
+OSDManager.cs case167 reads1873decimal(0x751).bit6. The OSD is a neutral event
+notice, not an invented observed Max/Default value for all other models.
+Linux fan hardware control remains unavailable where its backend is unavailable;
+local saved curves are not announced as hardware-applied.
+
+KEYs and system sources
+Shared11-row factory covers Windows lock, OSD preference,Fn lock,USB charging,
+AC recovery,Copilot,Wi-Fi,Bluetooth,camera,touchpad,microphone.
+Lock true means locked; microphone/system on/off inversion remains correct.
+OSD disabled preference is inverse of enabled notification setting; enabling
+now displays confirmation even though the old disabled service issued no token.
+Windows uses existing readback/queue results. Linux Fn/microphone use the same
+factory and begin/complete, including unknown/mismatch errors. No Linux radio,
+camera,touchpad,EC writer or unsupported keys were enabled.
+Audio/display/lock events preserve their native origin and known bounds.
+Missing keyboard maximum/negative state no longer claims Off. Unknown brightness
+or volume has no fake0% bar; unknown touchpad/camera is not a confirmed state.
+OEM events without verified value now say Hardware key event, not Setting changed.
+Camera actual updates without an outstanding token can display as observations.
+Rotation's duplicate untracked pending event removed; only the real rotation
+operation owns its token. Existing orientation action unchanged.
+
+GPU
+Windows/GTK NVIDIA and Radeon power-limit/apply/default actions now use the
+same OSD service, keyed by actual adapter UUID and vendor. No display-output
+adapter guessing; existing provider selection/capability/range checks unchanged.
+Success/error from the existing driver job, not the requested value alone.
+Invalid Windows field input reports an error without a hardware call.
+All creation paths wired, including delayed GPU detection and model changes.
+Read-only refresh/monitoring does not flood the OSD. Preview has no write job.
+
+INFO
+Existing diagnostic EC dump start/result factory reused on both OSes.
+Saved,unsaved,cancelled,paused and FAN-cleanup warning are separate cases.
+Warning can no longer turn an unsaved or cancelled collection into a completed
+collection title. Folder/partial/INFO detail remains actual.
+BIOS/VBIOS/EEPROM,driver install and inventory operations keep their existing
+dedicated operation window; no second competing OSD/dialog created.
+Readers,read-only firmware collector allowlists and service cleanup untouched.
+
+Models / boundaries
+All16 known catalogue models and Unknown use these same routes. Controls are
+still limited by actual board,backend,writable state and supported lighting
+zones. Inventory-only profiles gain no Uniwill/FAN/power/colour capability.
+Generic OS notifications and actual GPU driver support are model-independent.
+Native battery does not become supported on GM5/Honor merely by an OSD label.
+HID zones are not forced into existence. LPP pump/radiator remain core/BLE APIs
+without a new UI or OSD command. CLI intentionally has logs,not desktop OSD.
+No per-model hardware results claimed. Mixed Intel/NVIDIA and AMD/NVIDIA
+identities,system microphone and keyboard brightness maxima remain separate.
+
+Validation
+Source inventory and explicit entry-point review; diff checks; Windows/Linux
+GUI+mctl builds; portable version/hash verification. Core/protocol/driver
+sources unchanged. UI fixes preserve admitted existing commands and bounds.
+Queue scenarios reviewed statically: deferred old completion then newer command;
+newer observed same-category state then late callback; overlapping categories;
+disabled service; expired desktop notification; preview; cancellation; failure.
+Physical event delivery,visual rendering on all desktops and device reactions
+cannot be certified without running those machines and were not tested here.

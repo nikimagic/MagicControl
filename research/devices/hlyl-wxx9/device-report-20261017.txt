@@ -1,0 +1,161 @@
+MagicControl · сведения о ноутбуке
+Снимок: 17.10.2026 21:58:37
+
+Ноутбук · BIOS · UEFI · EC
+Ноутбук: HLYL-WXX9
+Модель из прошивки: HLYL-WXX9
+Производитель: HUAWEI
+Семейство: MagicBook
+Материнская плата: HLYL-WXX9-PCB
+Производитель платы: HUAWEI
+Производитель BIOS: HUAWEI
+Версия BIOS: 1.09
+Дата BIOS: 18.05.2022
+Версия EC (SMBIOS): 1.9
+Режим загрузки: UEFI
+Идентификатор системной прошивки UEFI: 1D640D8C-0E9C-4ED3-A641-D1C97ED06537
+Secure Boot: Выключен
+Версия SMBIOS: 3.2
+
+Дисплей · матрица
+Дисплей: Не сообщается · CMN1604
+Идентификатор панели: CMN1604
+Производитель матрицы: Innolux · CMN
+Модель из EDID: Не сообщается
+Код модели EDID: CMN1604
+Версия EDID: 1.4
+Изготовление: Неделя 11, 2019 год
+Глубина цвета EDID: 8 бит на канал
+Сигнал EDID: DisplayPort
+Гамма EDID: 2.20
+Размер / диагональ: 355 x 199 мм · 16.0 дюйма
+Подробные режимы EDID: 1920 x 1080 · 60 Гц
+HDR из EDID: PQ / HLG не заявлены в EDID
+Аппаратная глубина / FRC: EDID сообщает глубину сигнала. Нативные 10 бит или 8 бит + FRC требуют документации производителя матрицы.
+Яркость / покрытие / тип панели: Ниты, sRGB/DCI-P3 и IPS/OLED нельзя достоверно определить из обычного EDID.
+Текущий режим Windows: 1920 × 1080 · 60 Гц
+Подключение: Встроенный
+Глубина цвета Windows: 8 бит на канал
+Формат цвета Windows: RGB
+Расширенный цвет Windows: Не поддерживается в текущей конфигурации
+
+TPM
+Производитель: AMD
+Версия прошивки TPM: 3.42.0.5
+Спецификация: 2.0, 0, 1.38
+Включён / активирован: Да / Да
+
+Процессор
+Модель: AMD Ryzen 5 4600H with Radeon Graphics
+Производитель: AuthenticAMD
+Ядра / потоки: 6 / 12
+Частота из SMBIOS: 3000 МГц
+Сокет: CPU0
+Кэш L2 / L3: 3 МиБ / 8 МиБ
+Виртуализация в прошивке: Да
+О частоте: Частота из SMBIOS не является текущей частотой или гарантированным пределом буста.
+
+Графика
+Модель: Virtual Display Device
+Производитель: Huawei
+Графический процессор: Не сообщается
+Драйвер: 1.0.0.9
+Дата драйвера: 12.08.2021
+Память, сообщённая WMI: Не сообщается
+Идентификатор устройства: INDIRECTDSP\VIRTUALDISPLAYDRIVER\1&79F5D87&2&01
+Модель: AMD Radeon(TM) Graphics
+Производитель: Advanced Micro Devices, Inc.
+Графический процессор: AMD Radeon Graphics Processor (0x1636)
+Драйвер: 27.20.11032.1001
+Дата драйвера: 28.08.2020
+Память, сообщённая WMI: 0.50 ГиБ
+Идентификатор устройства: PCI\VEN_1002&DEV_1636&SUBSYS_1273152D&REV_C7\4&20C24D55&0&0041
+О видеопамяти: Поле WMI не показывает полный объём общей памяти встроенной графики и ограничено 4 ГиБ.
+
+Оперативная память
+Установлено модулей: 2
+Всего: 16.00 ГиБ
+Модуль 1 · DIMM 0: M471A1G44AB0-CTD
+Серийный номер: 00000000
+Производитель: Samsung
+Объём: 8.00 ГиБ
+Банк из SMBIOS: P0 CHANNEL A
+Тип: DDR4
+Формат: 0
+Номинальная / настроенная скорость: 2667 MT/s / 2667 MT/s
+Ширина данных / общая: 64 / 64 бит
+Настроенное напряжение: 1.2 В
+Модуль 2 · DIMM 0: M471A1G44AB0-CTD
+Серийный номер: 00000000
+Производитель: Samsung
+Объём: 8.00 ГиБ
+Банк из SMBIOS: P0 CHANNEL B
+Тип: DDR4
+Формат: 0
+Номинальная / настроенная скорость: 2667 MT/s / 2667 MT/s
+Ширина данных / общая: 64 / 64 бит
+Настроенное напряжение: 1.2 В
+
+Накопители
+Установлено накопителей: 1
+Накопитель 1: WDC PC SN730 SDBPNTY-512G-1027
+Номер диска Windows: 0
+Прошивка диска: 11120000
+Объём: 476.94 ГиБ · 512.11 ГБ
+Подключение: NVMe
+Тип носителя: SSD
+Состояние Windows: Исправен
+
+Батарея
+Питание: От батареи
+Заряд: 98 %
+Модель: HB6081V1ECW-22T
+Производитель: Desay
+Химия: LION
+Проектная / полная ёмкость: 55.24 Вт·ч / 39.97 Вт·ч
+Износ: 27.6 %
+Циклы: 768
+Изготовление: Не сообщается
+Источник: Windows · Battery Class IOCTL (только чтение)
+
+Сеть · звук · камера · NPU
+Microsoft Streaming Service Proxy: Microsoft · драйвер 10.0.26100.1
+Microsoft Input Configuration Device: Microsoft · драйвер 10.0.26100.1150
+Realtek High Definition Audio: Microsoft · драйвер 6.0.8969.1
+Microsoft Bluetooth LE Enumerator: Microsoft · драйвер 10.0.26100.9278
+Bluetooth Device (Personal Area Network): Microsoft · драйвер 10.0.26100.8972
+Microsoft Bluetooth Hands-Free Audio device: Microsoft · драйвер 10.0.26100.9278
+Microsoft Bluetooth Hands-Free Audio device: Microsoft · драйвер 10.0.26100.9278
+Microsoft Bluetooth Avrcp Transport Driver: Microsoft · драйвер 10.0.26100.9444
+Microsoft Bluetooth Avrcp Transport Driver: Microsoft · драйвер 10.0.26100.9444
+Microsoft Bluetooth Avrcp Transport Driver: Microsoft · драйвер 10.0.26100.9444
+Microsoft Bluetooth Avrcp Transport Driver: Microsoft · драйвер 10.0.26100.9444
+Microsoft Bluetooth A2dp Source: Microsoft · драйвер 10.0.26100.1
+Microsoft Bluetooth A2dp Source: Microsoft · драйвер 10.0.26100.1
+Microsoft Bluetooth Hands-Free Audio device: Microsoft · драйвер 10.0.26100.9278
+Microsoft Bluetooth Avrcp Transport Driver: Microsoft · драйвер 10.0.26100.9444
+Microsoft Bluetooth A2dp Source: Microsoft · драйвер 10.0.26100.1
+Bluetooth Device: Microsoft · драйвер 10.0.26100.9444
+Bluetooth Device: Microsoft · драйвер 10.0.26100.9444
+Bluetooth Device: Microsoft · драйвер 10.0.26100.9444
+Microsoft Bluetooth A2dp Sink: Microsoft · драйвер 10.0.26100.1
+Microsoft Bluetooth A2dp Sink: Microsoft · драйвер 10.0.26100.1
+Microsoft Bluetooth A2dp Sink: Microsoft · драйвер 10.0.26100.1
+Microsoft Bluetooth Enumerator: Microsoft · драйвер 10.0.26100.9444
+Bluetooth Device (RFCOMM Protocol TDI): Microsoft · драйвер 10.0.26100.9278
+Realtek Bluetooth Adapter: Realtek Semiconductor Corp. · драйвер 1.8.1053.3014
+USB Video Device: Microsoft · драйвер 10.0.26100.9444
+AMD High Definition Audio Device: Advanced Micro Devices · драйвер 10.0.1.12
+Microsoft Wi-Fi Direct Virtual Adapter: Microsoft · драйвер 10.0.26100.8972
+Microsoft Wi-Fi Direct Virtual Adapter: Microsoft · драйвер 10.0.26100.8972
+Realtek 8822CE Wireless LAN 802.11ac PCI-E NIC: Realtek Semiconductor Corp. · драйвер 2024.0.9.230
+Microsoft Kernel Debug Network Adapter: Microsoft · драйвер 10.0.26100.8521
+Cisco AnyConnect Secure Mobility Client Virtual Miniport Adapter for Windows x64: Cisco Systems · драйвер 4.7.3045.0
+TAP-ProtonVPN Windows Adapter V9: TAP-ProtonVPN Windows Provider V9 · драйвер 9.24.2.601
+
+Windows
+Система: Майкрософт Windows 11 Домашняя для одного языка
+Версия: 10.0.26200
+Выпуск / сборка: 25H2 · 26200.9457
+Архитектура: 64-разрядная
+Последняя загрузка: 23.09.2026 04:27:25

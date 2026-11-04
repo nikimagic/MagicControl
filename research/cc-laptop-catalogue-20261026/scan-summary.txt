@@ -1,0 +1,113 @@
+unique files 18491 enum members 45 candidate names 112 errors 0
+GK5CN_X 34 GK5CN_X,
+GK5CP_4X_5X_6X 8 GK5CP_4X_5X_6X,
+GK7CN_S 34 GK7CN_S,
+GK7CPCS_GK5CQ7Z 25 GK7CPCS_GK5CQ7Z,
+GK7NXXR 25 GK7NXXR,
+GM5MU1Y 35 GM5MU1Y
+GM6IX9B 5 if (board() != "GM6IX9B")
+PF4MU_PF4MN_PF5MU 40 PF4MU_PF4MN_PF5MU,
+PH4AQE3 10 PH4AQE3 = 6154,
+PH4ARxx 15 PH4ARxx = 5889,
+PH4AUxf 15 PH4AUxf = 5895,
+PH4AUxx 15 PH4AUxx = 5890,
+PH4AXxx 15 PH4AXxx = 5891,
+PH4PGx1 10 PH4PGx1 = 6147,
+PH4PGx2 10 PH4PGx2 = 6148,
+PH4PRxx 10 PH4PRxx = 6145,
+PH4PUxx 10 PH4PUxx = 6146,
+PH4TQx1 25 PH4TQx1 = 20,
+PH4TRX1 26 PH4TRX1 = 18,
+PH4TUX1 26 PH4TUX1 = 19,
+PH6AGxx 5 PH6AGxx = 5894,
+PH6AQxx 15 PH6AQxx = 5892,
+PH6ARxx 15 PH6ARxx = 5893,
+PH6PG0x 10 PH6PG0x = 6151,
+PH6PG0x150W 10 PH6PG0x150W = 6155,
+PH6PG3x 10 PH6PG3x = 6152,
+PH6PG3x150W 10 PH6PG3x150W = 6156,
+PH6PG7x 10 PH6PG7x = 6153,
+PH6PG7x150W 10 PH6PG7x150W = 6157
+PH6PGEx 10 PH6PGEx = 6150,
+PH6PRxx 10 PH6PRxx = 6149,
+PH6TQxx 10 PH6TQxx = 22,
+PH6TRX1 20 PH6TRX1 = 21,
+PHxAxxx 20 PHxAxxx = 23,
+PHxGPURule1 7 public const ushort PHxGPURule1 = 203;
+PHxPxxx 15 PHxPxxx = 24,
+X400_ADDRESS 1 CERT_ALT_NAME_X400_ADDRESS = 4u
+X470-I 1 if (name.Equals("ROG STRIX X470-I GAMING", StringComparison.OrdinalIgnoreCase))
+X470-PLUS 1 if (name.Equals("TUF X470-PLUS GAMING", StringComparison.OrdinalIgnoreCase))
+X470-PRO 1 if (name.Equals("PRIME X470-PRO", StringComparison.OrdinalIgnoreCase))
+X470_AORUS_GAMING_7 4 X470_AORUS_GAMING_7_WIFI,
+X470_I 3 ROG_STRIX_X470_I,
+X470_PLUS_GAMING 3 TUF_X470_PLUS_GAMING,
+X470_PRO 3 PRIME_X470_PRO,
+X4R4G4B4 1 X4R4G4B4 = 30,
+X509Certificate 40 client = new MqttClient(text, num, false, (X509Certificate)null, (X509Certificate)null, (MqttSslProtocols)0);
+X509Certificate2 79 private readonly List<X509Certificate2> trustedCertificatesData = new List<X509Certificate2>();
+X509CertificateChain 3 public sealed class X509CertificateChain : List<X509Certificate2>, IX509CertificateChain, IReadOnlyList<X509Certificate2>, IReadOn
+X509Certificates 55 using System.Security.Cryptography.X509Certificates;
+X509Chain 19 X509Chain x509Chain = new X509Chain();
+X509ChainElement 3 foreach (X509ChainElement chainElement in x509Chain.ChainElements)
+X509ChainHolder 7 public sealed class X509ChainHolder : IDisposable
+X509ChainPolicy 1 internal static void SetCertBuildChainPolicy(X509ChainPolicy policy, X509Certificate2Collection additionalCertificates, DateTime v
+X509ChainStatus 15 if (chain.ChainStatus.Any((X509ChainStatus c) => c.Status == X509ChainStatusFlags.RevocationStatusUnknown || c.Status == X509Chain
+X509ChainStatusFlags 21 if (chain.ChainStatus.Any((X509ChainStatus c) => c.Status == X509ChainStatusFlags.RevocationStatusUnknown || c.Status == X509Chain
+X509ChainToString 3 public static string X509ChainToString(X509Chain chain, NuGet.Common.HashAlgorithmName fingerprintAlgorithm)
+X509Extension 5 foreach (X509Extension extension in certificate.Extensions)
+X509IncludeOption 1 cmsSigner.IncludeOption = X509IncludeOption.None;
+X509RevocationFlag 1 policy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
+X509RevocationMode 7 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+X509Store 2 using X509Store x509Store = new X509Store(phStore);
+X509_ASN_ENCODING 6 X509_ASN_ENCODING = 1,
+X570-ACE 1 if (name.Equals("Pro WS X570-ACE", StringComparison.OrdinalIgnoreCase))
+X570-CREATOR 1 if (name.Equals("ProArt X570-CREATOR WIFI", StringComparison.OrdinalIgnoreCase))
+X570-E 2 if (name.Equals("ROG STRIX X570-E GAMING", StringComparison.OrdinalIgnoreCase))
+X570-F 1 if (name.Equals("ROG STRIX X570-F GAMING", StringComparison.OrdinalIgnoreCase))
+X570-I 1 if (name.Equals("ROG STRIX X570-I GAMING", StringComparison.OrdinalIgnoreCase))
+X570-PLUS 1 if (name.Equals("TUF GAMING X570-PLUS (WI-FI)", StringComparison.OrdinalIgnoreCase))
+X570-PRO 1 if (name.Equals("PRIME X570-PRO", StringComparison.OrdinalIgnoreCase))
+X570_ACE 3 PRO_WS_X570_ACE,
+X570_AORUS_MASTER 4 X570_AORUS_MASTER,
+X570_AORUS_PRO 4 X570_AORUS_PRO,
+X570_AORUS_ULTRA 4 X570_AORUS_ULTRA,
+X570_CREATOR_WIFI 3 PROART_X570_CREATOR_WIFI,
+X570_E_GAMING 3 ROG_STRIX_X570_E_GAMING,
+X570_E_GAMING_WIFI 3 ROG_STRIX_X570_E_GAMING_WIFI_II,
+X570_F_GAMING 3 ROG_STRIX_X570_F_GAMING,
+X570_GAMING_X 3 X570_GAMING_X,
+X570_Gaming_Plus 3 X570_Gaming_Plus,
+X570_I_GAMING 4 ROG_STRIX_X570_I_GAMING,
+X570_PLUS_WIFI 3 TUF_GAMING_X570_PLUS_WIFI,
+X570_PRO 3 PRIME_X570_PRO,
+X570_Phantom_Gaming 6 X570_Phantom_Gaming_ITX,
+X570_Pro4 2 X570_Pro4,
+X570_Taichi 3 X570_Taichi,
+X58A-UD3R 1 if (name.Equals("X58A-UD3R", StringComparison.OrdinalIgnoreCase))
+X58A_UD3R 3 X58A_UD3R,
+X58_3X_SLI 3 X58_3X_SLI,
+X58_SLI_Classified 3 X58_SLI_Classified,
+X670E 4 if (name.Equals("ROG CROSSHAIR X670E EXTREME", StringComparison.OrdinalIgnoreCase))
+X670E-A 1 if (name.Equals("ROG STRIX X670E-A GAMING WIFI", StringComparison.OrdinalIgnoreCase))
+X670E-CREATOR 1 if (name.Equals("PROART X670E-CREATOR WIFI", StringComparison.OrdinalIgnoreCase))
+X670E-E 1 if (name.Equals("ROG STRIX X670E-E GAMING WIFI", StringComparison.OrdinalIgnoreCase))
+X670E-F 1 if (name.Equals("ROG STRIX X670E-F GAMING WIFI", StringComparison.OrdinalIgnoreCase))
+X670E_A_GAMING_WIFI 3 ROG_STRIX_X670E_A_GAMING_WIFI,
+X670E_CREATOR_WIFI 3 PROART_X670E_CREATOR_WIFI,
+X670E_EXTREME 3 ROG_CROSSHAIR_X670E_EXTREME,
+X670E_E_GAMING_WIFI 4 ROG_STRIX_X670E_E_GAMING_WIFI,
+X670E_F_GAMING_WIFI 4 ROG_STRIX_X670E_F_GAMING_WIFI,
+X670E_GENE 4 ROG_CROSSHAIR_X670E_GENE,
+X670E_HERO 3 ROG_CROSSHAIR_X670E_HERO,
+X670E_Valkyrie 3 X670E_Valkyrie,
+X79-UD3 1 if (name.Equals("X79-UD3", StringComparison.OrdinalIgnoreCase))
+X79_UD3 3 X79_UD3,
+X870E 2 if (name.Equals("X870E AORUS PRO", StringComparison.OrdinalIgnoreCase))
+X870E_AORUS_PRO 4 X870E_AORUS_PRO,
+X870E_AORUS_PRO_ICE 4 X870E_AORUS_PRO_ICE,
+X8B8G8R8 1 X8B8G8R8 = 33,
+X8L8V8U8 1 X8L8V8U8 = 62,
+X8R8G8B8 5 case Format.X8R8G8B8:
+X8X24_Typeless 3 case Format.R32_Float_X8X24_Typeless:
+X8_Typeless 3 case Format.R24_UNorm_X8_Typeless:

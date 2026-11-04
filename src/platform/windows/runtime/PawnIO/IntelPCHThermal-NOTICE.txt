@@ -1,0 +1,13 @@
+IntelPCHThermal.bin: official signed PawnIO Modules0.2.11, unmodified.
+SHA256: 478500ae78aebef3ae7a0b5fe4848d2d5737e8f7c5d51200c284a61c21d7865d
+Copyright (C) 2026 M-Control Contributors
+License: LGPL-2.1-or-later; see COPYING in this directory.
+Source: https://github.com/namazso/PawnIO.Modules/blob/0.2.11/IntelPCHThermal.p
+Corresponding source included: IntelPCHThermal.p (unmodified).
+Archive: https://github.com/namazso/PawnIO.Modules/releases/download/0.2.11/release_0_2_11.zip
+Archive SHA256: 43608cb89bc84247fef1368a139013f7d043e17db6d6c8dfc9b46bf0905a81f4
+Consumer contract: https://github.com/namazso/PawnIO.Modules/pull/79
+MagicControl calls only ioctl_identity and ioctl_read_raw. No hardware writes.
+PCH identity and supported route are checked by the signed upstream module.
+Modern PWRM valid bit9, raw[8:0] integer Celsius; legacy BAR0 raw[8:0]*0.5-50.
+No claim that an untested laptop's PCH reading is confirmed by compilation.

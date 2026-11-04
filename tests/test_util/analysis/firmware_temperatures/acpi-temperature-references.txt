@@ -1,0 +1,12 @@
+DSDT-0171f11732dc.dsl:4891: Device (IPU)
+DSDT-0171f11732dc.dsl:8593: CPTM,   8,
+DSDT-0171f11732dc.dsl:8595: VGAT,   8,
+DSDT-0171f11732dc.dsl:8797: XHPP,   7,
+DSDT-0171f11732dc.dsl:8851: VDDT,   8,
+DSDT-0171f11732dc.dsl:8853: VDDE,   8,
+DSDT-0171f11732dc.dsl:8855: SOCT,   8,
+DSDT-0171f11732dc.dsl:8857: SOCE,   8,
+DSDT-0171f11732dc.dsl:9914: ThermalZone (ECTZ)
+DSDT-0171f11732dc.dsl:9921: Method (_TMP, 0, Serialized)  // _TMP: Temperature
+DSDT-0171f11732dc.dsl:9935: Return ((0x0AAC + (^^PCI0.SBRG.EC0.XHPP * 0x0A)))
+SSDT-5b0e2defe65d.dsl:530: "\\_SB.PCI0.GPPB.IPU",

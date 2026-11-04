@@ -1,0 +1,40 @@
+Независимый статический просмотр GUI diff
+19.10.2026; сравнение с c4ad921, только src/gui.
+
+Вывод: самостоятельного изменения дизайна карточек, геометрических констант,
+шрифтов, палитры/theme, renderer, механики или размеров скролла не обнаружено.
+Wujie остаётся внешним эталоном общих страниц. Визуальный/runtime тест, GUI,
+сборка и аппаратные действия не выполнялись; pixel-perfect результат не заявляется.
+
+Просмотрены все8 изменённых GUI файлов:
+- common/DeviceHeader.h: допуск явной диагностической процедуры по фактической
+  модели; не новый writer обычной FANs страницы и не изменение меню/шапки.
+- common/MonitoringCards.h: unknownAC=>unknown и stale numeric status;
+  существующие карточки/ряды/цвета/геометрия не заменены.
+- linux/FansPage.cpp: unavailable setters disabled, снята ложная primary
+  selection локального черновика; программный callback тоже отказывает.
+  Общая CSS primary/curve-preset переиспользуется, её стиль не изменялся.
+- linux/SettingsPage.cpp: HYDROC получает IntelPL подписи вместо AMDAPU;
+  unknownAC нейтрализует только статус/его существующий цвет состояния.
+- windows/FansPage.cpp: availability, actual mode/response recheck,
+  DeviceOperation Honor и suppress stale consumption; не layout/paint renderer.
+- windows/SettingsPage.cpp: typed saved draft/CPU PL presets, actual battery
+  selection/fresh-read-on-error и Intel identity labels; не новый вид карточки.
+- windows/main.cpp иlinux/main.cpp: early helper dispatch до GUI init;
+  не добавлены GUI окна/контролы/шрифты.
+
+Точное уточнение о размещении Intel подписей
+Windows SettingsPage.cpp:581 powerFieldLabels,610 измерение caption,
+644 powerColumn теперь используют intelCpuUi вместо intelUi для HYDROC.
+Это меняет соответствие аппаратного значенияPL1/PL2/PL4 существующим колонкам
+вместо прежнего AMD STAPM/Slow/Fast разворота. Используются прежние g.powerEdits/
+g.powerSpins/g.powerCaptions, текущий шрифт/DPI и прежняя общая формула ширины.
+Linux SettingsPage.cpp:43+ также включает HYDROC в Intel labels; прежняя
+geometry() измеряет новые подписи тем же способом. Это допустимая коррекция
+данных/Intel labels, не самостоятельная новая геометрия карточки. На Wujie
+эти Intel условия ложны, прежний порядок/подписи и общие размеры сохранены.
+
+Не менялись UiGeometry/PageMechanics/ControlTheme/NumericFieldTheme/theme/
+font/scroll компоненты. Длина нового сообщения может влиять на ellipsis внутри
+прежней области; размеры области и алгоритм clipping/scroll не редактировались.
+Источник проверки — git diff c4ad921 -- src/gui, не исторические скриншоты.

@@ -1,0 +1,3 @@
+add_library(magiccontrol_ui_config INTERFACE)
+target_include_directories(magiccontrol_ui_config INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_features(magiccontrol_ui_config INTERFACE cxx_std_20)

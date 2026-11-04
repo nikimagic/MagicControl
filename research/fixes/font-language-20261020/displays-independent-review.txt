@@ -1,0 +1,105 @@
+Independent static review — display evidence,2026-10-20
+Reviewer:/root/wujie. No production edits, GUI/EC/hardware/tests/builds.
+Final reread includes Hydroc fixes made during this review.
+
+Disposition
+No remainingP1/P2 established in the reviewed current display paths.
+Reported issues were sent immediately to root and Hydroc, then verified in source:
+1. GDK valid/connected was also reported as active. FIXED: Ui.cpp:288/300 now
+   records connected=valid and leaves active=null with a distinct missing-current-
+   compositor-path issue. GDK valid alone does not establish active mode.
+2. GListModel item lacked a null guard. FIXED Ui.cpp:284–285 marks partial and
+   continues. This is a defensive contract guard; no actual reentrant hotplug
+   race was reproduced or claimed from main-thread source inspection.
+3. Linux fallback cancellation only checked inside directory loop. FIXED
+   DiagnosticDumpLinux.cpp:12/32 handles cancellation before/after the scan,
+   including empty or unavailable/sys/class/drm.
+4. Windows fallback-monitors loop checked cancellation only once. FIXED
+   WindowsDisplay.cpp:136–139 checks each monitor and synchronizes final
+   cancelled/enumerationComplete/status before serialization.
+5. Optional fractional GDK scale lookup was tied to build headers>=4.14.
+   FIXED Ui.cpp:274–279 uses runtime version gate+dlsym. A4.12-header build
+   can use the optional newer runtime symbol without mandatory symbol linkage.
+
+JSON and field truth
+DisplayEvidence.h:34–44: nonfinite/missing doubles become null; number stream
+uses classic locale, not UI language comma. Optionalfalse isfalse, notnull.
+All raw id/name/source/status/error/path/manufacturer strings use firmwareQuote.
+FirmwareEvidence.h:34–45 escapes quotes,backslashes,control/invalid UTF8 bytes.
+Metadata strings are internally constructed; no raw name/path is concatenated
+without quoting in the reviewed constructors. Structural commas/braces are
+balanced by inspection. No JSON parser/test was executed.
+DisplayEvidence.h:46–60 marks snapshotAtomic=false, supplies per-field sources,
+issues and nulls instead of invented0 readings. currentDataComplete describes
+currently required active/primary/dimensions/rate/scale presence, not an
+independent accuracy proof of every metadata/DPI/connected field.
+Future-provider caveat: completeness checks optional presence, whereas serializer
+also rejects nonfinite values. Current Windows/GDK providers validate finite scale
+and positive rationalHz; a future provider must preserve this admission rule.
+
+Dimensions and frequency
+WindowsDisplay.cpp:107–116 uses current EnumDisplaySettingsEx dimensions with
+explicit non-virtualized/source-pixel provenance; CCD SOURCE_MODE fallback is
+validated by index,type,sourceID and adapterLUID. Neither path claims native EDID
+panel resolution or substitutes a preferred mode. Per-target refresh rational is
+preserved as numerator/denominator (zero rejected); fallback integer rate is
+marked precision-limited. Source desktop raster and target signal can differ
+under clone/GPU scaling; modeSource states which evidence is present.
+Linux Ui.cpp:289–305 keeps GDK logical geometry in metadata, leaves direct
+current physical dimensions null, and labels geometry*scale as derived only.
+Refresh source preserves GDK millihertz/1000 rational. It is reported monitor
+frequency, not measured frame presentation or instantaneous VRR.
+Linux platform fallback DiagnosticDumpLinux.cpp:10–33 never treats connector
+modes/EDID preferred or enabled raw text as current compositor geometry/refresh.
+
+DPI/scale
+WindowsDisplay.cpp:82–93 records process/thread awareness metadata. It uses
+GetScaleFactorForMonitor successS_OK+valid factor only, discards failure fallback
+output and reports HRESULT/API absence. effectiveDpi is explicitly factor*96/100,
+not raw physical panel DPI or independent custom override measurement. This
+avoids implying that awareness-virtualized GetDpiForMonitor is a raw measurement.
+GDK per-monitor fractional scale is optional; rounded integer scale is metadata
+only. Derived96*scale DPI is labeled application convention. Window-surface scale
+belongs only to the action window and is not copied to every monitor. Missing
+primary monitor remains null; first/window monitor is not guessed as primary.
+
+Cancellation, thread ownership and lifetime
+DiagnosticDump.cpp:567–570 consumes a by-value serialized string or calls the OS
+fallback. Exceptions become a structured unknown/error display document. Display
+capture does not invoke EC/controller/fan/brightness/scale setters.
+Linux BiosPage.cpp:149–166 captures GDK evidence in the GTK callback before
+starting the worker. Ui.cpp:262–265 explicitly refuses off-main-context capture.
+The worker captures only shared job,mode and moved std::string snapshot; no GTK
+object/state pointer crosses into it. createDiagnosticDump owns another string
+value; its delayed collection cannot mutate or free the original GTK objects.
+Result publication uses release/acquire done flag(:165/:169); job survives page
+closure. A GUI snapshot completed before later dump cancellation correctly keeps
+its own capture result; overall dump cancellation is separate.
+Windows getter uses local vectors/strings and RAII Shcore handle; function-pointer
+calls occur while the library is held. OS handles may invalidate under hotplug;
+errors/null fields are retained rather than cached pointers sent to another task.
+
+Known limits
+This is source/contract review, not visual fitting, OS mode measurements,
+hotplug/cancellation stress tests, RDP/clone/rotation/VRR validation, or proof that
+all API paths succeed on the user's two laptops. Snapshots are deliberately
+non-atomic. Unsupported getters/primary/custom scaling remain explicit unknowns.
+No out-of-scope lighting/fan/battery/firmware action was performed by reviewer.
+
+Primary API sources consulted(readonly)
+GDK valid: https://docs.gtk.org/gdk4/method.Monitor.is_valid.html
+GListModel nullable item: https://docs.gtk.org/gio/method.ListModel.get_item.html
+GetScaleFactor success/error-output contract:
+https://learn.microsoft.com/en-us/windows/win32/api/shellscalingapi/nf-shellscalingapi-getscalefactorformonitor
+
+Reviewed file hashes (final reread)
+src/platform/common/DisplayEvidence.h SHA256=92c1e3d1ff551bbb3ba7333fb5197b5b3fec2785663bbd627302b63bb141d131
+src/core/include/MagicControl/DiagnosticDump.h SHA256=5c12fe40ac33f487b3c2300a4e0694ba02ca7ea97f0437d5b653d596f9a0a711
+src/platform/common/DiagnosticDumpInternal.h SHA256=4e1e4bd03d90b384bc2e75499ed779d2c592ceca34c545574cdd15e4be7d5bad
+src/platform/common/DiagnosticDump.cpp SHA256=33aadfe2a56f1a836870304c6035e1c3e3d97a87f9c0b14ebd20d9759b2e7046
+src/platform/windows/WindowsDisplay.h SHA256=1ece1947ec580138afd5b8ed758da733416ee4338a39ae5b1b2ce305b361cb5e
+src/platform/windows/WindowsDisplay.cpp SHA256=ad3027559fdc9c8ac1f51b7ad897025c53cbed7ad32e166b3737b06675c3d864
+src/platform/windows/DiagnosticDumpWindows.cpp SHA256=c23407a78eed0538ba22852601e7621e31cda1099286d36fcd6b9483fcf8ca66
+src/platform/linux/DiagnosticDumpLinux.cpp SHA256=8513fbd45be45a0f9e4f040945aba2da9e7e9a8a283230e29d6e84aba911e407
+src/gui/linux/Ui.cpp SHA256=cc220d7ee84b72bbf6f7ee2fb65c8ac67d0adec7814a37b362a7bfe7af7445f2
+src/gui/linux/BiosPage.cpp SHA256=618a16ee3b51065e2b6839b667ce85ac1b87b3ded465f089ae90ea80aa193021

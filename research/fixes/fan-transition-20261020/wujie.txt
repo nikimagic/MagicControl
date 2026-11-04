@@ -1,0 +1,201 @@
+Wujie X5SP4NAG — explicit Manual transition correction,2026-10-20
+Owner:/root/wujie. Source implementation only; no application, GUI, EC, hardware,
+test executable, build or commit run by this agent. Root owns common build/portable.
+
+Scope and exact model
+MECHREVO / WUJIE Series-X5SP4NAG, verified identity82/72/26.
+Read AGENTS.md, DEVICE-ARCHITECTURE, FAN_MODES, model register compatibility map,
+current FanControlWindows.cpp and existing user dump/log evidence. No new map,
+calibration, temperature/PWM values, table encoding or hardware protocol introduced.
+Only src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp changed.
+Its header is the existing shared src/platform/windows/FanControlWindows.h;
+no model-local .h exists and no shared API/header modification was necessary.
+
+Evidence and limits of the user's physical complaint
+Input: MagicControl/windows/logs_WUJIE_Series-X5SP4NAG/MagicControl-3.jsonl and
+its dumps/dump-20261020-100812-0; existing analysis wujie-dump-100812.txt.
+This was build0.1.93. Events are UTC in raw journal, Moscow is+03:
+- seq466/468:10:12:53.933/10:12:53.x explicit Manual click/config request.
+- seq472: fresh CPU table comparison1382ms,changed0; GPU table untouched.
+- seq481/483: Manual armed/config flags confirmed.
+- seq486:10:12:55.964 FEEDBACK revision4,CPU0%/0RPM,GPU25%/0RPM,
+  confirmed=true. Following samples show fan ramp; that is telemetry, not proof
+  the intended autonomous curve was executed correctly.
+- seq622/624:10:14:02 explicit Max; seq633/636:10:14:04 explicit Manual.
+- seq639: CPU read_compare_ms0,changed0: the cache path was used for that
+  Max→Manual, unlike the first post-dump Manual fresh read.
+- seq663/665 online request and seq669–674 explicit online table/target writes.
+- seq685–687 explicit Default; seq691–710 another explicit autonomous Manual,
+  fresh CPU compare1713ms and27 changed bytes after the online table was replaced.
+The owner stated Manual did not return as needed and later clicks were manual.
+Do not call these events auto-restore. The dump intentionally finishes in Default;
+that rule is unchanged. No error proves a rejected first Manual command here.
+The cache bug does NOT explain the first post-dump Manual by itself, because that
+path already performed a fresh comparison. Physical root cause remains unproven.
+No inference of CPU/GPU physical equality follows from the common logical curve.
+
+Proven defect A — explicit autonomous requests could trust stale RAM payload
+Original lines1058–1066 used comparedCpuTable/adopt snapshot or tableCacheValid[0]
+instead of fresh CPU bytes when reloading. A retained full lease across Manual→
+Max→Manual leaves the cache valid; seq639 records its0ms compare. Firmware/external
+payload changes without a gate change are not established by our remembered bytes.
+Original unchanged-selection lines850–867 compared requested curves and cache
+validity/flags only, so a repeated Manual could claim no-op without reading its
+live CPU payload. FAN_MODES requires the CPU table comparison for autonomous
+Manual; the online fast Duty cache is a different contract.
+
+Fix A
+Current lines876–900: an explicit repeated EcManual no-op candidate reads48 CPU
+bytes, compares all47 owned bytes, excludes firmware-owned Down[0], and verifies
+owned flags again. No GPU table read/write and no activation when values match.
+Unreadable proof fails closed without Default/rollback, using the existing
+FanFlagsUnavailable path (there were no writes in the comparison).
+Current lines1095–1108: every actual Manual/recovery reload reads live CPU bytes
+after opening RAM writes. No previous Max/online cache or pre-arm adoption snapshot
+is substituted. Only differing owned bytes are written; encoding/commit/APP edge
+are unchanged. Startup adoption still avoids writes if current live state matches;
+if adoption mismatches, the actual writer obtains its own post-gate fresh read.
+No background96-byte sweep was added. A repeated explicit no-op now costs one CPU
+read; mismatch/adoption fallback may need an extra comparison, intentionally.
+
+Proven defect B — no-op after unknown ownership did not restore confirmation
+Periodic read failure clears state.confirmed and marks ownershipUnknown=true.
+The explicit unchanged branch originally clearedbusy/applying but not those
+fields, despite its fresh flags check succeeding. UI/core could continue to show
+unconfirmed status after accepting a new read-only confirmation.
+Fix B at current904–912: successful explicit no-op restores confirmed from the
+controlled-channel set, clears ownershipUnknown/error and records observedDefault
+according to lease. It is mode readback only; no physical-execution flag is added.
+
+Proven defect C — old periodic completion could finish a newer request's UI state
+request():267–269 incrementssequence, queues a request and sets busy/applying.
+A concurrently finishing old telemetry loop originally assignedstate=next, then
+only restoredbusy ifpending; it leftapplyingfalse and replaced the new message,
+revision/mode with the older generation. Old unknown-read branches also cleared
+busy/applying unconditionally. This race is proven by interleaving the source,
+not identified as a reproduced event in the supplied journal.
+Fix C at current633–638,1235–1242,1265–1268: publication under the controller mutex
+checks sequence==the worker's completedrevision. An old completion cannot replace
+the newer applying/message state; unknown observation still withdraws obsolete
+readback confirmation. Stale completion is explicitly logged with both revisions.
+
+Queued error/cleanup boundary
+fail():1327–1343 preserves progress of a newer pending request while withdrawing
+failed old ownership. Existing needsRestore is not silently cleared by a no-write
+error. Command execution rechecksneedsRestore before writes(:763–769), because a
+background failure may have completed after request admission. Only explicit
+Default can pass a required cleanup; the queued request is not permission to ignore
+it. Shared FIFO/onepending/DeviceOperation admission and power epochs are retained.
+
+Readback versus execution
+Current FEEDBACK log explicitly namesmode_readback_confirmed and
+physical_execution=unverified. RPM/PWM are still telemetry. Confirmation is not
+calculated from duty/rpm equality, and physical mismatch never triggers a new
+firmware rearm or forceful takeover. The hardware meaning of flags/table payload
+is not extended by this correction. The user complaint requires a separately
+authorized physical verification after root builds/updates the portable.
+
+Unchanged behavior
+- Default after diagnostic dump, no automatic previous Manual replay.
+- Manual autonomous CPU curve distinct from host Manual online.
+- No new PWM/threshold data, table clearing or periodic host PWM calculation.
+- GPU table untouched for autonomous Manual, including no-op/adoption/recovery.
+- No unrelated APU/battery/keyboard bits, UI/card/scrollbar changes.
+- Existing sleep-only recovery, masked flags, foreign ownership refusal preserved.
+
+Review performed
+Read exact diff and command/ownership/cache/publish/error paths. No tests were
+added/run, no build/GUI/hardware command performed. Source is ready for root review;
+this report does not certify a compiled binary or physical correction.
+
+Suggested shared FAN_MODES clarification (root owns docs)
+Every explicit Manual verifies live CPU payload before a no-op. Actual Manual
+activation compares live CPU after RAM write admission; earlier Max/online/adopt
+cache is not live proof. Old observed generations cannot complete a newer queued
+request. Table/flag confirmation is readback, not execution measurement.
+
+Artifact hashes at final source review
+src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp SHA256=dfd21d6d09ebc7502c179727ed3e25e3b7baba665d8a060aa461e26fcf674871
+src/platform/windows/FanControlWindows.h SHA256=745d9ab487adc59447947ef7a2185c4eb08b7997bdaf38e3bd2c5fee280323ad
+src/platform/windows/FAN_MODES.md SHA256=03f3fd6deabecbad71a1b8a3a03964a3a2de4c6d41df73da70bd53be32909eb5
+research/analysis-20261020/wujie-dump-100812.txt SHA256=c95f3e5c3c8165feee6de4067fac6a68acef866b0ea3a4cf0b1954d1c0dfc532
+
+Live log read with shared read-only handle; bounded prefix length=1484546 bytes, UTC=2026-10-20T10:42:23.2101967+00:00, prefix SHA256=a640ebb1adec733549f80dd61983b63bb2812c5cc507caa6ee99da3124090372.
+The app may append later; this is a prefix digest, not a frozen whole-file hash.
+
+ADDENDUM — isolated EcAccess block timing requested by root
+Only src/core/include/MagicControl/EcAccess.h and src/core/src/EcAccess.cpp
+modified for this addendum; no changes to backends/IOCTL/writes/dump/UI.
+Public mc::EcBlockReadTiming fields:
+uint64 processWaitUs,transportWaitUs,ioUs,maxByteUs;
+uint16 maxByteAddress;size_t bytesRead;bool detailed.
+readBlock(address,count,EcBlockReadTiming* timing=nullptr) is source-compatible
+with existing two-argument callers. nullptr retains the original gate/backend
+lock, reserve, byte rawRead loop and read-counter behavior, without byte clocks.
+With timing, the caller object is reset and detailed=true before lock acquisition.
+Separate RAII scopes measure local recursive-gate acquisition and backend
+lockTransaction acquisition. Backend RAII lifetime/unlock order remains backend
+then local gate, with the same exception behavior as the previous BackendLock.
+Each attempted rawRead contributes to ioUs and the slowest-byte address/duration,
+including an exception from that byte. bytesRead increments only after successful
+rawRead; the existing reads_ counter still increments for every backend attempt.
+No stability/retry/batch/readback semantics were changed. Zero-length/pre-I/O-failed
+calls keep maxByteUs/maxByteAddress=0. A zero-duration attempted byte can also
+round to0microseconds; bytesRead/context distinguish it from a successful empty
+call. Duration totals exclude vector allocation/output-copy and unlock overhead;
+they are per-call phase accounting, not an assertion that their sum equals total
+external block wall time. Nested caller-owned locks may have waited before this
+function and are outside these local timing scopes.
+On a read exception, no partial byte-vector is returned (unchanged), but the
+caller-owned timing retains successful prefix count plus failing-byte timing.
+No diagnostic call, build or test executed; source diff inspected statically.
+Frozen SHA256:
+EcAccess.h9956c608912454d708e288a3dff3e5fde83adb58b892a6cc5570fd6ab9eb5025
+EcAccess.cpp2906a39226918129db77d8982eb4be103ada6837f1fa7855967e427a8d427355
+Root wires these fields into the shared dump and owns passive-poll pausing.
+
+FINAL STATIC FOLLOW-UP — request invariants and no-op power boundary
+Kind::EcManual has exactly two construction paths in this translation unit:
+ecManual() immediately supplies savedProfiles, and restoreSavedProfiles() also
+sets savedProfiles before request(). Restore/adopt/CLI callers use those APIs;
+there is no direct external access to private Impl::Request. Thus the repeated
+Manual comparison's savedProfiles dereference is valid for all current paths.
+The worker'srevision is single-thread-owned. sequence/pending and publicstate
+are accessed under the controller mutex. A current explicit command retains its
+DeviceOperation while publishing; request admission refuses applying/pending and
+tryBegin cannot acquire a second operation. Old periodic state/unknown/error
+publications are the concurrent case handled by this patch. A no-op completion
+of an explicit command cannot normally be superseded through current admission.
+Root-approved final addition puts checkPower() inside the no-op publication mutex,
+matching the existing full-apply commit lock order (controller mutex→checkPower).
+If the epoch changes after flags readback, PowerInterrupted unwinds the lock
+before entering the existing interrupted/recovery handler; it cannot falsely
+complete the no-op across suspend. No new EC call/write or global lock introduced.
+No further tests/builds/hardware run. The following hash supersedes the earlier
+FanControlWindows.cpp digest in this report; source is frozen again.
+Final FanControlWindows.cpp SHA256=2b7e801e3b2c1721a59622fc4584fd46ef41f1100bea9d82f3ccc206efac3e23
+
+READ-ONLY INTEGRATION REVIEW — root dump timing and passive-read scheduling
+Reviewed DeviceOperation.h, DiagnosticDump.cpp/Internal.h/Windows adapter,
+PowerDiagnosticsWindows.cpp, MonitoringWindows.cpp and the actual protocol
+FanTelemetry.cpp. No obvious compile/RAII issue established by source review.
+BlockReader's third pointer matches every current adapter lambda; X5 forwards
+it to EcAccess, typed GM6/Honor/HYDROC leave detailed=false rather than inventing
+separated timing. Attempt outcome/error strings are JSON-quoted. ecTimingJson
+object/array braces and nondetailed null representation inspected statically.
+PassiveEcReadPause is a separate nestable atomic counter with balanced RAII;
+it neither acquires DeviceOperation ownership nor calls ObservationPause.
+captureSnapshot scopes the hint around capturePlatformEc, including exception
+unwinding, and enables it only for confirmed Default/restored-baseline snapshots.
+ReadOnly does not enable it. It is not a new Default/Manual restoration command.
+The new checks only skip optional X5 fan telemetry, battery EC supplement,
+system-power EC getter and the diagnostic EC observer. Wujie active online
+cooling uses dedicated AMD/Pawn temperature readers and direct readFanFeedback,
+so this hint does not stop its temperatures, PWM loop or ownership watchdog.
+No existing native Default-before-dump / Max rollback / postdumpDefault policy
+is replaced. Timing does not provide batch reads or any new EC writer.
+Minor diagnostic truth note sent to root: detailed=true may accompany a lock
+exception before any I/O; maxByteAddress then remains0. JSON can conservatively
+emitnull for max_byte_address when bytesRead==0 and ioUs==0 rather than implying
+that EC address0 was attempted. This is not an active-cooling safety blocker.
+No test/build/hardware run; files remained untouched during this review.

@@ -1,0 +1,47 @@
+Project data refresh,27October2026
+
+Documentation/catalog update only. No application, driver, reader, firmware,
+SSH hardware query, test or new build was executed. Working GUI/mctl Windows
+and Linux remain0.1.241. Four hashes match the complete build/session; latest
+product commit93ea891. Existing local EcByteEditor.h modification is preserved.
+
+Current source registry:4base +11reported +L16 +HPBSD =17known devices,
+16notebooks +1miniPC, separateUnknown. Seven different Windows control
+backends/capability sets,10inventory-only profiles. Honor is not battery-only;
+HPBSD is an independent ITE5571/PawnIO device, not an inherited Uniwill map.
+
+Current Honor BIOS reader6.76/SYS3.0.0.3 is pinned to the extracted official
+Lenovo OEM package. The stored integrated0.1.239 manifest and two actual probe
+files confirm equal16MiB ROMs, SHA75c813b7...46dd445. Old6.25/0.1.238 evidence
+is retained as history. PhysicalSPI/liveECflash and cross-model compatibility
+are not inferred. BIOS/NVIDIA reader versions shown in INFO are documented.
+
+Refreshed PROJECT-MAP, support matrix, README, Honor handoff, BIOS reader
+summary and two device READMEs. Old24October revision is explicitly historical.
+Battery aging/percentage/identity distinctions, native CPU/FAN separation,
+Linux availability and original-curve/input-range contract are recorded.
+
+Two original CSV catalogs updated through ArtifactTool value grids with no
+new XLSX, schema change or restyling. Only4and8existing cells changed, plus
+oneHPBSD record in each. Parsed values and physical lines of all unrelated
+records were compared to backups and preserved. CSV counts20->21 and106->107
+include headers/metadata/family rows, not counts of controlled laptops.
+Corresponding TXT summary updated. Original CSV/TXT and document backups
+remain in this task's backups folder. External catalogs are outside the Git
+root; hashes/changes are recorded in CSV-VERIFICATION and CATALOG-CHECK.
+
+Scroll clarification requested during the task:
+oneScrollModel arithmetic implementation,8Windows state-field declarations.
+Git counts7befored0f89e9,8ind0f89e9(0.1.203),8in0.1.232andcurrentHEAD.
+MessageDialog reusesPageMechanics. LicenseView retains its own thumb/paint/
+wheel/drag, and several pages retain local drag plumbing. Thus the count is
+not eight independent algorithms and did not rise during the recent fan-bound
+work. Some UI duplication remains real. No scroll or geometry code changed.
+Evidence inSCROLL-FACTS.json and the refreshed PROJECT-MAP.
+
+Validation: four existing binary SHA256 values unchanged; source profile
+count, local239 evidence, exact ROM hashes, document links and CSV roundtrip
+checked. No broken relative links among updated documents. Markdown diff
+whitespace review passes. This is not new hardware validation or a fresh
+code audit of every historical risk. Source-tree README changes are docs;
+build provenance is not rewritten and packaging gates remain authoritative.

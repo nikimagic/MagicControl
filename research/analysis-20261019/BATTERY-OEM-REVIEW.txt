@@ -1,0 +1,154 @@
+MagicControl: ограничение заряда GM6IR0C / HYDROC-16 G2
+Дата: 19.10.2026. Статический разбор точных локальных OEM-файлов.
+
+ОБНОВЛЕНИЕ: исходный текст ниже фиксирует первый этап исследования.
+Позднее в тот же день восстановлены все5512 записи JIT-защиты HYDROC и6
+DynamicIL-обёрток по точному native-ключу, без аналогий с GM6. Результат:
+research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019/README.txt.
+Там находятся полные raw/readable C#, хэши и воспроизводимые скрипты.
+Упоминания о ещё закрытых телах HYDROC ниже относятся к начальному этапу.
+
+1. Вывод
+
+Предположение «всегда требуется дополнительная команда включения процентного
+лимита» слишком общее. В восстановленной OEM QC-ветке setter просто изменяет
+процент в7B9. Но эта ветка не выбирается конструктором MyFanCtrl исследованного
+активного GM6-сервиса. Для RAM Fan1.5 работает другой менеджер.
+
+Действующий BatteryProtection2 GM6 реализует ТРИ ИМЕНОВАННЫХ ПРОФИЛЯ защиты
+через7A6.4–5. Они не являются доказанными процентами100/95/85.
+Порог напряжения/процента каждого профиля этим кодом не раскрывается.
+Найден штатный setter ПРОФИЛЯ GM6; setter произвольного процентного лимита
+для этой конфигурации ещё не восстановлен. HYDROC GCUService защищён.
+
+2. Идентичность артефактов
+
+GM6: build/research-gm6ir0c/samples/GCUService-active.exe
+7074680 байт; версия1.0.2.70.
+SHA256 8fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf
+HYDROC: build/research-hydroc16g2/installer/app/AiStoneService/
+MyControlCenter/GCUService.exe
+15918328 байт; версия1.0.2.70.
+SHA256 e5d388b45515d06567c2e71e4c2b882a1fa9313704d70785f19aec960e361003
+HYDROC: build/research-hydroc16g2/installer/app/DefaultTool/DefaultTool.exe
+1166584 байта; версия5.2.6.0.
+SHA256 e035bb4602764fbe8c7731be429a9b7144335298dd23fbff35c449e842a7241f
+GM6: build/research-gm6ir0c/samples/DSDT.aml,668509 байт.
+SHA256 2a4d766944f5416e275f0effbf478b90bdfa1e83d2875ae1aee11caac4bad4d1
+DSDT — ACPI-таблица, а ec.bin — снимок памяти EC. Они не являются полным
+образом исполняемой прошивки EC и не раскрывают весь алгоритм зарядки.
+
+3. Восстановленная вызываемая цепочка GM6
+
+Декомпиляция metadata/IL через ICSharpCode.Decompiler, без выполнения OEM-кода.
+Полное дерево: build/research-gm6ir0c/all-active/.
+
+02000341-MyControlCenter.App.cs:
+ - StartUpTask("MySystem") -> BatteryProtection2.Instance.EnableByService().
+ - MQTT BatteryProtection/Control -> BatteryProtection2.Instance.Receive().
+ - Resume -> BatteryProtection2.Instance.Resume().
+0200022C-MyControlCenter.CustomizeCtrl.cs:
+ - PublishSupportAll сообщает BatteryProtectionType="2".
+020001C6-GCUService.MySystem.BatteryProtection2.cs:
+ - EnableByService -> Init -> SetHealthProtectionStatus.
+ - Init читает HKLM\SOFTWARE\OEM\GamingCenter2\BatteryProtection2,
+   DWORD HealthProtectionStatus. CustomizeTarget17: default1; остальные:0.
+ - Receive принимает PERFORMANCEDMODE / BALANCEDMODE / HEALTHYMODE,
+   сохраняет HealthProtectionStatus=0/1/2 и вызывает соответствующий setter.
+ - RECOVERY выбирает0. Resume повторяет сохранённый профиль.
+ - Disable/Uninstall выбирают профиль0.
+ - Отчёт UI содержит HealthProtectionStatus, не верхний/нижний процент.
+
+SetHealthProtectionHigh/Middle/Low читают EC1958=0x7A6, изменяют биты4–5,
+сохраняют остальные биты и записывают тот же адрес:
+   PERFORMANCEDMODE: (old & ~0x30) | 0x00
+   BALANCEDMODE:     (old & ~0x30) | 0x10
+   HEALTHYMODE:      (old & ~0x30) | 0x20
+0x30 не используется этими setter. Readback и измерение прекращения зарядки
+в данных OEM-методах отсутствуют. Имена профилей не раскрывают точный процент.
+
+Фактическое свидетельство из пользовательского OEM-архива:
+build/research-gm6ir0c/Mechrevo-Research-GM6IR0C-20261017-215647.zip,
+registry/HKLM-SOFTWARE-OEM.reg:
+ HealthProtectionStatus=2, TypeCAdaptorPriorityStatus=0.
+Это сохранённый выбор на дату архива, не подтверждение текущего EC/тока.
+
+4. Неиспользуемые заготовки и отдельная QC-ветка GM6
+
+В BatteryProtection2 есть private SetBatteryChargingLimit_Up/Down,
+ReadBatteryChargingLimit_Up/Down и LoadBatteryLimitationDefault.
+Поиск по всему восстановленному дереву не обнаруживает их вызовов; Receive
+обрабатывает профили, RECOVERY и GET. Перечисления CHARGING_UP_LIMIT/DOWN
+сами по себе не означают обработку этих команд.
+Верхний setter: EC1977=7B9, сохранить бит7;100% кодируется0 в bits0–6.
+Нижний setter: EC2000=7D0, диапазон1..95, сохранить бит7.
+Старый getter нижнего порога не маскирует бит7 — не копировать как эталон.
+
+Private свойства вызывают NvramVariable.SetFwVars для BatteryLimitation,
+ChargeMaximumLimit/ChargeMinimumLimit. Однако switch SetFwVars(string,byte)
+GM6 НЕ содержит этих ключей. Такой вызов не меняет эти поля _fwvars; он может
+записать существующую структуру целиком. Это не доказанная активация через NVRAM.
+
+02000254-MyControlCenter.MyFanManager_QC.cs:
+UserSet_BatteryChargingLimit_Setting -> SetBatteryChargingLimit:
+ - требует SMBIOSINFO.m_bSupportBatteryLifeExtension;
+ - принимает только60/70/80/90/100;
+ - пишет только7B9 с сохранением бит7,100 кодируется0;
+ - дополнительных7C3/742/7A6 или NVRAM вызовов в setter нет.
+Feature: QC Refresh BIOS и строка SMBIOS type11/index18 (позиция4 после
+разворота строки; пустая строка в поддерживаемой QC-ветке разрешает feature).
+
+020002B9-MyControlCenter.MyFanCtrl.cs: конструктор выбирает MyFanManager либо
+семейство MyFanManager_RamFan1p5; создания MyFanManager_QC в нём нет.
+В RamFan1p5 и базовом MyFanManager процентный обработчик
+BATTERY_CHARGINGLIMIT_SETTING не найден. Наличие класса QC внутри EXE
+не делает его активным для GM6.
+
+5. HYDROC: восстановлено / остаётся закрытым
+
+build/research-hydroc16g2/gcu-by-token/
+020001D1-GCUService.MySystem.BatteryProtection2.cs:
+имена профилей, команд, getter/setter порогов, Init/Resume и NVRAM-свойств есть.
+Но тела методов и async Receive.MoveNext — throw Exception("Runtime exception").
+Это защитные заглушки, не рабочий алгоритм и не реальная ошибка исполнения.
+В сервисе есть обфусцированный загрузчик/DynamicILInfo; обычная IL-декомпиляция
+не восстанавливает защищённые тела. Имена не доказывают одинаковую цепочку плат.
+
+Читаемый DefaultTool: NVRAM_STRUCT содержит BatteryLimitation,
+ChargeMaximumLimit и ChargeMinimumLimit. Но NvramVariable.SetFwVars(string,byte)
+этих трёх ключей не обрабатывает. Цепочка «UI -> активация процентного режима
+-> сохранение -> подтверждение» не восстановлена. Запись всей UEFI-структуры
+по одним именам полей не обоснована.
+Дамп HYDROC dump-20261019-151330-0:4096/4096 байт EC доступны;7B9=00,7D0=00.
+Это один снимок без переключения родным софтом: из него нельзя определить
+включение или соответствие3 профилей конкретным процентам.
+
+6. Что требуется для подключения
+
+GM6 OEM-профили можно оформить отдельной типизированной возможностью с именами
+штатных режимов, маской0x30, сохранением соседних битов и проверкой результата.
+Кнопки100/95/85 должны требовать процентный backend: сопоставление
+HEALTHYMODE=85 или BALANCEDMODE=95 сейчас не доказано.
+Для процентного backend нужны поддерживаемая ветка платы, реальный setter/
+enable и чтение включения; затем проверка на внешнем питании по проценту и
+мощности/току батареи. Readback7B9 не доказывает исполнение порога.
+Wujie platform4/7 не переносить на GM6/HYDROC.
+
+Для HYDROC следующий источник — восстановление защищённых тел точного сервиса
+либо парные read-only снимки при переключении самим родным Control Center.
+Нужны режим, время, питание, сырые7A6/7B9/7D0/742/7C3/770 и Battery Class
+ток/мощность, плюс OEM-сохранение. Проверять отдельно до/после сна; сохранять
+полный ec.bin рядом. Это различает профиль, процент и физическую остановку.
+
+Аппаратные команды, OEM-сервис, UEFI и установленный драйвер при этом разборе
+не запускались и не изменялись. Новые пути записи в MagicControl не включены.
+
+7. Ранее начатая сборка карточки/дампа завершена
+
+Windows/Linux working portable0.1.72 собраны через Tools/Build-All.ps1.
+Карточка читает системные данные всех фактических моделей независимо от setter.
+Минимальное окно fast-телеметрии дампа60 секунд после первого сохранённого
+sample, статус в sampling-window.json; отмена завершает раньше.
+SHA256 Windows d9a81aaec1bb09e20b284e4166204b6c1cd0a1b12a198b405c01473c6ecee78a
+SHA256 Linux   0e8ad46b86f0d99274eda37f0c14ce81f0a06ea6b76fef1bc59833338a6cd0ab
+Хэши совпадают с результатами сборки. Все5 ранее сохранённых INI/CSV неизменны.

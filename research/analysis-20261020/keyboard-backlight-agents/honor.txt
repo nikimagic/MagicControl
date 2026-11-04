@@ -1,0 +1,237 @@
+Honor HLYL-WXX9 — полная статическая ревизия подсветки
+20.10.2026. Только исследование, без изменения production/UI/settings.
+
+ВЫВОД
+На точном HUAWEI HLYL-WXX9/HLYL-WXX9-PCB BIOS1.09 подтверждена белая подсветка
+с OFF/LOW/HIGH, не RGB. Native EC сохраняет выбранный уровень отдельно от
+фактического PWM: таймер умеет плавно уменьшать PWM и выключать свет, не меняя
+выбранныйlevel/shadow; activity восстанавливает его. Именно это сейчас ломает
+validate(): нормальный idle/fade трактуется как ошибка. Отдельно известный
+resume-state разрешён read(), но OFF/LOW setter из него запрещены.
+Улучшения возможны в typed backend/status и диагностике без изменения общего
+вида карточек/скролла Wujie и без расширения списка разрешённых I2EC writes.
+
+1. EXACT IDENTITY / ПРОИСХОЖДЕНИЕ
+ManufacturerHUAWEI,productHLYL-WXX9,boardHLYL-WXX9-PCB,BIOS1.09,EC1.9,IT8987.
+Ни Uniwill-регистры, ни RGB/HID и режимы современных Honor не переносятся.
+Прочитаны AGENTS.md, README модели, BacklightWindows/I2EcWindows/ControlWindows,
+KeyboardBacklight/cycle, GUI Win/Linux, sysfs adapter, WmiUtil/HardwareHal,
+заводская DSDT и EC из оригинального16-МиБ BIOS, исторические журналы.
+
+Точные сокращения путей далее:
+ SRC = src/devices/huawei/hlyl-wxx9/
+ DSDT = research/devices/hlyl-wxx9/honor-20261018/
+  Honor-diagnostics-20261018-4a4c9e25/acpi/DSDT-001-registry.dsl
+ EC = build/honor-analysis/ec-original.asm
+ OEM = build/honor-oem-analysis/
+ HIST = research/devices/hlyl-wxx9/honor-20261018/
+
+SHA256 исходного BIOS:
+ 38597994DC39ED17D57CEE8331AC107579B6FF186934CDBC873D3C5F363A806E
+WmiUtil.dll изPCManager11.1.6.31(модуль11.0.0.0):
+ AE4595E83180F4012BCD478730E58DD358AA5190462594532053AF551ED8FC7B
+HardwareHal.dll:
+ B8398B5E6C2EB6823BE323BC435B06F7D81E5E5CBBAE915A975A9F912D483B2B
+Полные paths/размеры/хэши и static snapshots — соседнийhonor.json.
+keyboard-working C# — пользовательский эксперимент, НЕ исходный Huawei OEM.
+
+2. ФАКТИЧЕСКИЕ РЕЖИМЫ / ЯРКОСТЬ / РАЗНЫЕ УРОВНИ ПОДТВЕРЖДЕНИЯ
+Белые уровни:02F4=0/1/2,03FC&C0=00/40/80,1804duty=0/50/100 приperiod1801=200.
+Это0%/25%/50% duty от полного PWMperiod, НЕ0/50/100% яркости и не четыре уровня
+Wujie. Светимость и потребление электрически не калиброваны.
+EC:52039–52059(file1647C) HIGH=period/2,LOW=period/4,иначе0.
+EC:50949–50975(file15C5E) nativehotkey циклически меняетlevel0→1→2→0,
+обновляет только03FC[7:6], вызывает тот же PWM setter. Других RGB/effects
+для этой exactклавиатуры найденные методы не подтверждают.
+
+HIST/native-backlight-0.1.28.txt:OFF→LOW→HIGH иHIGH вконце, native readback.
+HIST/keyboard-cycle-final-0.1.37.txt повторяет0/1/2 после удаления ошибочных
+GPIO output-level freeze guards. Пользователь прежде визуально подтвердил
+свет исходного рабочего пути. Это историческое физическое свидетельство;
+новая версия/20.10 на машине здесь не проверялась.
+Digital mirror1661.bit2 low/high подтверждает переключение PWM2 на пине,
+но не измеряет оптическую яркость и не доказывает исправность каждогоLED.
+
+3. I2EC: IDENTITY / GUARDS / FRESH MASK / ROLLBACK
+- SRC/I2EcWindows.cpp:33–45:exactprofile+BIOSVersionровно1.09 доportaccess,
+  SuperIO20/21=89/87,canary2000/2001=89/87;SPCTRL1low2=2readonly/3readwrite.
+  Режим интерфейса не включается автоматически. PawnIO DLL/LpcIO SHA pinned;
+  FileShare.Read предотвращает замену между проверкой и load.
+- Global Access_ISABUS.HTP.Method, bounded acquire; PNPCFG87/01/55/55,
+  release02/02. Читатели/писатели нашегоI2EC сериализованы этимmutex, firmware
+  и WMI PCManager в нём не участвуют; это не аппаратныйcompare-and-swap.
+- BacklightWindows.cpp:18–24:17hardware rules плюс6safety rules иGPIOC6.
+  Проверяютсяclock/period/PWMconfiguration/power/sleepgates, а не уровни чужих
+  GPIOA1/C0/E2/G1. Последние раньше давали ложныйsafetyEqual и уже исправлены.
+- Writes только02F4/03FC/1804, отдельныйallowlist отFANs. Не пишутсяflash,
+  timer rawaddresses,GPIOconfiguration или весь042C.
+- Важная перепроверка маски: I2EcWindows.cpp:63–70 САМ непосредственно перед
+ 03FCwrite делает(read03FC&3F)|(target&C0). Setter/rollback идут черезэтот
+  метод(Session::write:49–50). Следовательноlow6 не replay-ятся изстарого
+  snapshot. ownedStateEqual(maskC0) не единственное доказательство — freshRMW
+  действительно есть на транспортном уровне. Readback также maskC0.
+- Setter BacklightWindows.cpp:96–115:exactguards+legacyservice stopped,
+  двастабильныхснимка75мс,mirror,level→shadow→duty,500мс,guards+readback+mirror.
+  Rollback:116–127 проверяетsafety/config, original/attempted ownvalues и
+  возвращаетduty→shadow→level. Третьезначение не перетирается; неизвестный
+  откат логируется и возвращаетсякакнеподтверждённый. Он проверяетregisters,
+  не делает отдельную оптическую проверкуLED после восстановления.
+
+4. РОДНОЙ HWMI GLIV/SLIV И ПОЧЕМУ НЕ1306/1406
+DSDT:395–433 GLIVopcode0602 черезECmailboxC4 ожидаетECXD04/08/10 и кодирует
+ответbrightness0/50/100 вbyte2; иначеstatus1. SLIV:436–467 opcode0702 принимает
+KBBV0/2/4 и отправляетECmailboxC5+04/08/10. Это свой ABI, не нашI2EClevel0/1/2.
+На конкретном BIOS1.09 прежнийGLIV вернулошибку,SLIV ack не изменилсвет;
+нашкод этим acknowledgement яркостьнеподтверждает и не применяетэтикоманды.
+
+В exact WmiUtil11.0.0.0 функция ReadMemoryTrainingData180005bc0.c:4–7,65
+используетopcode1306. СовременныеHonor1306/1406 GKBM/SKBM нельзя включать
+только потому,что другойпубличныйдрайвер описываетихкакkeyboardmode.
+Сохранённыйgetter KeyboardMode1306 этоймашиныstatus1 не даёт разрешениеwrite.
+HardwareHal экспортKeyboard/GetKeyboardName не является RGB/effectsetter.
+
+5. GKBT/SKBT — ТАЙМЕР В ПРОШИВКЕ, НЕ HOST RGB CYCLE
+WMI u8Input[64], opcode littleendian, остатокнули.
+ GetterGKBT0x1206:06 12; ответstatus0 +secondsLE16(bytes1/2), минимум3байта.
+ SetterSKBT0x1106:06 11 secondsLow secondsHigh; минимумstatusbyte0.
+ Пример60с:06 11 3C 00...,0с:06 11 00 00...,3600с:06 11 10 0E...
+DSDT:1845–1858 принимаетseconds и сохраняет10*seconds вKBBL/KBBH.
+DSDT:1861–1876 читаетэто16битзначение,делитна10 ивозвращаетsecondsLE16.
+KBBH/KBBL ERAMoffset18/19 соответствуютXRAM0318high/0319low; не путатьпорядок
+сырыхECбайт сlittleendianформатомHWMI. 3600*10=36000 помещаетсяв16бит.
+OEM/WmiUtil/180004d70.c:50–56 и180004ef0.c:56–60 подтверждаюттотжеABIs.
+API/GUI диапазон0..3600.0 означаетнетnative idleoff,а не яркостьOFF.
+Историческийgetter0 не доказываетисполнение ненулевого таймера.
+
+Единицы API и tooltip: вход/выход HWMI — секунды, внутри EC хранится seconds*10,
+то есть десятые доли секунды по контракту DSDT. Надпись «сек» и диапазон0..3600
+в нашей карточке соответствуют этой конверсии; статического mismatch единиц
+не найдено. Реальную частоту scheduler/counter и точность таймера на стенде
+эта работа не измеряла. Native fade window+10 — десять внутренних ticks,
+а не дополнительные десять секунд; wallclock длительность здесь не заявляется.
+
+ECfile164D9:52089–52145 — роднойinactivity/dimmingpath:
+ guards/E5FB,power031A.0/042C.0/GPIOC6; timeoutraw0318:0319==0→return.
+ Дляненулевого:сравнениеelapsed02F8:02F9 сtimeout иtimeout+10;
+ после границы PWM1804 уменьшается ступенямиperiod/10, затем0.
+ Helper16623:52277–52286 вычисляетcurrentduty-period/10;
+ file164D9 пишеттолько1804 и не меняетselected02F4/shadow03FC.
+ Приperiod200 HIGH fade:100→80→60→40→20→0; LOW:50→30→10→0.
+ Сходство10ticks с1сек fade следуетизscale10, но wallclock tick/fade duration
+ в этой ревизии физически не измерялись. Не выдаватьточнуюдлительностьзаопыт.
+
+Activityfile164A3:52061–52088 при техжепитательныхguards,еслиPWM0, вызывает
+1647C ссохранённым02F4, затемобнуляетelapsed02F8/02F9. Не нужно имитировать
+activityчерезWin32таймерилиписатьrawelapsed. Nativecallsites/keyboardevents
+задаюткакэтап activity,но мышь/тачпад/внешняяUSBклавиатура отдельнонепроверены.
+Сон/инициализациятакжемогутобнулитьruntimelevel:EC40281(10EE4),42356(11ED3),
+а delayedrestorefile16545:52146–52177 декодирует03FC[C0] обратно в02F4.
+
+6. СТАРТ / EXIT / RESUME / SERVICE / LINUX
+- Honorread() вызываетобщийpureHWMIreadTelemetry() иотдельноI2ECbacklight;
+  readTelemetry() не входитPNPCFG. Это намереннаяграницаизолируемойдиагностики.
+- SharedKeyboardBacklight.cpp:model() допускаеттолькоWujie/GM6 иexactprotocol;
+  SettingsPage.cpp:291 не создаётKeyboardColorCycle приoemControlHonor.
+  Cycle6 не предназначендляwhitePWM; UIeffects/colors disabled,уровни0/1/2.
+- rememberChoice:SettingsPage.cpp:1005+ сразуreturn дляoemControl:непишет
+  WujieINI. НетHonor startup autoplay/brightnessrestore/exitreset. Firmware
+  hotkeys/idle/sleepостаётсявладельцемnativeповедения. ServiceLegacy
+  HuaweiKeyboardLight проверяетсяqueryonlyпередbrightnesssetter;неостанавливается.
+  PCManager/HWMI/firmware не блокируютсяISA-мьютексом. НашGlobalHWMIgate
+  сериализуеттольконашиHWMI sessions,неOEMPCManager.
+- Linuxтолькоhuawei::kbd_backlight/max_brightness==2 иbrightness0/1/2 при
+  правахwrite. Таймауттолькоеслиэкспортированkbdlight_timeout. НикакогоPawnIO/
+  I2EC,chmod или установкиkernelmodule. Старыйmainlinehuawei-wmi source не
+  доказываетподдержкуwhiteLEDэтоймашины;сохранённыйстороннийdriver дажеимеет
+  huawei::kbd_backlight max100 длядругогоautoAPI. Нельзя молчапереводить100в2
+  или писатьсовременные1306/1406. УспешногоLinuxHLYLlighttestнет.
+
+Linux upstream/fork различать явно. Корневой агент20.10 проверил текущий
+torvalds/linux drivers/platform/x86/huawei-wmi.c: в upstream LED setup есть
+только platform::micmute, GKBT/SKBT и kbd_backlight/kbdlight_timeout не найдены.
+Источник: https://raw.githubusercontent.com/torvalds/linux/master/drivers/platform/x86/huawei-wmi.c
+Следовательно наш sysfs адаптер требует реально предоставляющий эти атрибуты
+драйвер/fork на конкретной машине. Один загруженный upstream huawei-wmi не
+означает доступность подсветки/таймера; «Linux supported» без узлов экземпляра
+не заявляется. Сохранённый сторонний source не является этим upstream.
+
+7. КОНКРЕТНЫЕ НАХОДКИ
+K1 [P2] Native fade/idle OFF ошибочно запрещает чтение и управление.
+ SRC/BacklightWindows.cpp:78 требуетduty==duty(selectedlevel). NativeECfile
+164D9 уменьшаетactualdutyдо0,несбрасывая02F4/03FC (proofвыше). Поэтому
+ приselected2,shadow80,duty80/60/40/20/0 иvalidtimeout getterread():87 бросает,
+ keyboardWritableостаётсяfalse. GUI SettingsPage.cpp:1165–1166 отключаеткнопки.
+ Это статическидоказанныенормальныеfirmwarestates,неисследованнаяноваякривая.
+ Предложение:typedразделениеselectedlevel/actualduty/idlefade/idleoff; читать
+ корректныйnativeidleкакнаблюдение,а нерассогласование. Доказательствосостояния:
+ exactBIOS/canary/period200/config/powerguards,selected1/2,согласованныйshadow,
+ timeout>0,elapsed>=timeout иactualdutyнарассмотреннойfadeпоследовательности.
+ Всепрочиерасхожденияостаютсяunknown. Новыхwriteaddressesдляэтогоненужно.
+
+K2 [P2] Из разрешённого resume HIGH state доступны не все явные уровни.
+ readHlylBacklight():87 вызываетvalidate(value,true),допускаяlevel0,duty0,
+ (shadow&C0)==80 приостальныхguards. Ноsetter:102 вызываетvalidate(before,
+ level==2):OFF/LOW изэтогожеknownstate падают,толькоHIGH проходит.
+ Предложение:валидностьисходногоsnapshotнезависимаотrequestedtarget;тотже
+ ужеacceptedresumeHIGHsignatureможетслужитьbaselineдляявного0/1/2setter.
+ Не расширятьегонаrandomshadow/period/powerstate. ПрямоаналогичныйretainedLOW
+40 безснимка/проверкинеобъявлятьподтверждённымresumeexception. Передзаписью
+ boundedstableчтение;transitionsневыдаватьзаappliedlevel. Readback+PWMmirror
+ послеsetterсохраняются. Proposedfixнифизически,нивновомкодездесьнепроверен.
+
+K3 [P2] Ошибка выхода PNPCFG не доходит в успешный результат brightness setter.
+ I2EcWindows.cpp:15/20:destructorrelease()возвращаетошибкулогом,ноброситьне
+ может. BacklightWindows.cpp:115 успеваетзаписатьconfirmedиreturn;деструктор
+ вызываетсяпослеэтого. Приexitportfailure callerполучаетуспехбездоказанного
+ выходаизconfigmode. Dumpblock:59 ужеявнопроверяетrelease(),setterнет.
+ Предложение:явноcheckedfinishсессиипередпубликациейsuccess(включаяno-op);
+ destructor остаётсяfallback. НеубиватьпортовыйworkerпосерединеPNPCFG.
+ Это статическийerrorpath,отказпортаздесьнеинъецировался.
+
+K4 [P2/GAP] Обычный дамп недостаточен для разбора idle/resume.
+ DiagnosticDumpWindows.cpp:133–141 сохраняетRAM0..FFF иfanperiod1801/fanduty,
+ нонеkeyboardPWM1804/hardware16xx/18xx/mirror1661/точныеguardрезультаты.
+ PureHWMIreadTelemetryнамереннонечитаетI2EC;GTK/WindowsMonitoringSnapshot
+ неимеетструктурированногосостоянияwhitekeyboard. Sessionlogсодержитtimeout,
+ нонеобычныйkeyboardduty/fade/selected/shadowstate. Одних02F4/03FCвec.bin
+ недостаточно:светactual0можетбытьлегитимнымidle,аправильныйselected2сохранён.
+ Typed HlylBacklightState содержит лишь level/writable: internal snapshot duty
+проверяется, но наружу не возвращается. HlylFanDiagnostic читает fan PWM1808/1809,
+не keyboard PWM1804. Duty есть в log явного успешного setter, но это не текущий
+read-only sample обычного дампа и не временной ряд native inactivity.
+ Предложение:фиксированныйtypedreadonlykeyboardcontextвparentdumpдо/после
+ collection,внеубиваемогоtelemetryhelper. Не делатьSFRsweep иневключатьfull
+ read()визолируемыйworker. Всеraw/valid/error/timestampотдельно,беззаписи.
+
+K5 [P3] Availability не отражает занятую legacy service до нажатия.
+ readHlylBacklight():88 сообщаетwritableпоI2ECmode,requireLegacyStopped():31–38
+ вызываетсятольковsetter. ВрезультатеGUIможетпредложитькнопку,котораягарантированно
+ будетотклоненаприактивнойHuaweiKeyboardLight. Путьfailclosed,hardwareнепортит.
+ Предложение:readonlyserviceownerstatusвcapability/status;службынеостанавливать.
+
+K6 [P3/GAP] Таймаут не имеет собственного ownership-aware rollback.
+ ControlWindows.cpp:153–158 делаетgetter→setter→одинgetter. Приошибкепосле
+ acceptedSKBT прежнееsecondsне возвращается,неизвестноестояниенесообщается
+ отдельнорезультатомrollback. Brightnessrollbackвдругомметодеэто непокрывает.
+ Нуженboundedreadback/явныйunknown,условныйrollbackлишьсобственногозначения;
+ чужойизменённыйtimeoutнеоткатывать. Linux:HuaweiControlLinux.cpp:119–123 аналогично.
+ Физическиесрабатыванияtimeout>0ипереходыactivityещёнеподтверждены.
+
+8. ЧТО ДОЛЖЕН СОДЕРЖАТЬ ОБЫЧНЫЙ ДАМП
+keyboard.json/общаяtypedмодель,прежняякарточкабезредизайна:
+ exactSMBIOS/BIOS,IT8987ID/canary,SPCTRL1mode,transport/runtimehashes;
+ selected02F4,shadow03FCraw+ownC0+preservedlow6,actualPWM1804,period1801;
+ HWMI1206raw/status/HRESULT/seconds иrawKBBH0318/KBBL0319;
+ elapsed02F8high/02F9low,delayedrestore02F7,aux02F5;
+ guards042C.0/045C/180F.2/1823.1/031A.0/0400/GPIO1603.6 и17configrules;
+ fixedPWMMirror1661.2(optionalboundedobservation,noopticalclaim),legacyservice
+ state(ошибкапроверкинеравнаstopped),lastcommand/activecaller/readback/rollback;
+ explicitselected/effective/idle/resume/unknown иtimestamp каждогонаблюдения.
+ Snapshotстарого0.1.58:02F4=2,03FC=80,0318/19=0,02F8/9=0,031A=1,042C=0,
+045C=FF,0400=10;validmask1,но1804заRAMокномотсутствует. Необъявлятьсветпоэтому
+ dumpединственнымrawlevelдоказанным. ПереключениеUIмодели/CSVнеменяетисточники.
+
+ОГРАНИЧЕНИЯ РАБОТЫ
+Созданы только свои honor.txt/honor.json. Источники/UI/INI/EC/UEFI/SMU, драйверы,
+службы/portable не изменялись. GUI/CLI/OEM/tests/build/commit/SSH не запускались.
+Старые журналы описаны как исторические; proposed fix не выдаётся за новую проверку.

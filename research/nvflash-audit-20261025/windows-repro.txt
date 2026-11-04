@@ -1,0 +1,34 @@
+Test project C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows
+    Start 4: firmware_nvidia_synthetic
+1/3 Test #4: firmware_nvidia_synthetic ........***Failed    0.04 sec
+FAIL line 47: failed
+
+    Start 6: firmware_nvidia_contract
+2/3 Test #6: firmware_nvidia_contract .........   Passed    0.02 sec
+    Start 7: firmware_nvidia_collector
+3/3 Test #7: firmware_nvidia_collector ........***Failed    0.55 sec
+PASS synthetic scenario 0; saved=1; normal_reads=2; entire_reads=2
+PASS synthetic scenario 1; saved=0; normal_reads=2; entire_reads=0
+PASS synthetic scenario 2; saved=0; normal_reads=2; entire_reads=0
+PASS synthetic scenario 3; saved=0; normal_reads=2; entire_reads=1
+PASS synthetic scenario 4; saved=0; normal_reads=2; entire_reads=2
+PASS synthetic scenario 5; saved=0; normal_reads=2; entire_reads=2
+PASS synthetic scenario 6; saved=0; normal_reads=2; entire_reads=1
+PASS synthetic scenario 7; saved=0; normal_reads=1; entire_reads=0
+PASS synthetic scenario 8; saved=0; normal_reads=2; entire_reads=2
+FAIL both capture path
+
+
+33% tests passed, 2 tests failed out of 3
+
+Label Time Summary:
+firmware    =   0.61 sec*proc (3 tests)
+nvidia      =   0.61 sec*proc (3 tests)
+offline     =   0.61 sec*proc (3 tests)
+
+Total Test time (real) =   0.64 sec
+
+The following tests FAILED:
+	  4 - firmware_nvidia_synthetic (Failed)                firmware nvidia offline
+	  7 - firmware_nvidia_collector (Failed)                firmware nvidia offline
+Errors while running CTest

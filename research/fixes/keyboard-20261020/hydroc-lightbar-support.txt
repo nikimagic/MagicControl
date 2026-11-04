@@ -1,0 +1,109 @@
+HYDROC-16 G2 — точный бит поддержки Lightbar
+Дата: 2026-10-20. Только статическое исследование; production freeze соблюдён.
+
+Короткий ответ
+Родной MyEcCtrl.isSupportRGBLBFromEC проверяет EC0x78E.bit4 (mask0x10):
+1934 decimal ->0x78E; (Data &0x10)==16 ->return1, иначе0.
+Это флаг native RGB lightbar capability, не доказательство физической полосы
+и не универсальный допуск к HID hinge/logo. EC0x765.bit6 (mask0x40) —
+отдельный generic lightbar support в существующем X5SP4NAG контракте.
+Не подменять один бит другим и не переносить HID маршрут вWujie по аналогии.
+
+Exact источник
+ControlCenter5.23.51.56_Eluktronics_V4.zip SHA256:
+55f28ce14493ac678a7d5cf59050e34279ce0539172cbda16bce71d4e4f1b1b7.
+GCUService.exe SHA256:
+e5d388b45515d06567c2e71e4c2b882a1fa9313704d70785f19aec960e361003.
+Ниже имена файлов относительно:
+research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019/readable-csharp/
+Это recovered exact тела; старые decompiled-gcu runtime stubs не использованы.
+
+1. Прямой EC guard и coarse LightbarType
+020000FC-MyECIO.MyEcCtrl.cs:201–209 isSupportRGBLBFromEC:
+Read(1934), проверка0x10, return1/0.
+020002DF-MyControlCenter.MyRgbLightBarDefault.cs:338–346:
+второй самостоятельный isSupportRGBLBFromEC, идентичный адрес и маска.
+02000244-MyControlCenter.CustomizeCtrl.cs:534–548 Customize_Init:
+приECguard1 задаёт NvramVariable.m_supportLightBar=1,m_supportRGBLB=1,
+CustomizeInfo.m_sLightbarType="2", вызываетUpdateLightbarSupportItems;
+иначеLightbarType="0". Это coarse native RGBLB, не RGBKB_Type HID enum.
+02000257-MyControlCenter.NvramVariable.cs:897–927 Get:
+SupportByte ushort разбивается LE; num=array[0]>>4;
+m_supportLightBar=((num&4)==4)?1:0, то есть SupportByte.bit6.
+Затем отдельно EC78E.4 устанавливает m_supportRGBLB=1.
+Не доказано одной этой managed функцией, что UEFI SupportByte всегда является
+побайтным alias EC765; это независимый источник firmware данных.
+02000257-MyControlCenter.NvramVariable.cs:1120–1137 GetLightbarSupportType:
+0=noLightbar;1=m_supportLightBar1 иRGBLB255;2=RGBLB1;3 сохраняется отдельно.
+0200033D-MyControlCenter.OemServiceInfo.cs:40–85 Get:
+OemService "setapctrl /GetStatus" -> high nibble из позиции283,mask4 ->
+genericLightBar; EC78E.4 overrides RGBLB1, иначе отдельныйRGBLightbar query.
+Наш genericEC765.6 именован вsrc/protocols/uniwill/x5sp4nag/Registers.h:258–268;
+егоtoggle767.1/status768.1 не являются поддержкой HID и не относятся к78E.4.
+
+2. Отдельный HID Lightbar/hinge маршрут
+020000D7-LightingModel.LM_Manager.cs:89–116 LB_Init:
+создаёт LM_ITE_RGBLB, вызываетILM_RGBLB_Init(), успешный type из ITE.
+EC fallback в этомLB_Init отсутствует (в отличие отkeyboard LM_Init).
+020000DD-LightingModel.ITE_SPEC.cs:10–24:
+VID048D;LBPIDList7001,7000,6005,6008,6010;pageFF03.
+020000DF-LightingModel.LM_ITE_RGB.cs:4382–4499 ILM_RGBLB_Init():
+- PID7000/7001: HIDManager.Init(VID048D,PID,Usage2),FWquery80,
+  UsagePageFF03 ->MEZone_Lighbar4 иlogo/hinge subtypes;
+  FWmajor сам по себе не gate этой ветви; PID7001 additionally LB_VER_UP log.
+- Остальные nativeLB PID:Usage1 +pageFF03;FWmajor33 иBIOSIDN ->Lightbar3;
+  FWmajor24 ->Lightbar2;иначеBIOSIDY/IDP ->Lightbar1, прочееfalse.
+HIDManager exact Attributes/PID/VID/GetPreparsed/Caps/Usage checks:
+020000C9-UsbHidModel.HIDManager.cs:35–98.
+FW80:020000DF-LightingModel.LM_ITE_RGB.cs:1266–1303,
+[00,80,00,00,00,00,00,00,00], reply[2..5]major/minor/test/customer.
+Это protocol SetFeature+GetFeature, не пассивныйdescriptor query.
+Не выполнять OEMinit при сборе дескриптора и не выводитьFW80 изbcdDevice.
+
+020003F3-MyControlCenter.MyRgbKeyboard.HIDKeyboardFactory.cs:63–70:
+Lightbar1/2/3/4 ->отдельныеHIDLightbar classes.
+020003C7-MyControlCenter.MyRgbKeyboard.HIDLightbar4.cs:218–224 constructor
+вызываетGetDeviceSupport(rescanRegistry), а не выводитhinge/logo из78E.4.
+020000DF-LightingModel.LM_ITE_RGB.cs:4863–5070 GetDeviceSupport:
+приsaveResult дляBIOSIDA/IDB иIDX/IDZ посылаетA2feature,
+[00,A2,00,00,00,00,00,00,00], затемGetFeature, byte[2] ->source/pin code.
+IDA/IDB code->(hinge,base,logo,newlogo):
+7=(1,1,1,0),11=(1,1,0,1),6=(1,0,1,0),5/9=(0,1,0,1),
+10=(1,0,0,1),2/0=(1,0,0,0),1=(0,1,0,0),8=(0,0,0,1),
+3=(1,1,0,0),4=(1,1,1,0);defaultallfalse.
+IDX/IDZ:0/5=(hinge),1=(hinge+logo),4=(hinge+base+logo),
+6=(hinge+base),defaultallfalse.
+5031–5035 отдельноEC7AB.bit0 ->MBlogoSupport.
+5045–5063 ForceLogo/Base/Hinge/newlogo registry overrides могут включить
+флаги: cached/forced support не доказывает физическую комплектацию.
+SourceA2 не является одним универсальным bitmask по всемBIOSсемействам:
+таблицы семантики различаются, в частностиcode0 означаетhinge.
+Наш старый G2 BIOSbyte74C=C6 ->GetBiosProjctID IDY (mask0F/3Fдают6;
+MyEcCtrl.cs:427–457); поэтому перечисленныеIDA/B/IDX/Z sourcebranches
+дляэтогостарогодампа не подтверждаютhinge, применяются registry paths.
+
+Калибровка не выводится из78E.4:
+LM_ITE_RGB.cs:1375–1403 HID_Set_Color_14H выбирает cheatRGB_HIDLightbar,
+Lightbar2/3 поtypedfamily;Lightbar4 отправляетrawRGB сcontrolblank/save.
+WKDColor.cs:525/568/599 — отдельные функциикалибровки1/2/3.
+Таким образом capabilitybit недостаточен длявыбораpacket/codec.
+
+3. ИмеющийсяHYDROC EC snapshot (не новое аппаратное чтение)
+build/audit-logs-20261019/logs_HYDROC-16-ca5dbd707263/logs_HYDROC-16/
+dumps/dump-20261019-151330-0/{ec.bin,ec-valid.bin}
+Оба4096байт;valid[проверенныеадреса]=01:
+740=1A (Project26);74C=C6;765=E1;78E=FC;7AB=00;748=01.
+765 raw E1: (E1 & 40)=40 -> generic EC capability bit6 set.
+78E&10=10 ->nativeisSupportRGBLBFromEC returns1 поэтомуsnapshot.
+7AB&01=00 ->MBlogoECcapnotset.
+748=01 —не интерпретировать как доказательство присутствия/горенияполосы.
+EC dump SHA256:a2acf2d75c6e7ee0472fe42aa3e58703efe050b59b2b381d826855fa32e5a86d.
+EC valid SHA256:3431383721510cf1c211de027cf958c183e16db5fabb6b230eb284c85e196aa9.
+Дваcapset совместимы, но не разрешаютугадатьPID/Usage/FW/source,
+количествоLED/hinge/logo илифизическуюсвязьсразъёмом.
+
+Следующее нужное свидетельство: свежийpassiveHIDinventory фактическогоG2
+сVID/PID/UsagePage/Usage/FeatureReportByteLength иошибкамиполноты.
+FW80/A2 —отдельнаяявноразрешённаяtypedprotocolдиагностикапослеguards,
+не часть пассивногоdescriptor dump;вэтомисследованииневыполнялась.
+Производственныйкод,драйверы,EC/HID,UI,настройки,сборкиитестынезатронуты.

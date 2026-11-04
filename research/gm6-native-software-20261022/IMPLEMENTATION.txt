@@ -1,0 +1,15 @@
+GM6IR0C — программные и физические native-профили,22.10.2026
+
+Решение владельца: Office/Gaming/Turbo в программе повторяют физическую кнопку вместе с профилем вентиляторов; Custom включён в оба пути.
+
+Один applyNativeProfile обслуживает physical cycle и explicit software selection. Никакой новой копии FAN setters. setCpuPreset0/1/2 на exactGM6 выбирает native Office/Gaming/Turbo, возвращая0/0/0 overrides по существующему OEM пути. setPower на exactGM6 выбирает Custom с явно переданной тройкой, существующими пользовательскими кривыми, проверкой полной таблицы/flags/PL и сохранением gm6ir0c-power.txt после readback. Физическая кнопка сохраняет циклOffice→Gaming→Turbo→Custom и использует тот же успешно применённый Custom intent при возврате.
+
+Все операции проходят прежние exact board/feature/OEM admission, существующий gate/DeviceOperation, native APP check и epoch. Общая функция дополнительно отвергает сон и активную диагностику для software caller. Owned rollback сохранён. Батарея, GPU, NVRAM и напряжения не записываются.
+
+В UI три native-кнопки больше не требуют CPU-only fresh defaults/AC guard и могут работать там же, где физическая native-команда. Custom retains AC/PL4 guard. При нулевых overrides выбор определяется native flags и подтверждённым профилем, а не ложнымAuto. Кнопка Custom отражает nativeCustom. Геометрия/OSD/renderers прежние. В GM6 nativeBattery-profile треевые legacy percentage commands сейчас не выдаются; параллельный путь не добавлен.
+
+Разделение actual board строгое: новые software branches толькоmechrevo-gm6ir0c. GM5/L16 сохраняют CPU-only setters; физический AMD-cycle остаётся с прежним AC adapter branch. Wujie/Honor/HYDROC не расширяются. Economy иAuto сохраняют прежние отдельные команды, их физическое исполнение этим изменением не заявляется. Linux raw writer не добавлен.
+
+Логи: native_profile source=software_preset/software_custom/physical_cycle, затем общий requested/readback. Успех не объявляет измеренные ватты или обороты. GM6 CURRENT_CALC из0.1.154 сохранён.
+
+Статическая проверка: цепочка UI writePerformance→setCpuPreset→applyNativeProfile, Custom editor→setPower→applyNativeProfile, OEM176 FIFO→applyNativeProfile. Общий rollback и epoch admission не дублируются; выбор режима и duty/up/down преобразования сохранены. Тесты/GUI/аппаратные команды не запускались. Сборка и сверка portable — в VERIFICATION-0.1.155.json.

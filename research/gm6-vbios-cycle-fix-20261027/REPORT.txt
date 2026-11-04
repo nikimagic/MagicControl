@@ -1,0 +1,71 @@
+VBIOS capture and GM6 physical DC cycle,27October2026
+
+Evidence: Users_logs/logs_GM6IR0C (19).zip, archiveSHA256
+f5401d68f3432de21754af8eb81d678bd297333da16bfcdd2b3f6e9e9009a952.
+Full analysis: research/gm6ir0c-logs19-20261027/REPORT.txt and EVIDENCE.json.
+No hardware, GUI/mctl, driver, vendor reader or firmware tool executed here.
+
+VBIOS
+The captured0.1.210 session ended at eeprom_capacity after --check exit0,
+Restricted or unsupported, no geometry. No save_started, terminal result,
+Windows crash event or exit reason is available. Exact termination cause is
+not proven. This patch removes geometry as an ordinary-VBIOS prerequisite,
+not a claim to have reproduced that old crash.
+
+Shared GUI/CLI collector now performs ordinary VBIOS two-pass read/validation
+first. Only then performs optional entire-EEPROM capacity probe. Unknown or
+restricted geometry refuses entire and retains independently verified VBIOS.
+New mode_started and capacity_probe phase events bound the formerly silent
+transition. C++ unknown exceptions get explicit failed/cancelled result;
+failure metadata-save errors are also logged. This does not catch Windows
+access violations, external process termination or power loss.
+Repeat identity validation uses fresh OS physical devnode and fresh NVFlash
+list, exact PCI/IDs/index, with original NVML data only for missing segment.
+No repeated full NVML power/thermal query occurs between capture passes.
+No index0/display fallback; ambiguous/changed identity still aborts.
+Read allowlist List/Check/Save/SaveEntire/Compare, two matching SHA/size/shape,
+geometry admission and raw compare for entire, bounded leases/cleanup remain.
+Shared operation messages explain restricted capacity separately from VBIOS.
+
+GM6
+The physical button formerly repeated Turbo->Custom failure on DC. Shared
+pure nextNativeProfile accepts Custom availability. Exact GM6 physical cycle
+on DC/unknownAC now Office->Gaming->Turbo->Office. Skip reason enters log/OSD.
+AC retains Office->Gaming->Turbo->Custom. Explicit Custom/Minimal and their
+AC guards are unchanged, as are saved Custom PL/curves/slots and AMD cycle.
+A supply transition before an actual Custom apply is rechecked by existing
+guard; no unconfirmed DC PL values are written. Native checked journal and
+rollback remain; no new masks, registers, battery/ROM/firmware writers.
+
+Build isolation
+Initial primary build0.1.233 failed on pre-existing unfinished HPBSD edits:
+NativeFanCurveSupport and base virtual methods absent. These were present
+before this task and were not reverted, completed or staged by this task.
+Managed app worktree API returned Not a git repository for the parent context.
+A normal detached Git worktree was created at:
+C:/Users/admin/Documents/mechrevo_dsh/MagicControl-build-233
+Base0f9ec3b (complete0.1.232), plus only the seven task source/doc files.
+Common Build-All runs there and both results are staged into the actual
+primary working portable with the repository stagers. Primary failed session
+is retained honestly; isolated completed build and verified source provenance
+are recorded in VERIFICATION.json. No source state/session is forged.
+
+Verification: static diff review and git diff --check; no tests added/run per
+AGENTS.md. Reviewed shared inclusive20..100C/5..100% field bounds in both GUI;
+no FAN editor geometry/scroll/limits changed. Windows/Linux builds, actual
+portable version and four SHA256 hashes are recorded after successful build.
+
+Runtime restoration: Git checkout normalized pinned OEM INF line endings.
+The unmodified original runtime trees were copied byte-for-byte from primary
+to the isolated worktree; CMake pins/signatures remain mandatory.
+A restricted status-register message alone does NOT reject an otherwise
+recognized EEPROM ID and geometry; only missing/invalid geometry refuses entire.
+
+Completed common build0.1.233; both real Windows/Linux portable GUI+mctl
+updated and matched four build/session SHA256 values. Windows stager
+requires input staging and destination inside its workspace; verified EXEs
+were copied to primary build/verified-vbios-233/windows before staging.
+Linux binaries staged successfully; its unchanged old sidecar was replaced
+by a byte-for-byte copy of the verified isolated portable build-version.txt.
+No version value was invented/edited. Seven task source copies and all
+pre-existing source preservation hashes match.

@@ -1,0 +1,190 @@
+Honor HLYL-WXX9 — реальные stop100/95/85 и restart80
+20.10.2026. Только статический анализ. Корень ссылок — репозиторий MagicControl.
+
+КРАТКИЙ ПРАКТИЧЕСКИЙ ДОПУСК
+Существующий typed setChargeThresholds уже принимает80/100,80/95,80/85.
+Специальная нормализация в95/100 касается ТОЛЬКО входной пары0/100; прямой
+запрос80/100 она не меняет. Проблема нынешних кнопок — Windows SettingsPage:1364
+и Linux SettingsPage:71 передают end-5, а не fixed80.
+
+Готовый консервативный путь для интеграции: exactHUAWEI/HLYL-WXX9/HLYL-WXX9-PCB,
+BIOS1.09; свежий успешный GBCM1603 сообщает CMOD2,DTTS72 (наблюдённый профиль
+этой машины); GBTT1103 и GBCM thresholds совпадают стабильно. Затем только
+SBTT1003 с lower80/upper{100,95,85}; повторные GBTT/GBCM должны подтвердить
+пару и неизменные CMOD2/DTTS72. SmartCharge mode/DTTS самовольно не переключать.
+Неизвестный mode,4/6, изменившийся context, ошибка или disagreement getters —
+unavailable/unknown, без обещания fixed80 enforcement и без фонового enforcement.
+Статически mode1/3/5 тоже выбирают сохранённую пару, но они не проверены здесь
+физически; первоначальный допуск толькоmode2/72 не требует догадок об их смысле.
+
+Предел этого вывода: encoding и firmware selection доказаны исходниками;
+физический restart80 и циклы80/100,80/95,80/85 НЕ выполнялись. Нельзя объявлять
+низкий80 физически подтверждённым только по pair readback или старой пробе70/80.
+
+1. ТОЧНАЯ МОДЕЛЬ И ИСТОЧНИКИ
+Плата: HUAWEI/HLYL-WXX9/HLYL-WXX9-PCB, BIOS1.09, EC1.9, Ryzen5 4600H.
+Это не Uniwill/X5/GM6/HYDROC; регистры4/7 и их battery API не применимы.
+Прочитаны AGENTS.md, READMEHLYL, BATTERY.md и BatteryThresholds.h.
+
+SHA256 пересчитаны по локальным данным, OEM код не исполнялся:
+research/devices/hlyl-wxx9/honor-20261019/oem/PCManager/WmiUtil.dll
+ AE4595E83180F4012BCD478730E58DD358AA5190462594532053AF551ED8FC7B
+research/devices/hlyl-wxx9/honor-20261019/oem/PCManager/HardwareHal.dll
+ B8398B5E6C2EB6823BE323BC435B06F7D81E5E5CBBAE915A975A9F912D483B2B
+research/devices/hlyl-wxx9/honor-20261018/firmware/HLYL-WXX9_BIOS_1.09_ORIGINAL_16MB.bin
+ 38597994DC39ED17D57CEE8331AC107579B6FF186934CDBC873D3C5F363A806E
+
+Сокращения точных путей ниже:
+DSDT = research/devices/hlyl-wxx9/honor-20261018/
+ Honor-diagnostics-20261018-4a4c9e25/acpi/DSDT-001-registry.dsl
+EC = build/honor-analysis/ec-original.asm (получен из оригинального BIOS выше)
+OEM = build/honor-oem-analysis/
+HIST = research/devices/hlyl-wxx9/honor-20261018/
+Modified Hackintosh hlyl-reference.dsl не подменяет заводскую DSDT.
+
+2. SBTT/GBTT: БЕЗОПАСНОЕ КОДИРОВАНИЕ
+ROOT\\WMI/OemWMIMethod.OemWMIfun, Windows u8Input[64]. u64Input fallback
+упаковывает первые8байт little-endian в unsigned64 decimal BSTR. Выход u8Output,
+status byte0; проверять HRESULT, минимум длины и status, не один ack DLL.
+
+Set SBTT opcode0x1003:
+  input[0]=03,input[1]=10,input[2]=lower,input[3]=upper, остальные60байт=00.
+ 80/100:03 10 50 64 00 00 00 00... → ожидаемый GBTT00 50 64...
+ 80/95 :03 10 50 5F 00 00 00 00... → ожидаемый GBTT00 50 5F...
+ 80/85 :03 10 50 55 00 00 00 00... → ожидаемый GBTT00 50 55...
+Get GBTT opcode0x1103:03 11, остальные62байта00; output[1]=lower,[2]=upper.
+Это raw integer percentages, не EnumMode и не напряжения.
+
+Доказательства:
+- OEM/HardwareHal/180015080.c:15–17 передаёт первый/второй byte структуры в
+  SetBatteryChargeThreshlod. BtSetInformation180016700.c:11–15 подтверждает
+  тот же generic threshold путь, без дополнительного enable setter.
+- OEM/WmiUtil/180002c20.c:57–61 собирает lower вbyte2,upper вbyte3,cmd1003.
+- DSDT:713–745 пишет BCCL/BCCH без allowlist конкретных пресетов. Только0/100
+  имеет особую ветку0/0; для80/100,80/95,80/85 выполняется обычная копия пары.
+- SRC protocols/huawei/Hwmi.h:13–17 реализует именно этот layout.
+  ControlWindows.cpp:setChargeThresholds проверяет0<=start<=end<=100,end>0;
+  нормализует start только приstart0,end100. Поэтому80/100 остаётся80/100.
+
+3. КОНТЕКСТ SMARTCHARGE: ПАРА НЕ ВСЕГДА ЭФФЕКТИВНА
+В DSDT SBTT пишет только BCCL/BCCH. Он НЕ меняет CHAM/DTTS и не выключает
+SmartCharge автоматически. В текущем адаптере нет вызовов1503/1603: режим и
+DTTS сохраняются по факту отсутствия записи, но пока не проверяются API.
+
+GBCM opcode0x1603 нужен как read-only admission/context getter:
+  input03 16, далее62нулевыхbyte;
+  output[0]=status,[1]=CMOD,[2]=DTTS,[3]=lower,[4]=upper.
+  Минимум5байт/status0, mode/DTTS не трактовать как проценты порога.
+  HIST/Honor-diagnostics.../wmi-getters.json: SmartCharge
+ 00 02 48 46 5A... означает mode2,DTTS72,70/90; GBTT вернул00 46 5A...
+
+SBCM opcode0x1503 — ДРУГОЙ setter:
+  input03 15 CMOD DTTS lower upper, далее нули.
+  DSDT:2085–2099 пишет сразу CHAM/DTTS/BCCL/BCCH.
+  DSDT:2102–2116 задаёт формат GBCM. Нельзя передаватьlower/upper через
+  обычный двухаргументный command(1503,lower,upper): тогда будут записаны
+  CHAM/DTTS, а thresholds окажутся нулевыми. В этой работе1503 не вызывается.
+
+OEM/WmiUtil/1800048a0.c:58–87:
+- mode0 отклоняется(-23); это не доказанный «disable mode0» через OEM DLL.
+- flag useDefaults=true заменяет DTTS на0x48(72), а thresholds берёт из таблицы.
+- При useDefaults=false сохраняет переданные DTTS/lower/upper в packet1503.
+  Не вызывать native defaultmode2,true ради80/upper: он вернёт70/90.
+OEM/WmiUtil/180004a70.c:51–58 читает1603 и возвращает только mode, если<7;
+наша диагностика должна сохранять полный ответ, включая DTTS/пару/status.
+
+Таблица извлечена статически из этого самого WmiUtil.dll:
+baseRVA0x12798; modeN: DWORDlower atbase+8*N, DWORDupper atbase+8*N+4;
+соответствующий rawbase0x11198. Mode0 не действителен по функции выше.
+ mode1 40/70; mode2 70/90; mode3 95/100; mode4/5/6 40/70.
+Названия enum этихmode не восстановлены как доказанный UI словарь; не
+называть их «дом/офис/путешествие» только по знакомым процентам.
+
+4. ОРИГИНАЛЬНЫЙ EC: ПОЧЕМУ CMOD2 ДОСТАТОЧЕН, А4/6 ОПАСНЫ ДЛЯ ОБЕЩАНИЯ
+DSDT ERAM@FEDD8300 содержит BCCL/BCCH offset5C/5D; WRAM@FEDD8200 содержит
+CHAM/DTTS offsetAE/AF. Исходный EC и старый4096-byte dump согласуются с
+XRAM035C/035D и02AE/02AF. Эти адреса — исследовательское доказательство;
+код управления должен использовать HWMI, не открывать новый raw writer.
+
+EC:23231–23247 (code9CA8) при BCCL=BCCH=0 записывает CHAM4 и40/70.
+Поэтому прежнее краткое «raw0/0=disabled» неполно: это особый reset/disable
+request, после которого firmware может восстановить defaultSmartCharge4/40/70.
+0/0 нельзя обещать устойчивым сохранённым состоянием. Это объясняет прежнее
+наблюдение0/100→40/70; direct80/100 эту specialbranch не запускает.
+
+EC:23248–23282 и helperC8FA:29283–29286:
+  if(CHAM!=4 && CHAM!=6): effective= BCCL/BCCH.
+  if(CHAM==4 || CHAM==6):
+      if(counter16(03C8:03C9)<DTTS || XRAM0348.bit2==1):
+          effective=0/100 (08DA/08DB);
+      else effective=BCCL/BCCH.
+Counter03C8 high/03C9low сравнивается с byteDTTS; единицы этого счётчика не
+доказаны здесь, не называть72 секундами. Getter1603 не возвращает counter/bit2.
+Поэтому по одному CMOD4/6+DTTS без raw effective наблюдения нельзя определить
+исполнение fixedpair. Безопаснее отказать этимmode, а не переключать их самому.
+
+Для CMOD2 DTTS вообще не участвует в выборе effectivepair. Статически это
+верно при любом DTTSbyte; консервативная первоначальная интеграция может
+требовать наблюдённый DTTS72 и неизменность контекста. Mode1/3/5 попадают в ту
+же прямую ветку, но exactinstance физически подтверждён в контекстеmode2/72.
+
+Проверенный только чтением старый dump0.1.58:
+build/honor-deep-0.1.58/results/logs/dumps/dump-20261019-065345-0/
+ 02AE=2,02AF=72,035C=70,035D=90,08DA=70,08DB=90; validmask=1 для каждого.
+Нули05C/05D в началеXRAM не эти поля: нельзя переносить AMLoffset без base.
+
+EC:23373–23406 переносит effectivepair и выставляет internalvalid gate после
+стабилизации, а код9DFE/9E66 использует её в charging state machine.
+EC:23429–23433 и helperC901:29287–29291 сравнивает RSOC с lower черезстрогое
+RSOC<lower; upperhelperC8A8:29231–29237 и ветки9E66/9E9F различают>=,>,==
+в зависимости от state. Это статическое обоснование гистерезиса, не разрешение
+писать internal31B/4A4/chargerbits и не гарантия остановки ровно наGUI80/85.
+Термозащита, AC/batteryflags и прочие ограничения остаются в state machine.
+
+5. ЧТО УЖЕ ДОКАЗАНО ФИЗИЧЕСКИ, А ЧТО НЕТ
+HIST/charge-stop-ac-20261018.txt:
+ 70/90→70/80 при заряде>80 иPowerOnline=true:
+ ChargeRate20984→16482→0mW; Chargingtrue→false; вернули70/90.
+ Это доказывает управление верхним cutoff через arbitrarypair, не restart80.
+HIST/native-charge-travel-ac-0.1.29.txt:
+ 95/100 принято дважды, затем70/90 восстановлено — readback.
+HIST/charge-full-mode-ac-0.1.34.txt:
+ 95/100 наAC реально заряжало≈4.3W с ростомRemainingCapacity34265→34273;
+ вернули70/90. До100% батарея тогда не доведена.
+Ранний charge-full-mode-current-20261018.txt былPowerOnline=false и не
+считается подтверждением зарядки от сети.
+
+НЕТ физического доказательства полного цикла80/100,80/95,80/85, restartпри
+пересечении80, удержания после reboot/sleep или нового20.10 сеанса. Сохранённая
+пара и firmwareeffectivepair не заменяют измерение напряжения/тока/ёмкости.
+
+6. ЧТО СОХРАНЯЕТ НАШ АДАПТЕР И КАК ИНТЕГРИРОВАТЬ БЕЗ НОВОГО РЕЖИМА
+Текущий typed Win/Linux setter уже несёт реальные start/end, а не enum mode.
+Общий BatteryThresholds.h проверяет пару, два совпадающих чтения и bounded
+verify/rollback. Windowsrollback возвращает исходную пару лишь если actual
+равна нашей target; thirdpair/неизвестныйtransport не перезаписываются.
+Linux отслеживает частичные start/end writes и проверяет owncomponents.
+Никаких FANs/APU записей. Honor не сохраняет эти значения в WujieINI и не
+самовосстанавливает их на старте: после явного setter значение хранит firmware.
+
+Для нового единого пресета достаточно общему caller передавать80,upper вместо
+upper-5, сохраняя форму/шрифт/цвета/скролл Wujie. Но для ограниченного допуска
+к обещаниюfixed80 добавить read-only1603 перед/после и stablecontextmode2/72.
+Чужое изменение SmartCharge контекста не откатывать1503 вслепую; setter пишет
+толькопару, поэтому принадлежность этой пары не доказывает принадлежностьmode.
+Подсветка выбранного preset должна требовать иupper,иlower80, а не одинchargeEnd;
+иначе старые95/100 и80/100 выглядят одинаково. Live readback/неизвестное/реальное
+исполнение разделять в существующей statusстроке, без новой карточки.
+
+Если policycontext4/6 нужно поддержать позднее, требуется отдельный разбор/
+согласованная проба mode semantics; не выводить режимизназвания100% и не
+менять CMOD/DTTS радиuniformUI. Read-only guard позволяет обойтись без такого
+самовольного переключения уже сейчас. Linuxsysfs thresholdpair можетзадаться,
+но существующийdriver не обязан экспонировать SmartChargecontext1603: без
+подтверждённого read-onlycontext не обещать тот же restricted enforcement.
+
+ГРАНИЦЫ ВЫПОЛНЕННОГО
+Созданы только этот отчёт и соседнийhonor.json. OEM/BIOS исследовались какданные;
+программированиесостояний не выполнялось. Productioncode,UI/settings,EC/UEFI/
+SMU,driver/services,portable не менялись; GUI/CLI/OEM/tests/build/commit/SSH
+не запускались. Интеграция принадлежит корневому агенту.

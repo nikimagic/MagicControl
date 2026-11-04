@@ -1,0 +1,94 @@
+Typed diagnostic FAN restoration / 2026-10-20
+
+Source-only implementation. No GUI, tests, builds, drivers, OEM programs,
+SSH or hardware commands were executed by this agent. Wujie card geometry,
+scrollbar, palette and controls are unchanged. No HYDROC/Unknown/Linux writer
+was enabled. Root owns DiagnosticDumpWindows/common orchestration/lifecycle.
+
+Modified model APIs:
+  src/devices/mechrevo/gm6ir0c/ControlWindows.{h,cpp}
+    Gm6Controller::prepareDiagnostic() -> FanDiagnosticSession
+  src/devices/huawei/hlyl-wxx9/FanControlWindows.{h,cpp}
+    HlylFanController::prepareDiagnostic() -> FanDiagnosticSession
+    hlylFanController() -> shared_ptr<HlylFanController>
+  src/gui/windows/FansPage.cpp
+    Honor controller ownership is shared_ptr and uses that exact-board factory.
+    No renderer/layout changes.
+
+Integration contract
+Prepare runs under the caller's DeviceOperation reservation, takes the model
+mutex, captures pre-dump actual/owned state and selects firmware Default. The
+returned session keeps the SAME controller alive. End-of-data restore callback
+takes its own DeviceOperation and model mutex, checks explicit FAN-command
+generation, fresh Default baseline, board/transport guards and the shared
+diagnosticFanEpoch. GUI WM_POWERBROADCAST invalidation is supplied by root;
+the model checks it after admission and again immediately before target writes.
+This epoch covers that GUI lifecycle, not an exclusive lease against arbitrary
+external firmware/OEM changes. Exact live guards remain mandatory.
+
+A newer explicit command/power epoch returns superseded=true, no old replay.
+Foreign/unknown Default mismatch is an unconfirmed failure, not superseded.
+An already-consumed callback is separately refused, not misreported as a new
+user command. Default-before-dump has a guarded no-write confirmation callback.
+Unknown/foreign pre-dump state has no restore callback and is labelled honestly.
+Root decides cancellation/GUI-close/failed-diagnostic-cleanup policy; models do
+not replay an old mode on those orchestration paths independently.
+
+GM6IR0C details
+Successful public FAN setters advance a separate fanCommandGeneration (before
+hardware admission); diagnostic Max/factory operations do not masquerade as
+new explicit requests. Default invalidates previously remembered native owner.
+Manual remembers exact actual masked flags/RAM only after successful readback;
+prepare matches that live map before accepting it as ours. Draft CSV is never
+the captured source. Only existing native FAN fields are used, and reserved
+Down[0] is excluded, as in the setter. No CPU PL/battery/lighting payload is
+replayed. Boost owns only751.6; it never adopts an underlying foreign RAM table.
+
+Online ownership is checked against its current expected map, then captures
+actual native RAM/flags plus controller curves, selected channels, linked mode,
+hysteresis levels and template. A mismatch is foreign, not permission to replay.
+After fresh Default comparison, restore uses readback-verified masked writes
+and enables commit last. Online requires fresh Intel DTS/NVIDIA temperatures,
+restarts through driveOnline with current thermal protection, and bases future
+owned cleanup on the diagnostic Default baseline rather than a stale dump.
+Failed writes perform ownership-aware journal rollback with fresh writer guard;
+rollback errors reach the restore result and needsRestore, not just the log.
+Ordinary firmware RAM changes while Default is active are not compared to the
+old table: the baseline check covers Default mode flags/context, and only OUR
+saved Manual/online table is eligible for replay.
+
+Honor HLYL-WXX9 details
+Capture accepts only owned && !releasePending && manual.bit1 with the exact
+requested raw target pair. It records the actual targets through I2EC and
+checked PNPCFG finish. Manual means fixed PWM, Max means owned100/100; it is
+not a Uniwill autonomous RAM curve. A foreign Manual can be explicitly released
+to diagnostic Default, but its targets are never saved as our replay intent.
+
+The callback reuses fixed() admission: fresh CPU<80C, native power/PWM guards,
+fresh Auto bit and the exact post-Default target baseline, checked target/PWM
+readback and checked finish. A failed finish keeps cleanup pending and cannot
+publish success or blindly write into the poisoned session. New explicit
+setFixed/setAutomatic increments commandGeneration even when admission fails.
+Restoration confirms command/PWM readback, not physical RPM response.
+
+The shared Honor factory is essential: previously a temporary dump controller
+would restore fixed PWM and immediately release it in its destructor. GUI and
+dump now share one watchdog owner. A GUI-owned pre-dump request remains alive
+after the diagnostic session is destroyed. CLI has no earlier owned GUI manual
+intent; process exit still retains the existing Honor safety policy of releasing
+its own fixed mode. This change does not introduce persistent unattended CLI
+Manual or alter model exit safety.
+
+Limitations
+No new hardware confirmation. Fresh state/readback cannot detect an external
+actor that changes fields away and back between samples. Shared DeviceOperation
+is application serialization, not exclusive firmware ownership. Existing GUI
+typedStateGeneration covers GUI requests only; backend diagnostic changes are
+observed by ordinary polling, not falsely claimed as a new UI request epoch.
+Root is responsible for serializing final restore after all probes/data and
+for skipping it after cancel, GUI close, or unknown diagnostic cleanup.
+
+Validation
+Static diff/source review and git diff --check for the five source files and
+this report. Build, Windows/Linux portable staging, SHA verification and commit
+are delegated to root after integration. No runtime success is claimed here.

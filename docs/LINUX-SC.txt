@@ -1,0 +1,52 @@
+Sc — поворот встроенного экрана в MagicControl407
+
+Одна операция DisplayRotationOperations используется Windows и Linux: новое
+нажатие добавляет180° к текущей ориентации, повторное возвращает исходную.
+Сохраняется паритет дополнительных нажатий во время переключения. Исполнитель
+ResourceWorker общий, в GUI нет потоков. OSD показывает начало и результат;
+успех означает повторное чтение нужной ориентации, а не только exit code helper.
+
+Linux:
+- KDE/Plasma Wayland: kscreen-doctor --json -> output.ID.rotation.VALUE -> новый
+  JSON. Нужен установленный kscreen-doctor из штатного пакета KScreen.
+- X11: xrandr --query -> --output INTERNAL --rotate VALUE -> новый query.
+  Нужен штатный xrandr. Wayland никогда не подменяется XWayland/xrandr.
+- Другие Wayland compositors: пока нет native display adapter; явный отказ.
+  GNOME/Mutter и wlroots writer в этой версии не подключены.
+Только одна активная внутренняя Panel/eDP/LVDS/DSI. Внешний/первичный монитор не
+является заменой встроенной панели. Неоднозначность, исчезновение/сменаidentity,
+отражённая/неизвестная ориентация и несовпадение readback дают ошибку.
+Не меняются mode, частота, primary, scale и расположение других мониторов.
+Вызов helper без shell, с отдельными argv, invariant locale,10-секундным deadline;
+модель не зависает без срока в системном процессе. На железе здесь не проверялось.
+
+Клавиша в фоне/трее:
+Используется org.freedesktop.portal.GlobalShortcuts. Сессия принадлежит приложению,
+preferred_trigger=XF86RotateWindows. Рабочий стол может показать диалог разрешения
+и назначения Sc. После разрешения событие не зависит от фокуса MagicControl.
+Отказ/отсутствие portal отражается в display_rotation log. Пока binding не принят,
+есть GTK key-release fallback при фокусе приложения. При активном portal он отключён
+для предотвращения двойного поворота. Activated/Deactivated отсекают auto-repeat.
+Программа не перехватывает /dev/input, не собирает нажатия и не просит root.
+При выходе закрываются request/session, отписываются сигналы, life guard защищает
+поздние callbacks. Закрытие в трей сохраняет активную binding как Windows.
+
+Драйвер:
+Sc на исследованном Uniwill сообщает OEM event0xD0 (208). Чтобы Linux/compositor
+видел физическую кнопку, kernel driver должен выдавать KEY_ROTATE_DISPLAY.
+На старом драйвере0xD0 может быть KEY_UNKNOWN — MagicControl его не переопределяет.
+Приложение не загружает/не патчит kernel modules и не пишет в EC. Патч upstream
+не доказывает его присутствие в установленном ядре; это требует физического лога.
+Сырой KEY_UNKNOWN нельзя безопасно считать Sc. Глобальную binding можно назначить
+в системном portal, но это не заменяет отсутствующий kernel keymap.
+
+Источники интерфейсов (первичные):
+KDE doctor:
+https://github.com/KDE/libkscreen/blob/master/src/doctor/doctor.cpp
+JSON schema и Panel/Rotation:
+https://github.com/KDE/libkscreen/blob/master/src/configserializer.cpp
+https://github.com/KDE/libkscreen/blob/master/src/output.h
+GlobalShortcuts contract:
+https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.GlobalShortcuts.html
+Uniwill Sc event/key mapping, kernel patch08.10.2026:
+https://lkml.iu.edu/2610.1/01137.html

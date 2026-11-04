@@ -1,0 +1,114 @@
+GM6IR0C — исправления по статической ревизии
+19.10.2026. База поручения c4ad921 / portable0.1.76.
+
+Область записи этого агента:
+src/devices/mechrevo/gm6ir0c/ControlWindows.h/.cpp,README.md;
+src/protocols/uniwill/gm6ir0c/Registers.h;
+настоящий отчёт. Frozen audit не изменялся.
+Общий GUI, core/platform, настройки, драйверы и shared docs агент не редактировал.
+Тесты, сборки, GUI, EC/HID/hardware, SSH и OEM EXE/DLL не запускались.
+
+1. GM6-05: CPU-only пресеты SETs вместо комплексного OEM режима
+
+Исследованы точные источники ДО выбора схемы. Числа из AMD/Wujie не применялись.
+Активный источник:
+build/research-gm6ir0c/decompiled-oem-active/
+MyControlCenter.MyFan.MyFanManager_RamFan1p5.decompiled.cs:2876–2924.
+GetGamingPLDefaultValue читает730/731/732 + соседний733 DState;
+GetOfficePLDefaultValue читает734/735/736 + соседний737 DState;
+GetTurboPLDefaultValue читает7A7/7A8/7A9 + соседний7AA DState.
+PL1/2/4 writes отдельно подтверждены OEM SetPL1/2/4Value:2655–2668.
+
+Exact архив:
+build/research-gm6ir0c/Mechrevo-Research-GM6IR0C-20261017-215647.zip,
+внутри files/ProgramFiles-OEM/Control Center/UniwillService/MyControlCenter/
+UserPofiles/Mode1_Profile1.json: Gaming75/75/200,
+  SHA2563029cb01ead026f2952493bb26f4e0e8832898b65374e7f7f1aafd6ac682efc5;
+UserPofiles/Mode2_Profile1.json: Office45/45/200,
+  SHA2561926d320af43aaedf69319173fcdedaa9e90e0faf079b481ddf7a1717f049f37;
+UserPofiles/Mode3_Profile1.json: Turbo140/165/250,
+  SHA25623bf3a044f4f018ceec91d44ddc589ec8e242ca7205743ea16a492edc1a40e54.
+В ветке Mechrevo Control Center/AiStoneService те же тройки. PL1/PL2_Enabled
+в этих JSON=false; это данные/источник, не доказательство исполнения CPU-only.
+
+Схема согласована с родительским агентом ДО реализации:
+- setCpuPreset(0Office,1Balanced/Gaming,2Turbo) свежо читает соответствующую
+  тройку из firmware default registers, проверяет границы и порядок, пишет
+  ТОЛЬКО783/784/785, затем подтверждает всю тройку readback.
+- Архивные45/75/140 и прочие ватты не подставляются при отсутствии данных.
+- Нулевые, частичные/выходящие за reviewed bounds или ошибочные defaults
+  оставляют этот пресет unavailable; необоснованной factory fallback нет.
+- Это application CPU PL preset using firmware defaults. Это НЕ native
+  whole-system Office/Gaming/Turbo, который связан с FANs/GPU/TCC.
+- AC-only и запрет неизвестного PL4 Double сохранены;0/0/0 как явный Manual
+  reset возвращает только CPU overrides прошивке, а не означает0Вт.
+- Max bounds140/165/250 и минимум10 взяты из exact OEM Fan/Status на этом
+  GM6; они не объявляются физически измеренными/эффективными лимитами CPU.
+- Нет stopOnline, putTables,751 writes, commit/custom/light/respective/FAN
+  writes. Online продолжает тот же intent и собственные RAM/flags.
+- Старый setMode(int) теперь только совместимый вызов setCpuPreset: забытый
+  старый потребитель больше не может переприменить FANs из SETs.
+
+Actual state отдельно от native mode:
+Gm6State.mode — прежнее наблюдение whole-system751, не выбор CPU-кнопки;
+Gm6State.cpuPreset —0/1/2 только при одном совпадении actual overrides с
+прочитанными валидными defaults. Нет совпадения/неоднозначность/Auto=>-1.
+Gm6State.cpuPresetLimits[3] — optional<array<int,3>>, доступность каждого пресета;
+Gm6State.cpuPresetWritable — OEM writable, AC подтверждён, известен хотя бы
+один PL-пресет, PL4 Double отсутствует. GUI дополнительно проверяет optional
+именно своей кнопки. Gm6State.cpuPresetStatus объясняет ограничения.
+Новые observation logs сохраняют source registers/default triples/actual
+limits/совпадение/writable, но не выполняют никаких writes.
+
+2. GM6-02: сохранение Manual draft в typed backend
+
+setPower(array<int,3>) теперь выполняет общую CPU-only механику:
+validated values -> точный guard и transaction -> PL writes -> readback ВСЕЙ
+тройки -> savePortableText(portableSettingsPath("gm6ir0c-power.txt"),text,error).
+Формат прежний,3 ASCII целых через пробел и newline.
+Общий savePortableText добавлен родительским агентом в PortableSettings,
+повторно использует существующий temp+checked write/flush/close+atomic replace.
+Свою дублирующую файловую механику модель не создавала.
+
+Ошибки save/write/readback приводят к явной попытке rollback только наших
+неизменённых PL fields. Journal теперь возвращает ошибку rollback; она
+присоединяется к ошибке операции и журналируется, не теряется в destructor.
+Перед каждым CPU rollback-write заново проверяются exact guard/OEM owner.
+Если поле уже исходное, оно не записывается; если не исходное и не наше,
+старое значение не навязывается, возврат считается неподтверждённым.
+Файловая ошибка не объявляется удачным сохранением. Другие EC функции,
+батарея, FANs и подсветка в rollback CPU-операции не участвуют.
+
+loadPowerDraft(string& error) предоставляет typed read-only API для GUI:
+optional<array<int,3>>, отсутствие файла=>nullopt+empty error; открытие,
+формат/полнота/размер>4096/границы дают явный error. Никакой записи при чтении.
+CPU preset не заменяет сохранённый ручной черновик и не включает power restore
+на старте/после сна. GUI должен убрать прежний собственный truncating ofstream
+и прочитать/показать typed draft, не выдавая75/75/200 за factory fallback.
+Эту общую SettingsPage интеграцию делает родительский агент.
+
+3. GM6-01: plateau отдельно от observed fan response
+
+Используются новые shared FanMaximumResult.commandApplied/responseObserved,
+добавленные родительским агентом. readbackConfirmed устанавливается только
+при commandApplied&&restored, а fanResponseConfirmed только при
+commandApplied&&responseObserved&&restored. settled больше не используется
+для утверждения физической реакции. Если baseline ужеMax, стабильность без
+изменения не выдаётся за наблюдение реакции. Без возврата успех не фиксируется.
+Сам masked751.6 Boost setter и30-секундный sampling policy модель не меняла.
+
+4. ГРАНИЦЫ / ОСТАВШЕЕСЯ В ОБЩЕЙ ОЧЕРЕДИ
+
+Fresh factory FAN mailbox dump — следующая общая работа/HYDROC агент;
+эту механику GM6 агент не дублировал. Shared SSD provenance — общая правка.
+UI сохраняет Wujie эталон: новые страницы, controls, геометрия и скролл
+не создавались/не редактировались. Shared docs нуждаются в уточнении:
+  GM6 SETs CPU presets не whole-system OEM mode и не переприменяют FANs;
+ 0x751 native mode остается observation, cpuPreset отдельный PL-readback;
+ Manual draft хранит typed controller через общий атомарный writer;
+ plateau не является физической реакцией на Max.
+
+Физическое применение PL через firmware на GM6 этой работой не измерялось.
+Readback означает только значения EC; не утверждается гарантированное
+MSR/RAPL enforcement, не измерялись ток/зарядка/новые RPM. Бинарники и portable
+этот агент не собирал/не обновлял, итоговая сборка принадлежит родителю.

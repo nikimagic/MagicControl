@@ -1,0 +1,127 @@
+Исправления Wujie / X5SP4NAG после ревизии
+Дата:19.10.2026. Базовый контрольный коммит:c4ad921.
+
+Область изменения
+Только три файла модели:
+  src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp
+  src/devices/mechrevo/x5sp4nag/windows/BatteryChargeWindows.cpp
+  src/devices/mechrevo/x5sp4nag/windows/ConfigurationRestoreWindows.cpp
+Исходный аудит research/audits/models-20261019/wujie.txt не менялся.
+UI, общие механизмы, геометрия карточек, шрифты, скролл и пользовательские
+INI/CSV не изменялись этим агентом. Wujie остаётся визуальным эталоном.
+
+W1 / P1 — владение FANs
+FanControlWindows.cpp:409+ проверяет шесть реально принадлежащих FANs масок:
+7C6.2 /741.0 /727.6 /726.7 /7C5.7 /751.6. APU mode bits751, пульсация7C5,
+camera727 и прочие соседние поля не считаются чужой сменой FANs.
+Каждое несовпадение перепроверяется до трёх раз с паузой20мс. Ошибка чтения
+или нестабильное чтение — FanFlagsUnavailable, а не подтверждённый перехват.
+Каждый проход online проверяет флаги под общей EC transaction перед возможной
+записью Duty, включая неизменившийся target. Периодического обхода RAM96байт нет.
+
+Обычный Manual poll больше не переводит несовпадение в recovering/rearm.
+Подтверждённая внешняя смена прекращает управление, очищает actual confirmation,
+освобождает lease и не вызывает Default/rollback таблиц или gates. Отложенный
+APP presence после прекращения по чужой смене очищается. Возврат ресурса службы
+GCUBridge остаётся прежним освобождением lease, не нашей EC записью.
+
+Unknown ownership останавливает записи текущего прохода и снимает confirmed.
+Intent сохраняется для read-only повтора, ownershipUnknown заставляет повторять
+чтение до свежего результата, не публиковать confirmed в следующий тик без него.
+Если неизвестен владелец явной команды, она завершается ошибкой без слепого
+Default. Generic error cleanup тоже не пишет EC при невозможности проверить
+владение. Разрешённый rearm после подтверждённого сна сохранён отдельно.
+
+W2 / P2 — откат батареи
+BatteryChargeWindows.cpp:105+,238+:
+- Живые upper/lower перед записью сверяются с исходными own masks под короткой
+  transaction. Платформа также read/compare/write под одним gate.
+- WMI read/compare/masked write/readback сериализованы одним EcAccess gate на
+  попытку; соседний byte и status bit7 сохраняются. Вся10с активация не держит
+  общий transaction непрерывно; обычный online между короткими попытками работает.
+- Rollback восстанавливает только поля, запись которых пыталась эта операция.
+  Если masked current уже original — no-op; если current равен нашему значению —
+  возвращает original mask; третье значение сохраняется как чужое изменение.
+- Для WMI rollback используется low7, не0xFF. Повторная команда активации при
+  уже исходном WMI значении не отправляется. ROM/platform context проверяется
+  перед каждым возвращаемым полем. Чужое поле/неизвестное чтение не затирается.
+- Ошибки отката агрегируются в log и в exception с явным сообщением:
+  «откат батареи не подтверждён; фактическое состояние неизвестно».
+- Созданный pin удаляется только после успешного возврата всех own fields и
+  проверки его содержимого; при ошибке/неопределённости сохраняется для разбора.
+Эта правка не трогает751, вентиляторные flags/tables/PWM, APU или7A6.
+Физический80% restart по одному readback по-прежнему не обещается.
+Fresh actual Wujie UI после setter error выполняет родительский агент.
+
+W5 / P2 — независимое восстановление
+ConfigurationRestoreWindows.cpp:214+,225+,281+:
+APU restore и fan restore — независимые steps. В legacy APU step включены также
+предварительные чтения, чтобы их ошибка не прерывала последующие battery/FANs
+steps. Отказ APU больше не исключает Max/Default и сохранённый fan mode из очереди.
+FanController оставляет собственные identity/mode/ownership guards. Из FANs
+не добавлены APU записи и из SETs не вызывается OEM связанный SetUserProfile.
+Итоговый restore остаётся incomplete при любой ошибке отдельного шага, даже
+если независимые шаги завершились; запуск/подтверждённый resume остаются причиной
+restore, а обычный polling/переключение вкладки его не запускают.
+
+Проверка в этой работе
+Выполнен только статический просмотр изменённых веток и git diff --check для
+трёх файлов: ошибок whitespace нет. Никаких тестов, сборок, GUI, CLI, OEM,
+драйверов, SSH, EC/HID/SMU операций или коммитов не выполнялось. Изменения ещё
+не объявляются собранными/перенесёнными в portable или проверенными на железе.
+
+Текст для обновления общих контрактов родительским агентом
+FAN_MODES:обычный poll сверяет masked owned gates. Устойчивая внешняя смена
+останавливает writes/confirmed без отвоевания; read failure означает unknown,
+приостанавливает writes и не даёт readback confirmation до свежего результата.
+Wake-rearm разрешён только после подтверждённого сна или явной команды.
+BATTERY:откат сравнивает current own masks с attempted/original, сохраняет
+чужие поля и соседние bits/byte; ошибка отката должна присутствовать не только
+в журнале, но и в результате команды с указанием неизвестного actual state.
+RESTORE:ошибка одного APU шага не отменяет независимый шаг FANs; аппаратные
+guards остаются у соответствующего контроллера, общий итог учитывает оба шага.
+
+Дополнительная перекрёстная проверка W1/W2 агентом HYDROC
+========================================================
+Статический review после основных правок Wujie,19.10.2026.
+По дополнительному поручению родителя изменён только FanControlWindows.cpp
+и этот отчёт. BatteryChargeWindows.cpp оставлен без изменений.
+Сборки, тесты, GUI, драйверы, EC/HID/SMU и SSH не запускались.
+
+W1: найден и закрыт дополнительный wake-time fail-open cleanup.
+Сценарий: есть прежний Manual/online lease, touched=true; после сна
+recovering=true, verifyRecoveryOwner читает RAM/flags и получает EcIoError.
+Прежний generic catch проверял владельца только при !recovering и мог
+передать external=false в fail(), который очищал FAN masks через native().
+Тем самым именно unknown после сна давал нежелательные cleanup writes.
+
+Текущие места после исправления:
+FanControlWindows.cpp:528–551 — verifyRecoveryOwner сохраняет отдельно
+PowerInterrupted/ExternalChange, остальные read errors превращает в
+FanFlagsUnavailable. Внешний typed catch завершает без Default/rollback.
+:1252–1267 — generic cleanup проверяет own masks также при recovering;
+foreign/unknown запрещает native(), отложенный presencePending очищается.
+:491–510 — restorePresence при retained lease сначала проверяет те же own
+masks, поэтому queued APP notification не отвоёвывает741.0 до watchdog.
+:482–490 — release отсоединяет logical lease/expected/intent ДО попытки
+restoreService. Даже ошибка возврата GCUBridge больше не оставляет stale lease
+для следующего ordinary cycle. Локальный RAII ресурс освобождается при throw;
+ошибка остаётся в fail() и needsRestore. Сам release EC не пишет.
+
+Обычный цикл по-прежнему проверяет masks под общей transaction до duty update;
+foreign change останавливает управление, unknown приостанавливает writes;
+подтверждённый сон и явная команда остаются отдельными поводами re-arm.
+Соседние APU/RGB/camera bits не становятся owner fields. UI не изменялся.
+
+W2: новых доказанных дефектов масочного отката не найдено.
+BatteryChargeWindows.cpp:105–125 — WMI fresh read/compare/write/readback под
+одной короткой EcAccess transaction. expected допускает original/our masked
+value; третье masked value не затирается. Маска low7, status bit7 и соседний
+byte сохраняются; rollback skipUnchanged не повторяет activation-команду.
+:250–277 — context ROM/platform проверяется перед каждым полем; read error
+не даёт записи этого поля. restoreBits пропускает original, возвращает own
+attempted mask и отвергает foreign value. Различение поля остаётся оптимистичным:
+если внешний писатель записал ровно наш masked value, отличить его невозможно.
+:278–295 — pin удаляется лишь после подтверждённого возврата, rollback errors
+агрегируются в исключение и лог; unknown state не выдаётся за успех.
+Это статическое подтверждение веток, не аппаратная проверка WMI/зарядки.

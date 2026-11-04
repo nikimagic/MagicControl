@@ -1,0 +1,22 @@
+MagicControl0.1.227 — HPBSD native curves in the existing editor and actual PWM
+27.10.2026
+
+Default graph is projected from the observed native8CPU/3System bands and slopes. Manual reuses the existing numeric fields, arrows, chart and typed async worker. SixCPU/oneSystem normal upper boundaries and7/2normal RPM bases are editable. Lower boundaries and CPU slopes are encoded by the model; no invented16-point protocol or new editor/geometry/fonts. CriticalCPU94+/System83+ fields are disabled and excluded from the hardware write set. RU/EN/SC/TC labels use the common catalog.
+
+The model controller now validates monotonic nonzero native curves, protects hot boundaries, seeds ordinary bases toMAX before boundary changes and journals all apply/restore prefixes. v3receipts carry30mutable fields and curve kind; oldv2fixed receipts retain their original16fields and canonical temperatures. Unknown/foreign policies remain unavailable. A rejected draft before write leaves an existing owned curve running. Drafts use settings/hpbsd-fan-curves.txt, not another model CSV. Editing/saving does not apply EC; Manual applies the whole validated CPU/System policy. No startup replay was added. FixedMin/Max and oldCLI target methods retain their previous80/70guards; autonomous curves retain firmware hot-stage control instead of being cancelled at80/70.
+
+PWM is an independent hardware getter:1803CPU/1804System, checked1841period127.100*raw/127, invalid=>unknown. No hardwarePWM write. The graph remains nominalRPM percent; marker uses filtered EC control temperatures0888/0889 plus physicalRPM. Source labels avoid pretending the system fan is GPU hardware or Huawei.
+
+Validation:4598offline interrupted-restoration prefixes forB1/B2 preserve critical rows/overrides. New cases exercise editable temperatures, max seeding, malformed/nonmonotonic/zero curves and hot plot stages. Live curve-cycle probe SHA1bcc725083f9f22c1ce56605e4a9fb52d4b25e88a21f8aec0d2d00467026ba9c applied ordinary boundaries27/30C and native curves; mode1/applied=true throughout12seconds, targetcodes24/22, lateCPU~2460RPM/System~2140RPM. PWM35.433%/47.244%, raw45/60 of127. Exact original policy restored at end, exit0. Raw evidence in verify-curves-20261027. This internal probe reused the previous completed226resource version while compiling the new controller sources. Hot thermal transitions and physicalB2 were not load-tested.
+
+Old Huawei/Mechrevo/Uniwill device/protocol implementations compare unchanged againstHEAD; the shared interface only adds optional curve data and unsupported defaults. Honor retains its fixed-only controls and methods. Linux has no new hardware backend. The pre-existing EcByteEditor.h edit is unrelated and excluded.
+
+Build-All completed Windows/Linux GUI+mctl227, copied both working portable trees and verified hashes. Mini-PC delivery and own-GUI field/image verification follow through its original .magiccontrol-update engine. No GitHub publication requested.
+Windows GUI 
+742DF08A93C5EA0D5B32437B907587253B51E4D6B6D0D63D24B2E6165727EA71
+Windows CLI 
+2CA2BFF697DAFF9AF8F2476B7BC9BE67E016813A6EC0183C5AE719A07ACFBC31
+Linux GUI 
+A4C3B84C6308ADCC34B981FD18D5703093D2DCC4F65C689925FA0E3EAF1A4B64
+Linux CLI 
+4A2B3BA38B69EBBDB9481918782E5E46E0ACCC6EF7A928CA3D7868106036D19A

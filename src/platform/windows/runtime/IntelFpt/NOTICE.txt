@@ -1,0 +1,20 @@
+Intel Flash Programming Tool 16.1.27.2181
+Copyright Intel Corporation. All rights remain with the respective owners.
+
+Original OEM-distributed executable, unmodified, from GIGABYTE G5/G7 VF BIOS FB10:
+https://download.gigabyte.com/FileList/BIOS/nb-bios-g5_g7-vf-win11-64bit-ddr4-bios-fb10.zip
+See PROVENANCE.json for exact archive/member hashes and driver byte range.
+This notice is an attribution/provenance record, not a grant of redistribution
+rights. The Intel/OEM software terms continue to apply.
+
+MagicControl uses only fixed information (-I) and whole-flash read (-d)
+operations on admitted Intel LPC IDs. No flashing script, unlock utility,
+reset command, firmware payload or arbitrary command entry is included.
+driver-reference.bin is an unchanged signed PE byte range embedded in FPT,
+kept solely for offline signature verification. It is not installed by our code.
+The executable and reference bytes are embedded in the Windows application
+and verified/extracted into its protected offline runtime cache on request.
+The driver reference reports Intel PCH CAD 1.0.0.105. A valid signature is not
+proof of successful loading or reading on a particular system. FPT16 remains
+separate from FPT19 and PawnIO. Existing WNPDriver/SYS conflicts abort capture;
+they do not authorize a different firmware reader or removal of another driver.

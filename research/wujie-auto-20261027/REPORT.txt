@@ -1,0 +1,22 @@
+MagicControl0.1.226 — Wujie Auto and cleared override readback
+27.10.2026
+
+Fix the observed225state: confirmed zero783/784/785 was decoded as null, so stock Turbo751=10 was not highlighted. Readback now preserves zero, while active preset fields retain their native factory values for each zero override. A partial/unknown snapshot is not Auto.
+
+Wujie gains the existing fifth Auto button in SETs and the shared tray menu, following GM6 explicit intent plus fresh0/0/0. The shared protocol reset clears only783..785 with readback and ownership/identity guards.751,FAN flags/tables/lease and manual draft are not touched. Old Manual5..255 and its PL4 scale guard remain unchanged. Linux gets the shared five-label layout, without an unconfirmed backend writer.
+
+ApuAutoPower is an optional boolean appended to DeviceSetting, with no renumbering. Existing ApuMode4 remains Custom and maps to UI Custom5; it never becomes Auto. GUI Auto persists the separate intent; startup/resume prioritises the same zero-reset path. Native/Minimal/Custom choices clear the flag. CLI power auto uses the same setter and retains the existing ephemeral Wujie CLI preference semantics.
+
+Offline:32000readback combinations; explicit Auto/native/Custom, old saved Custom, unknown/partial states and unchanged Honor/GM6/HYDROC button counts. Real Performance.cpp was compiled against a memory EcAccess double: exact3-address write set, idempotence,6before/after injected-write rollback cases, identity rejection and unchanged Manual scale guard pass. No physical EC or fan mode was switched during these checks.
+
+Existing model-specific GM/Honor/HPBSD controllers, writers and mode rules were not edited. The shared settings enum only adds an optional Wujie key. The pre-existing EcByteEditor.h change is unrelated and excluded from this commit.
+
+Build-All completed Windows/Linux GUI+CLI226, staging and verifying both working portable trees. No GitHub release archives or publication requested. Existing user INI/CSV/settings/logs remain outside the commit. GUI was not automatically launched; no new actual-user Auto intent was selected.
+Windows GUI 
+1C2BD1D49DC46B1BB9D2B0B92D4A11A83F7E9CD912EC65D3C65D03F49D7C2610
+Windows CLI 
+0E7AA4E281405D2F8E721A623745543718BB6B07168B95D823B6B74BAA2B4B79
+Linux GUI 
+DCC3D07C2E76CB31F37BC0DD4FC75ACCA5735A9F378DFA75D71C5E165D54AA67
+Linux CLI 
+AE1F25148039060CF7C602DE2419F3F63B0D4D1F5A70DA0D7131ED91E2E33D7E

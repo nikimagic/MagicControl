@@ -1,0 +1,249 @@
+GM6IR0C — полное статическое исследование подсветки
+20.10.2026. Исходники текущей базы 5b1f092; только исследование.
+Созданы лишь настоящий отчёт и gm6ir0c.json рядом. Production, UI, геометрия,
+скролл, INI и оборудование не изменялись. OEM программы, драйверы, аппаратные
+команды, тесты, сборки и коммиты не запускались.
+
+1. ТОЧНЫЙ ОБЪЕКТ И ИСТОЧНИКИ
+
+MECHREVO JiguangX Series GM6IR0C, EC Project25/RAM Fan1.5.
+Активный GCUService1.0.2.70:
+build/research-gm6ir0c/samples/GCUService-active.exe,
+SHA256 8fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf.
+Использованы lighting-active/ и all-active/, полученные из этого EXE.
+Соседнее AiStoneService дерево другого EXE не подставлялось.
+
+Основные OEM файлы:
+lighting-active/LightingModel.LM_Manager.cs:23–80;
+lighting-active/LightingModel.LM_EC_RGB.cs;
+lighting-active/MyControlCenter.MyRgbKeyboard.HIDKeyboardFactory.cs;
+lighting-active/MyControlCenter.MyRgbKeyboard.SingleZone.cs;
+lighting-active/MyControlCenter.KeyboardCloseTimer.cs;
+all-active/02000179-MyRGBKeyboard.RGBKeyboard.cs.
+SHA256 исследованных текущих исходников и OEM файлов сохранены в JSON.
+
+В прежнем пользовательском companion.log37 ответов Keyboard/Status указывали
+solution=EC/type=SingleZone. Владелец описывал моно, пульсацию и радугу на этой
+клавиатуре. Это доказательство типа/родных возможностей, не физическая проверка
+каждой команды нового MagicControl. Старый log-review-20261019.txt фиксирует
+721 command readback/12 запусков цикла в0.1.69; текущего аппаратного теста нет.
+
+2. ТРАНСПОРТ, ДРАЙВЕР И ТИП
+
+LM_Manager сначала пробует ITE, затем EC. Тот факт, что класс называется
+HIDKeyboard, не означает HID-пакеты для выбранного SingleZone EC backend.
+LM_EC_RGB проверяет RGB capability 766.bit2; factory выбирает SingleZone.
+SingleZone фактически вызывает MyEcCtrl/AcpiCtrl/ACPIDriver. Для этого
+подтверждённого экземпляра нет основания вместо EC искать новый HID writer.
+
+MagicControl: Gm6Controller::readKeyboard/setKeyboard
+src/devices/mechrevo/gm6ir0c/ControlWindows.cpp:462–468 -> общий KeyboardBacklight.
+До записи проверяются фактический профиль, Project25, RAM1.5, feature Backlight,
+отсутствие GCUService.exe/AiStoneService.exe; оба вызова держат модельный gate.
+Shared EcAccess::Transaction дополнительно держит межпроцессный EC mutex.
+0x9C40A488/0x9C40A48C — транспорт, не универсальное разрешение другой EC-карты.
+
+Текущий полный пакет src/platform/windows/runtime/Uniwill:10.48.11.331,
+SYS46352 байта SHA2566e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235,
+с отдельными INF/CAT. В архивном pnputil это oem179.inf/ACPI\INOU0000.
+Raw samples/UWACPIDriver.sys43776 относится к другому полному пакету17.53.43.609;
+его байты не равны текущему SYS. Происхождение разобрано в gm6ir0c audit, раздел7.
+Установленный SYS на машине во время этой работы не читался.
+
+Подтверждена одна RGB-зона. Возможности четырёхзонных/поклавишных ITE моделей
+из той же программы не являются возможностями GM6. Наш backend не должен
+применяться к HYDROC/Unknown только из-за сходного имени/производителя.
+
+3. КАРТА СОСТОЯНИЯ И КОМАНД
+
+Общий контракт: src/protocols/uniwill/SingleZoneBacklight.h.
+  766 &04       RGB capability, чтение.
+  78C bits7:5   яркость0..4; bit1=power disable; bit4=apply strobe.
+  769/76A/76B   R/G/B levels, устройство0..50.
+  767 bit5      применить записанные RGB levels.
+  767 bit7      native rainbow; OEM сначала пишет RGB=0/0/0.
+  7C5 bits2:0   native breathing:0 off,1..4 presets.
+  76C/76D/76E   чтение default RGB levels.
+  78E bit5      GetSingleZonePowerSupport, отдельный OEM capability/report.
+
+Точные OEM тела SingleZone.cs:
+SetPowerDisable_EC366–374; SetBrightness_EC376–416;
+SetRGBLevel827–838; Start/StopRainbow840–861;
+StartBreathingMode1035–1055; SetColorMode1058–1107.
+Вызов SetPowerStatus сам использует bit1; отсутствие/неизвестность
+SingleZonePowerSupport не превращает bit1 в произвольный guessed register.
+
+Чтение приложения: KeyboardBacklight.cpp:60–66 получает actual raw78C/767,
+masked pulse и RGB. Это лучше, чем объявлять сохранённый OEM GetBrightness
+фактическим регистром: родной getter хранит отдельные _AC_LightLevel/_DC_LightLevel.
+GetBrightness/Plugged/UnPlugged в SingleZone используют cached значения.
+Наш readback подтверждает байты, не яркость/цвет, увиденные человеком.
+
+4. ОДИНАКОВЫЙ RGB ПО РАЗНЫМ ПУТЯМ: ПОДТВЕРЖДЁННЫЙ P2
+
+[GM6-L01 P2] В приложении расходятся fixed palette и custom/Cycle converter.
+
+src/core/src/KeyboardBacklight.cpp:42–57:
+keyboardColorPalette(Gm6) копирует Wujie palette, меняя только white на50/40/40.
+keyboardColorLevels(Gm6,uiRgb) знает white и только6 специальных цветов;
+для остальных использует R/5,G/6,B/6 с минимумом1.
+SettingsPage.cpp:725–729,1422–1431: обычная кнопка пишет raw palette;
+chooser вызывает keyboardColorLevels; цикл вызывает её же в core:115,126.
+
+На одинаковых входах, арифметика по исходникам (не аппаратный тест):
+Input UI RGB       Fixed button    Custom/Cycle    Active OEM SetRGBColor
+255,80,0           50,10,0         50,13,1        50,10,0
+0,255,255          0,50,50         1,42,42        1,50,50
+180,0,255          35,0,50         36,1,42        36,1,50
+255,255,255        50,40,40        50,40,40       50,40,40
+
+Следствие: цвет, выбранный как тот же RGB в chooser/цикле, может получить
+другие уровни, чем фиксированная кнопка. Это конкретная программная
+несогласованность/неполная калибровка, не доказанная аппаратная опасность.
+White special-case корректен во всех показанных путях.
+
+Важное опровержение ложной находки: default orange цикла255/102/0 и UI orange
+255/80/0 — РАЗНЫЕ входы. В exact OEM оба есть: index5=>40/10/0 и index3=>50/10/0.
+Разные уровни между этими двумя разными RGB сами по себе не ошибка.
+Аналогично UI purple180/0/255 и default cycle magenta255/0/255 отличаются.
+
+Ещё важнее: список COLOR_CELL.R_Level НЕ равен активному converter.
+SingleZone.cs:45–77 содержит30 исходных записей; но SetColorMode:1072
+вызывает SetRGBColor(cell.R,cell.G,cell.B), а не SetRGBLevel(cell.R_Level,...).
+SetRGBColor:756–824 использует RGBValueToLevel:154–156 с минимумом1,
+для совпадения с одним из первых29 COLOR_CELL возвращает G/B divisor5,
+затем применяет восемь special-case веток. Поэтому реальный active OEM:
+red255/0/0=>50/1/1; green0/255/0=>1/50/1; blue0/0/255=>1/1/50;
+magenta255/0/255=>50/1/50. Metadata список содержит иные нулевые каналы.
+TranalteColorCellsRgbToLevel найден только как объявление, не активный caller.
+Нельзя обосновывать exact-native конверсию одними R_Level из списка.
+
+План: одна модельная функция UI RGB->raw по реально выбранной semantics;
+fixed buttons, custom и cycle используют её одинаково. Если требуется точно
+имитировать native, реализовать весь SetRGBColor, а не6 исключений. Если
+продукт намеренно допускает чистые нулевые каналы, обозначить такую политику
+и всё равно обеспечить одинаковый вход->одинаковый raw. Existing saved RGB
+уже в raw units, их нельзя повторно конвертировать как UI255-space.
+Изменения оформления/контролов/скролла для этого не нужны.
+
+5. PULSE: РЕАЛЬНЫЙ SETTER ЕСТЬ, ПАЛИТРА UI НАМЕРЕННО ОТКЛЮЧЕНА
+
+Exact OEM: SetColorMode effect2 -> StartBreathingMode(BreathingIndex),
+7C5 &F8 затем прибавляет1..4. Это аппаратный эффект, не наш программный цикл.
+Наш общий API принимает change.pulse1..4; default при первом входе GM6=1,
+существующий actual pulse сохраняется, сохранённый PulseColor может выбрать
+индекс при явном включении. Команды native pulse1..4 технически реализованы.
+
+SettingsPage.cpp:1145–1149 выключает ВСЕ цветовые кнопки при GM6 pulse;
+1424–1427 дополнительно запрещает writeColor; paletteIndex:738–746 возвращает-1.
+Причина — реальные цвета индексов GM6 физически не сопоставлены с цветами
+Wujie. В summary:803–807 честно написано «пресет EC N» вместо цвета Wujie.
+Это консервативное ограничение UI, а не отсутствие аппаратного setter.
+В результате пользователь не может явно выбирать2..4 штатных preset из UI,
+кроме уже текущего/сохранённого. Нельзя включать их с недоказанными подписями
+«белый/красный/зелёный/синий» только по таблице другой платы.
+Нужны exact frontend mapping/наблюдение владельца каждого1..4; затем включить
+существующие controls через модельные данные, сохранив внешний эталон Wujie.
+
+6. ЦИКЛ6 / ИНТЕРВАЛ / AUTO OFF — ТРИ РАЗНЫХ МЕХАНИЗМА
+
+Native rainbow: EC767.7, не host loop. Native breathing:7C5.low3.
+Native Manual effect64: шесть индексов1/5/9/13/21/25 по умолчанию,
+ManualInterval10сек. SingleZone.cs:891–932 ставит System.Timers.Timer,
+ManualMix:931–985 интерполирует5 подшагов; при2сек —4, с отдельным sleep.
+Это исполняемый в OEM сервисе плавный переход, не автономный EC эффект.
+
+Наш KeyboardColorCycle: core112–135, шесть UI RGB, interval1..3600сек,
+раз в interval меняет один статический цвет. Host loop общий, background
+DeviceOperation, останавливается при changed RGB/effect. Это ступенчатый цикл,
+НЕ полная имитация native ManualMix с плавной интерполяцией. Длительность шага
+может увеличиться из-за занятости DeviceOperation; не жёсткий real-time таймер.
+Различие задокументировать; плавность добавлять только общим ядром и без
+повторного мигания disabled/enabled всех UI кнопок.
+
+OEM KeyboardCloseTimer: KeyboardCloseTimer.cs:49–89 слушает raw keyboard/mouse,
+сбрасывает idle timer;98–125 timeout вызывает ControlBrigtnessEvent(true),
+активность после погасания — false. SingleZone.cs:117–139 прекращает эффекты
+и пишет power-disable; это host activity timer OEM процесса.
+Он не доказывает аппаратный timeout, переживающий выход из программы.
+Существующие AutoOff controls GM6 поэтому disabled, не fake setter.
+Интервал цикла не следует молча привязывать к AutoOff полю.
+
+7. ЗАПРОШЕНО / СОХРАНЕНО / READBACK / STARTUP / SLEEP / EXIT
+
+Запрошенное действие проходит общую SettingsPage worker operation.
+Shared backlight проверяет параметры/state, делает masked writes и final readback.
+После readback rememberChoice сохраняет KeyboardLevel/KeyboardEffect/PulseColor
+и raw RGB в gm6ir0c-device-settings.ini; цикл — keyboard-cycle.ini.
+Save failure означает «EC применено, но не сохранено», не успешное persistence.
+
+[GM6-L02 — подтверждённый пробел restore]
+Несмотря на сохранение Keyboard* в отдельном GM6 INI, реального GM6 startup/
+sleep-resume restore этих ключей в текущем коде нет:
+- MainWindow.cpp:814–816 создаёт ConfigurationRestore только при legacy controller;
+- BackendFactoryWindows.cpp:7–11 намеренно исключает uniwill-gm6ir0c из legacy;
+- MainWindow::restoreConfiguration:867–870 для GM6 передаёт лишь battery restore
+  и выходит без configurationRestore;
+- Gm6Controller не содержит отдельного keyboard pending-restore/restore hook.
+Saved RGB/Pulse используются при последующем ЯВНОМ переключении Mono/Pulse,
+а KeyboardLevel как автоматический GM6 restore не применяется.
+OEM RGBKeyboard.cs:228/234,260/264,288/292 вызывает InitalizeKeyboardEffect,
+а SingleZone:182–227 читает saved effect/AC/DC level и запускает его.
+Таким образом сохранение в нашем INI не равно реализованному восстановлению.
+
+Для cycle в текущем контракте явно отсутствует startup autoplay: не включать
+его тайком под видом исправления restore. Нужна согласованная политика:
+какие явные сохранённые brightness/effect/raw RGB восстанавливать после
+подтверждённого сна/старта, при каком реальном EC/backend/OEM ownership.
+Это capability gap; не объявлять аппаратным багом только по отсутствию hook.
+
+Наш цикл живёт в SettingsPage, а не текущем tab paint, поэтому обычная смена
+вкладки его не прекращает. Destructor страницы:SettingsPage.cpp:305–308
+join user worker, затем cycle.reset() останавливает host thread. Exit оставляет
+последний статический RGB; старые снимки не replay-ятся. Suspend/resume отдельного
+cycle hook не имеет: при следующем тике changed effect/RGB вызывает stop,
+если ожидаемые байты совпали — цикл может продолжиться. Это не доказательство
+восстановления saved preferences после того, как firmware их сбросила.
+
+8. ВЛАДЕНИЕ / СОСЕДНИЕ БИТЫ / ROLLBACK
+
+Прямые shared writes — KeyboardBacklight.cpp:68–100 под EcAccess transaction.
+7C5 mask07 сохраняет FAN respective.bit7;767 rainbow.bit7/apply.bit5 сохраняют
+USB/lightbar биты;78C levelmaskE2+strobe10 не пишет весь старый байт.
+Cycle expected covers RGB, native rainbow и pulse; Fn brightness намеренно
+не входит во владение. Background gate общий с interactive controls.
+
+Ограничение ошибки отката: shared Journal:32–38 ловит rollback exception и
+пишет только log; caller получает исходное исключение, а не отдельный
+rollback result/unknown. Для общей дальнейшей работы желательно typed outcome
+как у батареи: уже исходное/возвращено/чужое/неизвестно, без обещания восстановления.
+Также при будущей общей переработке учесть re-admission OEM owner перед rollback;
+текущий Gm6Controller выполняет admission перед whole apply, не новый native
+owner check внутри shared Journal. Соседние биты при этом масками сохраняются.
+Новые физические гонки/ошибки возврата этой работой не воспроизводились.
+
+9. LINUX И ДАННЫЕ, НУЖНЫЕ ДЛЯ СЛЕДУЮЩЕГО ШАГА
+
+Общие карточки/палитра/геометрия сохраняются, но подтверждённого Linux GM6
+EC RGB writer нет. Huawei sysfs brightness/timeout не переносится на GM6.
+Видимая карточка не означает working RGB transport. Не включать writes
+ради визуального совпадения; внешний вид Wujie и скролл остаются эталоном.
+
+Нужны сохранённые данные, а не новые случайные адресные пробы:
+- actual766/78E/78C/767/7C5, RGB769..76E до/после каждой явной команды;
+- requested UI RGB, converter/raw target, final readback, separate save status;
+- timestamps и Service/OEM owner, соседние FAN/USB/lightbar маски;
+- сопоставление pulse indices1..4 с фактическими цветами владельцем;
+- startup/resume/AC/DC снимки и поведение native OEM при закрытом приложении;
+- cycle interval и desired smoothness, stop reason, background gate waits;
+- при ошибках: сохранённый initial state, какие own fields изменились,
+  readback/rollback status и доступность актуального состояния.
+Общий EC RAM dump и firmware-before/after OS evidence полезны, но сами по себе
+не доказывают цвет, физическую яркость или автономное исполнение таймера.
+
+ИТОГ
+P2: реальный converter mismatch для одинаковых RGB между fixed/custom/cycle.
+Подтверждённый gap: GM6 Keyboard* сохраняются, но startup/resume restore нет.
+Pulse1..4 setter есть, UI консервативно закрыт до подтверждения цветового mapping.
+White50/40/40 корректен. Различие orange255/80 и255/102 не считать ошибкой.
+Интеграция/исправление — отдельная работа; production и оборудование не менялись.

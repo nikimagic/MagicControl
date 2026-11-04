@@ -1,0 +1,161 @@
+Wujie: фактическая HID/EC проверка допуска световой пробы полосы
+Дата:20.10.2026. Пользователь явно разрешил аппаратный тест и готов наблюдать.
+
+Результат первой реальной пробы
+Инвентаризация и фиксированное EC чтение ВЫПОЛНЕНЫ на этом Windows ноутбуке.
+Световая команда не отправлялась: для ITE HID препятствие — отсутствие
+совместимого узла в текущем полном PRESENT перечислении. Отдельно native
+legacy EC support78E.4 сброшен. HID LB_Init этот бит не проверяет; он не является
+дополнительным условием HID допуска. Два разных пути не смешиваются.
+Это конкретный blocker активации, не просьба о повторном разрешении.
+Ни свечение, ни отсутствие физических светодиодов этим не доказаны.
+
+1. Проверенный компьютер и границы helper
+SMBIOS:MECHREVO / BaseBoardProduct=WUJIE Series-X5SP4NAG,
+SystemProductName=WUJIE Series,BIOS=N.1.20MRO15.
+Standalone C# helper и source:
+  build/research-hinge-20261020/Program.cs
+  build/research-hinge-20261020/EcRead.cs
+  build/research-hinge-20261020/HingeInventory.csproj
+Он не связан с product GUI/core/controllers, не создаёт FAN/APU/SMU objects,
+не вызывает vendor DLL/installer и не содержит HID GetFeature/SetFeature.
+EC mode имеет только фиксированный read IOCTL9C40A488 и небольшой allowlist.
+Не было EC write IOCTL9C40A48C, UEFI/NVRAM, persistentSave, USB enable/reset,
+служебного start/stop/install, driver install, fan/keyboard переключений.
+Production/CMake/portable и Git-коммиты этим агентом не менялись.
+
+2. Почему первоначальный Win325 не означал занятость/отсутствие
+Первый запуск внутри sandbox перечислил4HID, но metadata CreateFile(access0)
+везде вернул ERROR_ACCESS_DENIED5. Повтор вне sandbox дал успешное access0
+открытие всех4 и чтение attributes/preparsed capabilities/reportIDs.
+Фактический Windows token:Administrator=false,Medium integrity S-1-16-8192.
+require_escalated снял sandbox, но не повысил Windows token; UAC не потребовался.
+cbSize SP_DEVICE_INTERFACE_DETAIL_DATA_W=8 наx64, DevicePath offset=4;
+полученные device paths валидны, успешно открываются.
+
+3. Реальный PRESENT HID результат
+hidEnumerationComplete=true,4interfaces; attributes/caps прочитаны успешно.
+Все четыре имеют VID093A/PID0255 и parentACPI\UNIW0001\1:
+
+collection | page / usage | input/output/feature bytes | input IDs | feature IDs
+COL01      | 0001 /2      | 9/0/0                      | [2]       | []
+COL02      | 000D /5      | 30/0/257                   | [1]       | [3,4,7,10]
+COL03      | 000D /14     | 0/0/2                      | []        | [5,6]
+COL04      | FF00 /1      | 0/0/257                    | []        | [11,12,65,66,67]
+
+Имена Windows:mouse,touchpad,Microsoft Input Configuration Device,vendor-defined
+collection. ParentACPI\UNIW0001\1 — I2C HID(hidi2c), далееACPI\AMDI0010\1.
+Это коллекции тачпада, не подтверждённая полоса. Native ITE08/09/80/88 им
+не отправлялись; vendor-definedFF00 сам по себе не даёт права считать егоRGB.
+
+PRESENT USB/HID PnP nodes:23,enum complete,CM problemCode0 у всех,ошибокAPI нет.
+USB устройства в снимке:camera2B7E:B663,MediaTek Bluetooth13D3:3585,
+hubs05E3:0620/0610 и AMD root USB/USB4. Узла048D среди них нет.
+Дополнительное AllClasses перечисление, включая nonpresent, завершено; фильтр
+VID_048D не нашёл сохранённых candidate nodes. Это результат текущей Windows
+PnP базы, не доказательство, что контроллер физически никогда не существовал.
+Raw USB configuration/endpoint transfer и feature reports не опрашивались;
+USB evidence — read-only SetupAPI/CM identities,driver/service,parent/status.
+Report IDs — HidP metadata, не полученные с устройства feature payloads.
+
+4. Владелец и драйверная доступность
+GCUBridge/GCUService/AiStoneService SCM query:service отсутствует для каждого
+(NoServiceFoundForGivenName), не access failure. Их процессов не наблюдалось.
+Это NoReviewedOwnerObserved, а не доказанный exclusive HID lease.
+Отдельной проблемы «узел найден, но занят» для полосы не установлено:
+matching interface отсутствует, пробовать его RW open не к чему.
+
+Installed UWACPIDriver:
+  ImagePath=\SystemRoot\System32\drivers\UWACPIDriver.sys;
+  Type1,Start3,SCM Running,signatureValid;
+  signerMicrosoft Windows Hardware Compatibility Publisher;
+  SYS SHA2566e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235.
+Это проверка configured file на диске плюс живой ответ driver, не kernel-memory
+hash. Read CTL_CODE требует FILE_WRITE_ACCESS, поэтому handle имеет RW admission;
+helper всё равно способен выполнить только фиксированный READ, не запись.
+Чтение сериализовано Global\MagicControl.EcTransactions.v2,timeout5с.
+
+5. FRESH exact EC reads
+Двойное чтение каждого фиксированного адреса подтвердило:
+  454=52(hex)=82;456=48(hex)=72;740=1A(hex)=26 — exact identity passed.
+  765=A1;78E=EC;748=80;749=00;74A=00;74B=00;768=00.
+20successful read calls,writeIoctls0,HIDfeatureCalls0,handleOpenError0.
+
+Критическое уточнение capability:
+- 765.6 из общего EC field map тожеclear, но одного этого недостаточно.
+- В точно разобранном OEM MyECIO/MyEcCtrl.cs171–179(и Reference233+) native
+  isSupportRGBLBFromEC читает1934=78E и проверяет0x10.
+- Сейчас78E=EC,значит именно этот native bit4 такжеCLEAR.
+- Это native EC RGBLB/coarse LightbarType guard, а НЕ универсальный HID guard.
+  Отдельный LM_Manager.LB_Init/ILM_RGBLB_Init ищет HID независимо от78E.4.
+- Reference_w568w/GCUService/MyControlCenter/CustomizeCtrl.cs75–88:
+  Customize_Init назначает LightbarType2 при support, иначе0.
+Это намного точнее предположения по765.6. Не заявляется, что другой OEM SKU/
+NVRAM override или иной физический LED контроллер невозможен; для exact X5
+такой alternative backend сейчас не найден и не активирован.
+
+6. Точная native последовательность и причина отказа от target
+DefaultTool/LightingModel/LM_ITE_RGB.cs4049–4105:
+  VID048D,PID7000/7001,Usage2,PageFF03 → MEZone_Lighbar4/hinge,
+  перед тем лишь чтение ProjectID и HIDManager.Init enumeration.
+  Отдельный power/discovery gate, который создаёт отсутствующий HID узел доInit,
+  в этой ветке не найден. Управление яркостью/эффектом требует уже открытый HID.
+  Поэтому native80/88 context сохранить не удалось — matching handle отсутствует.
+
+Alternative legacy source в Reference_w568w/MyRgbLightbarManager:
+  695–719:On меняет748.2clear и748.3 по breathing policy;
+  779–792:AppExist748.0;657–671:Colorful748.7;
+  803/834/865:RGB749..74B через RGBLightBarTable;
+  890–918:apply triggers748.4/748.5.
+  Эти generic методы не являются доказательством управляемой hinge наX5:
+  native supportclear,выбранного exact legacy LightbarType нет. Default RGB table
+  — fallback, не аппаратная калибровка конкретного отсутствующего устройства.
+Source также содержит UEFI/OemService policy paths; они здесь не вызывались.
+Не было обхода capability guard и экспериментального переключения748.
+Перед любой новой target записью root должен отдельно рассмотреть exact binding
+и последовательность. Авторизация теста есть; неопределённый backend ею не
+становится доказанным, а команды тачпаду не становятся допустимыми.
+
+7. Итоговые typed состояния
+PhysicalStripe:ownerReportedPresent / opticalOutputNotTested.
+ITEInterfacePresence:noMatchInCompletePresentEnumeration.
+KnownItePnpHistory:no048DMatchInCompletedEnumeration.
+Existing093ATouchpadAccess:metadataReady outside sandbox.
+ITEWriterAccess:notProbedBecauseNoMatchingNode.
+Owner:noReviewedNativeOwnerObserved;notExclusiveLease.
+LegacyNativeSupport:78E.4notAdvertised.
+Activation:blockedNoAdmittedBackend;targetAttempted=false;ACK/readback=null.
+Не «полосы физически нет», не «занята», не «нужно поставить случайный драйвер».
+
+Артефакты вbuild/research-hinge-20261020:
+present-inventory.json(sandbox),present-inventory-unsandboxed.json,
+present-inventory-final.json(numericReportIDs,parent/driver/status),
+outside-token.json,oem-service-status.json,installed-driver.json,
+ec-read-initial.json,ec-read.json(final78E included),helper sources/binaries.
+Машиночитаемая сводка и SHA256:hinge-hardware-20261020.json рядом с отчётом.
+
+Следующее конкретное доказательство, которое меняет этот результат
+Нужно фото именно предполагаемой световой полосы у петель этого экземпляра
+и точный вариант комплектации/наклейка модели, либо прежний снимок родного ПО,
+которое успешно управляло ею. Если сохранился успешный OEM журнал, нужны строки
+LB_Init/HID VID/PID/usage/firmware и PnP snapshot того состояния — они дадут
+реальную привязку отсутствующего сейчас backend. Новые эксперименты вслепую
+по соседним EC битам такого доказательства не заменяют. Ответа о прежнем свечении
+и оптического подтверждения текущего свечения в этой сессии пока не получено.
+
+Уточнение после передачи exact HYDROC результатов,20.10.2026
+Источник:research/fixes/keyboard-20261020/hydroc-lightbar-support.txt,
+сохранённый коммитaa74a2d. Новых аппаратных действий в этом уточнении нет.
+Exact recovered MyEcCtrl201–209 и MyRgbLightBarDefault338–346 подтверждают
+адрес78E/mask10 для native EC support; это совпадение метода, не перенос
+аппаратных разрешений HYDROC в Wujie. HYDROC старыеFC/E1 не заменяют наши
+живыеEC/A1. Наличие или отсутствие78E.4 само по себе HID полосу не исключает.
+Для Wujie вывод о недоступном HID target по-прежнему основан на независимом
+практическом свидетельстве:4успешно прочитанных093A:0255 интерфейса и0ITE048D
+совпадений полного PRESENT/HWID-history перечисления. Физическая полоса не
+объявляется отсутствующей.
+NVRAM SupportByte genericLightBar: lowbyte>>4 затем&4 означает rawbit6/mask40,
+неbit2. Alias этого NVRAM поля к EC765 не доказан; UEFI здесь не читалась.
+HID A2/source — таблица кодов, зависящая от BIOS family; source0 может означать
+hinge и не является универсальной bitmask. HYDROC IDY нельзя интерпретировать
+черезIDA/IDB илиIDX/IDZ таблицу, и никакая из этих таблиц не применялась к Wujie.

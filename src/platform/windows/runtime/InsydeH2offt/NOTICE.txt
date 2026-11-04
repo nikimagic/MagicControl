@@ -1,0 +1,16 @@
+Insyde H2OFFT6.76 OEM reader component
+Copyright Insyde Software Corp. All rights reserved.
+H2OFFT64.sys3.0.0.3: original Insyde signature and Microsoft catalog retained.
+Source: official Lenovo KSCN43WW package, statically extracted, never installed.
+https://download.lenovo.com/consumer/mobiles/kscn43ww.exe
+Container SHA256:0a9df4f3eb9a6fb1ac44f1ed553dd85919147759e953954665cc08bf80b4c9d1.
+The container's hash matches Lenovo's published checksum. No Lenovo BIOS image,
+UEFI executable, firmware capsule or flash script is included. Fixed command:
+H2OFFT-Wx64.exe <new output> -g. No arbitrary options are exposed.
+FlsHook1.0.0.9 and BiosImageProcx64.dll retain original Insyde signatures.
+FlsHook is an OEM validation dependency, not an application launch target.
+No Intel FWUpdLcl or obsolete6.25 VC90 components are distributed.
+INI changes: Silent0->1, DisableMouseAndKeyboardInput1->0, FDFile FileName empty,
+Log_file Flag0->1. Firmware/model/version/flash protections stay unchanged.
+This proprietary component is outside MagicControl's source-code license;
+no new redistribution grant is implied.

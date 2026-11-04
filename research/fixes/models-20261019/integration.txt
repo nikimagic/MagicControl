@@ -1,0 +1,92 @@
+Исправления после ревизии пяти моделей,19.10.2026
+Контрольная база:c4ad921, portable0.1.76.
+
+Исходные отчёты research/audits/models-20261019 заморожены. Это отдельный
+результат исправлений; строки исходного аудита относятся к его старой базе.
+
+Wujie W1/W2/W3/W4/W5:
+- FANs проверяют собственные шесть масок каждый цикл перед Duty. Внешнее
+  изменение прекращает writes без отвоевания. Ошибка чтения означает unknown.
+  Wake-time unknown и generic cleanup также не получают разрешения Default.
+  Отложенный APP не обходит ownership guard, ошибка release не оставляет lease.
+- Батарейный rollback сохраняет чужие/соседние поля, сообщает неполный возврат
+  в exception; SETs перечитывает actual после ошибки.85/95 выделяются только
+  при подтверждённой платформе и activation gate, не по одному порогу7B9.
+- Динамические battery/system-power данные имеют10с TTL; package MSR cache
+  не переживает отказ модуля и не подменяет источник мощности CPU.
+- APU и FAN restore независимы; общий результат учитывает ошибки обоих.
+
+Honor H1–H7:
+- Typed Auto distinguishes applied/alreadyAuto/ownershipLost; чужие targets
+  не заменяются cleanup. Стабильные0/0 — допустимое отключение защиты батареи.
+- Windows/Linux battery rollback проверяет actual; HWMI ошибки сохраняют
+  opcode/raw/HRESULT. Resume проверяет принадлежащие маски.
+- GUI FAN setters используют общий DeviceOperation и свежий actual result.
+- Общая дампилка подключает guarded fixed100/100 на30с с Auto cleanup,
+  термоконтролем80°C и раздельными показаниями RPM/PWM.
+- Killable диагностический reader Honor использует только чистые HWMI getters,
+  не входит в I2EC/PNPCFG и не создаёт активный fan watchdog.
+
+GM6 GM6-01/02/03 и X1:
+- Max command readback, рост RPM и стабильное плато разделены. Плато само
+  по себе не подтверждает физическую реакцию на команду.
+- Manual PL сохраняется checked atomic writer; failure откатывает только
+  наши PL fields и сообщает неизвестный возврат. Повреждённый draft не угадывается.
+- CPU-only пресеты используют свежие FW PL defaults и пишут только783–785;
+  FAN tables/online/751 не меняются. Выделение основано на actual PL triple.
+- Повторное чтение FAN/CPU после setter обязательно проверяется до success
+  toast. Точный applied PL triple возвращается setter, совпавшие пресеты
+  не выдаются за уникально распознанный режим. Unknown actual не success.
+
+HYDROC HYD-01/02/03/04/05/06:
+- Export содержит hydroc16g2-device-settings.ini.
+- Startup restore: максимум5 pre-write transient попыток за30с; explicit
+  выбор отменяет pending. OEM/pin/identity отказы не ретраятся.
+- Snapshot reader не выдаёт свои0 payload writes за измеренный глобальный
+  счётчик. Общая battery policy ошибка включает состояние rollback.
+- Intel данные получают Intel CPU/PL подписи в существующей карточке.
+- PawnIO ошибки содержат module/stage/HRESULT/hash и очищают partial loader.
+
+Unknown/shared U1–U7:
+- Radeon fallback выполняется для каждого отсутствующего OS-visible adapter
+  по аппаратному identity, без смешивания одинаковых названий.
+- Fast dump getters работают в persistent read-only процессе с10с deadline,
+  progress/partial frames и ограниченным завершением. Parent не ждёт зависший
+  vendor/Storage getter через неограниченный get/join; setters/cleanup не убиваются.
+- AC unknown остаётся null/unknown, а не «от батареи». Raw статусы сохраняются.
+  На Linux offline одного входа не скрывает unknown другого; один discharge
+  не доказывает отсутствие сети. Peripheral scope=Device не становится основной
+  системной батареей ноутбука.
+- Native ACPI/HID/SCM/driver metadata снимается fixed isolated helper с20с
+  бюджетом; hashes/signature сведения не устанавливают и не запускают драйверы.
+- Неподключённый FAN backend не выделяет и не сохраняет ложный applied preset.
+- NVMe primary сохраняет источник именно выбранного значения; дополнительные
+  SMART температуры имеют собственные rows/provenance.
+- Диагностика сохраняет все системные батареи со стабильными identity;
+  существующая одна карточка не смешивает разные физические батареи.
+
+Factory export / общие функциональные пробелы:
+- Один recovered RAM1.5 mailbox helper для точных GM6 Project25/HYDROC Project26.
+  Только явный WithFanProbes: Default → исходный EC → baseline telemetry →
+  factory mailbox → Max. ReadOnly/preview не вызывает mailbox writers.
+- Capture хранит Gaming/Office/Turbo raw96+valid/ACK/статусы. После двух raw
+  чтений повторно проверяются identity/Default/APP/ACK. Cleanup возвращает
+  только собственный741.0; старый payload не replay-ится и остаётся неактивным.
+- Полноценное управление FANs/RGB HYDROC, ITE HID и неизвестные OEM-карты
+  остаются неподключёнными возможностями, не выдуманными исправлениями.
+
+UI:
+Существующие карточки Wujie, компоненты, геометрия, шрифты, theme/assets,
+скроллбар и порядок карточек сохранены. Изменены данные/подписи Intel,
+достоверность выбора и доступность неподключённых команд. Новых карточек нет.
+
+Проверки:
+Выполнен статический перекрёстный review агентов. Новых тестов, запуска GUI,
+OEM/EC/HID/SMU действий, установки драйверов или физических проб не выполнялось.
+Результат общей сборки/хэши portable фиксируется отдельно в build-verification.json.
+Сборка не является измерением физической реакции FAN/заряда/подсветки.
+
+Дополнительное исправление интеграции:
+Atomic file replacement выделен в leaf OS adapter magiccontrol_storage,
+чтобы core settings/inventory не зависели от порядка раскрытия статической
+platform библиотеки при Linux CLI link. Реализация замены файлов не менялась.

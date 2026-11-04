@@ -1,0 +1,94 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\InsydeH2offt\FlsHook.exe
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha256): 17CFD95B953DD7D54581D886F23F1CCF96DC1A5A1DF9BBF1AC4866AD90777156
+
+Signing Certificate Chain:
+    Issued to: DigiCert Assured ID Root CA
+
+    Issued by: DigiCert Assured ID Root CA
+
+    Expires:   Mon Nov 10 03:00:00 2031
+
+    SHA1 hash: 0563B8630D62D75ABBC8AB1E4BDFB5A899B24D43
+
+
+        Issued to: DigiCert Trusted Root G4
+
+        Issued by: DigiCert Assured ID Root CA
+
+        Expires:   Mon Nov 10 02:59:59 2031
+
+        SHA1 hash: A99D5B79E9F1CDA59CDAB6373169D5353F5874C6
+
+
+            Issued to: DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1
+
+            Issued by: DigiCert Trusted Root G4
+
+            Expires:   Tue Apr 29 02:59:59 2036
+
+            SHA1 hash: 7B0F360B775F76C94A12CA48445AA2D2A875701C
+
+
+                Issued to: Insyde Software Corp.
+
+                Issued by: DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1
+
+                Expires:   Tue Aug 04 02:59:59 2026
+
+                SHA1 hash: 7EC40A94C507A5D67BA991A456661A86387FDAAF
+
+
+The signature is timestamped: Wed Aug 06 13:27:49 2025
+
+Timestamp Verified by:
+    Issued to: DigiCert Assured ID Root CA
+
+    Issued by: DigiCert Assured ID Root CA
+
+    Expires:   Mon Nov 10 03:00:00 2031
+
+    SHA1 hash: 0563B8630D62D75ABBC8AB1E4BDFB5A899B24D43
+
+
+        Issued to: DigiCert Trusted Root G4
+
+        Issued by: DigiCert Assured ID Root CA
+
+        Expires:   Mon Nov 10 02:59:59 2031
+
+        SHA1 hash: A99D5B79E9F1CDA59CDAB6373169D5353F5874C6
+
+
+            Issued to: DigiCert Trusted G4 TimeStamping RSA4096 SHA256 2025 CA1
+
+            Issued by: DigiCert Trusted Root G4
+
+            Expires:   Fri Jan 15 02:59:59 2038
+
+            SHA1 hash: 07894D00FC194A17DB273AEB5CF8FACEF14423A4
+
+
+                Issued to: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1
+
+                Issued by: DigiCert Trusted G4 TimeStamping RSA4096 SHA256 2025 CA1
+
+                Expires:   Thu Sep 04 02:59:59 2036
+
+                SHA1 hash: DD6230AC860A2D306BDA38B16879523007FB417E
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\InsydeH2offt\FlsHook.exe
+
+
+Number of signatures successfully Verified: 1
+
+Number of warnings: 0
+
+Number of errors: 0
+

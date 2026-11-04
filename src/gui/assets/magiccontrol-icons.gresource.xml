@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/com/mechrevo/magiccontrol/icons">
+    <file alias="512x512/apps/com.mechrevo.magiccontrol.png">magiccontrol-512.png</file>
+  </gresource>
+  <gresource prefix="/com/mechrevo/magiccontrol">
+    <file alias="donation-wallet.png">donation-wallet.png</file>
+    <file alias="license.txt">../../../GitHub_Releases/LICENSE.txt</file>
+  </gresource>
+</gresources>

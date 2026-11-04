@@ -1,0 +1,177 @@
+[0.022s][warning][cds] Archived non-system classes are disabled because the java.system.class.loader property is specified (value = "ghidra.GhidraClassLoader"). To use archived non-system classes, this property must not be set
+INFO  Using log config file: jar:file:/C:/Users/admin/Documents/mechrevo/.tools/Ghidra_12.1.4/ghidra_12.1.4_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml (LoggingInitialization)  
+INFO  Using log file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\application.log (LoggingInitialization)  
+INFO  Loading user preferences: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\preferences (Preferences)  
+INFO  Searching for classes... (ClassSearcher)  
+INFO  Class search complete (768 ms) (ClassSearcher)  
+INFO  Initializing SSL Context (DefaultSSLContextInitializer)  
+INFO  Initializing Random Number Generator... (SecureRandomFactory)  
+INFO  Random Number Generator initialization complete: SHA1PRNG (SecureRandomFactory)  
+INFO  Trust manager disabled, cacerts have not been set (DefaultTrustManagerFactory)  
+INFO  Starting cache cleanup: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\cache\ghidra\fscache2 (FileCacheMaintenanceDaemon)  
+INFO  Finished cache cleanup, estimated storage used: 0 (FileCacheMaintenanceDaemon)  
+INFO  Headless startup complete (7618 ms) (AnalyzeHeadless)  
+INFO  Class searcher loaded 59 extension points (20 false positives) (ClassSearcher)  
+INFO  HEADLESS Script Paths:
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\SystemEmulation\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\FileFormats\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Processors\JVM\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Processors\PIC\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\BSim\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\WildcardAssembler\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\BytePatterns\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\VersionTracking\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Processors\DATA\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Processors\Atmel\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\Base\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\GnuDemangler\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\PDB\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\nvflash-reader-20261025
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Debug\Debugger-rmi-trace\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Processors\8051\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\SwiftDemangler\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Debug\Debugger\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\FunctionID\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\Decompiler\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\DecompilerDependent\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\MicrosoftCodeAnalyzer\ghidra_scripts
+    C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\PyGhidra\ghidra_scripts (HeadlessAnalyzer)  
+INFO  HEADLESS: execution starts (HeadlessAnalyzer)  
+INFO  Creating project: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\NvflashSavedFile (HeadlessAnalyzer)  
+INFO  Creating project: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\NvflashSavedFile (DefaultProject)  
+INFO  REPORT: Processing input files:  (HeadlessAnalyzer)  
+INFO       project: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\NvflashSavedFile (HeadlessAnalyzer)  
+INFO  IMPORTING: file:///C:/Users/admin/Documents/mechrevo_dsh/analysis/nvflash-research-20261025/mirror-extracted/nvflash64.exe.reference.bin (HeadlessAnalyzer)  
+INFO  Using Loader: Portable Executable (PE) (ProgramLoader)  
+INFO  Using Language/Compiler: x86:LE:64:default:windows (ProgramLoader)  
+INFO  Using Library Search Path: [., C:\WINDOWS\SysWOW64, C:\Users\admin\Documents\mechrevo\.tools\Temurin21\jdk-21.0.12.1+1\bin, C:\WINDOWS\Sun\Java\bin, C:\WINDOWS\system32, C:\WINDOWS, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell, C:\Users\admin\.codex\tmp\arg0-windows\codex-arg0HlJyqP, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\libheif\libheif\bin, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\jxrlib\jxrlib\bin, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\poppler\Library\bin, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin\override, C:\WINDOWS\System32\Wbem, C:\WINDOWS\System32\WindowsPowerShell\v1.0\, C:\WINDOWS\System32\OpenSSH\, C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\, C:\Program Files\Git\cmd, C:\Program Files\cursor\resources\app\bin, C:\Program Files\WSL\, C:\Program Files\dotnet\, C:\Users\admin\AppData\Local\hermes\bin, C:\Users\admin\AppData\Local\Microsoft\WindowsApps, C:\Users\admin\.dotnet\tools, C:\Users\admin\AppData\Local\Microsoft\WinGet\Packages\Microsoft.etl2pcapng_Microsoft.Winget.Source_8wekyb3d8bbwe, C:\Users\admin\Documents\PlayTodey\Reader\NdefTagTool\build\dotnet\.dotnet\tools, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin\fallback, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin, C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd, C:\Users\admin\AppData\Local\OpenAI\Codex\bin\c602dfdab3808440, C:\Users\admin\AppData\Local\OpenAI\Codex\bin\2993767bd1dfb009] (ProgramLoader)  
+INFO  TLS callbacks at 141078638 (TLSDirectory)  
+INFO  TLS callbacks at 1801489e0 (TLSDirectory)  
+WARN  Invalid or missing function at 18015f410 (ExportDataDirectory)  
+WARN  Invalid or missing function at 1800cf87c (ExportDataDirectory)  
+WARN  Invalid or missing function at 180061404 (ExportDataDirectory)  
+INFO  Additional info:
+Loading file:///C:/Users/admin/Documents/mechrevo_dsh/analysis/nvflash-research-20261025/mirror-extracted/nvflash64.exe.reference.bin?MD5=27e785793ccdaefb68cdc55c99dce8e7...
+[nvflash64.exe.reference.bin]: failed to create TerminatedCString at 1416eb984: Failed to resolve data length for TerminatedCString
+------------------------------------------------
+
+Searching 27 paths for library ADVAPI32.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/advapi32.dll
+Loading file:///C:/Windows/System32/advapi32.dll?MD5=3a34cafb3a9a8c7c0b4f230ace934529...
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\advapi32.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 27 paths for library BCRYPT.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/bcrypt.dll
+Loading file:///C:/Windows/System32/bcrypt.dll?MD5=30d869d1cc08b99e0227ba85504fc48d...
+[bcrypt.dll]: failed to create WEVTResource at 1800284d0: Failed to resolve data length for WEVTResource
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\bcrypt.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 27 paths for library CRYPT32.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/crypt32.dll
+Loading file:///C:/Windows/System32/crypt32.dll?MD5=32bb06493f56fa9d62e965a121ba1d82...
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\crypt32.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 27 paths for library KERNEL32.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/kernel32.dll
+Loading file:///C:/Windows/System32/kernel32.dll?MD5=f5c1a53820926a317adde8a0eccf31ca...
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\kernel32.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 27 paths for library SETUPAPI.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/setupapi.dll
+Loading file:///C:/Windows/System32/setupapi.dll?MD5=9f094e22d2fff536da9c3bb1b009b44b...
+[setupapi.dll]: failed to create WEVTResource at 18047fe28: Failed to resolve data length for WEVTResource
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\setupapi.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 27 paths for library USER32.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/user32.dll
+Loading file:///C:/Windows/System32/user32.dll?MD5=57c789795a3089648fe8e67f19661977...
+[user32.dll]: failed to create WEVTResource at 1800efa70: Failed to resolve data length for WEVTResource
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\user32.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 27 paths for library WINMM.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/winmm.dll
+Loading file:///C:/Windows/System32/winmm.dll?MD5=a2e3d363cdb7dd10d285b1cad7139846...
+[winmm.dll]: failed to create WEVTResource at 180031310: Failed to resolve data length for WEVTResource
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\winmm.exports
+Library not saved to project.
+------------------------------------------------
+
+Searching 27 paths for library WS2_32.DLL...
+Skipping library which is the wrong architecture: file:///C:/Windows/SysWOW64/ws2_32.dll
+Loading file:///C:/Windows/System32/ws2_32.dll?MD5=4427c7a0cd59d6d38aa1c5220b7e479e...
+[ws2_32.dll]: failed to create WEVTResource at 18006c4b8: Failed to resolve data length for WEVTResource
+Created exports file: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\settings\ghidra\ghidra_12.1.4_PUBLIC\symbols\win64\ws2_32.exports
+Library not saved to project.
+------------------------------------------------
+
+Applying cached symbols from WINMM.DLL
+Applying cached symbols from SETUPAPI.DLL
+Applying cached symbols from USER32.DLL
+Applying cached symbols from KERNEL32.DLL
+Applying cached symbols from ADVAPI32.DLL
+Applying cached symbols from BCRYPT.DLL
+Applying cached symbols from WS2_32.DLL
+Applying cached symbols from CRYPT32.DLL
+Linking the External Programs of 'nvflash64.exe.reference.bin' to imported libraries...
+  [WINMM.DLL] -> not found in project
+  [SETUPAPI.DLL] -> not found in project
+  [USER32.DLL] -> not found in project
+  [KERNEL32.DLL] -> not found in project
+  [ADVAPI32.DLL] -> not found in project
+  [BCRYPT.DLL] -> not found in project
+  [WS2_32.DLL] -> not found in project
+  [CRYPT32.DLL] -> not found in project
+------------------------------------------------
+
+ (ProgramLoader)  
+INFO  IMPORTING: Loaded 0 additional files (HeadlessAnalyzer)  
+INFO  ANALYZING all memory and code: file:///C:/Users/admin/Documents/mechrevo_dsh/analysis/nvflash-research-20261025/mirror-extracted/nvflash64.exe.reference.bin (HeadlessAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___raise_securityfailure' specified in file: C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\Base\data\PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+WARN  Ignoring leading '_' chars on no-return name '___report_rangecheckfailure' specified in file: C:\Users\admin\Documents\mechrevo\.tools\Ghidra_12.1.4\ghidra_12.1.4_PUBLIC\Ghidra\Features\Base\data\PEFunctionsThatDoNotReturn (NoReturnFunctionAnalyzer)  
+INFO  Skipping PDB processing: missing PDB information in program metadata (PdbUniversalAnalyzer)  
+INFO  Packed database cache: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\nvflash-static-20261025\cache\ghidra\packed-db-cache (PackedDatabaseCache)  
+WARN  Decompiling 140f57b70: Unable to read bytes at ram:152011200 (DecompileCallback)  
+WARN  Decompiling 140ce7f60: Unable to read bytes at ram:152121200 (DecompileCallback)  
+ERROR VarnodeContext: out of address spaces at @140745e2f for: EAX-140745e2f (VarnodeContext)  
+INFO  -----------------------------------------------------
+    Call-Fixup Installer                       0,084 secs
+    Create Function                            0,229 secs
+    Decompiler Switch Analysis                83,640 secs
+    Disassemble                                0,008 secs
+    Disassemble Entry Points                  33,124 secs
+    Embedded Media                             0,103 secs
+    External Entry References                  0,000 secs
+    Function Start Search                      0,221 secs
+    Non-Returning Functions - Discovered      99,604 secs
+    Non-Returning Functions - Known            0,062 secs
+    PDB Universal                              0,003 secs
+    Shared Return Calls                        4,147 secs
+    Subroutine References                      2,138 secs
+    Windows x86 PE Exception Handling          1,014 secs
+    Windows x86 Thread Environment Block (TEB) Analyzer     0,014 secs
+    x86 Constant Reference Analyzer           91,563 secs
+-----------------------------------------------------
+     Total Time   315 secs
+-----------------------------------------------------
+ (AutoAnalysisManager)  
+ERROR REPORT: Analysis timed out at 240 seconds. Processing not completed for file: file:///C:/Users/admin/Documents/mechrevo_dsh/analysis/nvflash-research-20261025/mirror-extracted/nvflash64.exe.reference.bin (HeadlessAnalyzer)  
+INFO  REPORT: Execute script: ReviewNvflash.java 'C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\nvflash-reader-20261025\decompiled' '141139930,141140cf8,141198ba0,141198cb0,141199a08,141199a28,141199a80,141199cb0,141199cd8,1411b0418,1411b0458,1411cdd60,1411d3500,1411d35a0,1411d80c0,1411d83b8,1411df240,1411e7368'  (HeadlessAnalyzer)  
+INFO  SCRIPT: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\nvflash-reader-20261025\ReviewNvflash.java (HeadlessAnalyzer)  
+WARN  Decompiling 140ce7f60: Unable to read bytes at ram:152121200 (DecompileCallback)  
+INFO  ANALYZING changes made by post scripts: file:///C:/Users/admin/Documents/mechrevo_dsh/analysis/nvflash-research-20261025/mirror-extracted/nvflash64.exe.reference.bin (HeadlessAnalyzer)  
+INFO  REPORT: Post-analysis succeeded for file: file:///C:/Users/admin/Documents/mechrevo_dsh/analysis/nvflash-research-20261025/mirror-extracted/nvflash64.exe.reference.bin (HeadlessAnalyzer)  
+INFO  /nvflash64.exe.reference.bin: file created (admin) (LocalFileSystem)  
+INFO  REPORT: Save succeeded for: /nvflash64.exe.reference.bin (NvflashSavedFile:/nvflash64.exe.reference.bin) (HeadlessAnalyzer)  
+INFO  REPORT: Import succeeded (HeadlessAnalyzer)  

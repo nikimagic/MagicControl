@@ -1,0 +1,27 @@
+НАБЛЮДЕНИЯ, НЕ ЗАВОДСКИЕ КОНСТАНТЫ. Часть снята после наших записей.
+Плата | Project740 | BIOS family | Platform7C3 | ROM770 | источник
+
+L16 | [26] | ID6 | [6] | FF | сохранённые RAM с validity, индекс26.10
+HYDROC-16 | [26] | IDY | [13] | FF | сохранённые RAM с validity, индекс26.10
+GM5HG0A | [25] | IDA | [4, 7] | FF | сохранённые RAM с validity, индекс26.10
+GM6IR0C | [25] | IDC | [4, 7] | 04,FF | сохранённые RAM с validity, индекс26.10
+WUJIE Series-X5SP4NAG | [26] | IDG | [4] | FF | сохранённые RAM с validity, индекс26.10
+
+ДляWUJIE дополнительный свежий файл portable platform_id/rom_id:
+platform_id | 27.10.2026 18:24:35 +0300 | {"hex": "0x07", "decimal": 7}
+rom_id | 27.10.2026 18:24:35 +0300 | {"hex": "0xFF", "decimal": 255}
+project_id | 27.10.2026 18:24:35 +0300 | {"hex": "0x1A", "decimal": 26}
+
+ДРУГИЕ МОДЕЛИ: ProjectID из OEM РЕЕСТРА, НЕ direct740. Platform/ROM неизвестны.
+Плата | CC version(s) | registry ProjectID | CustomizeTarget
+GM6PX7X | ['5.56.60.4'] | [16] | [56]
+KUANGSHI-JIGUANG Series-X6xx55xW-B2 | ['5.56.60.26'] | [26] | [56]
+CANGLONG Series-X6xR55xY | ['5.56.51.44', '5.56.51.62'] | [26] | [56]
+GM6BG0X | [] | [16] | []
+KUANGSHI-JIGUANG Series-X6xx57TW | ['5.56.51.44'] | [26] | [56]
+JIAOLONG Series-X6DR55xx-B2 | ['5.56.51.53'] | [26] | [56]
+GX6HG0U-F | ['5.49.51.44'] | [26] | [49]
+CANGLONG Series-X8xR55xP-B2 | ['5.56.60.34'] | [26] | [56]
+YAOSHI Series-X6AR55xY | ['5.56.51.44', '5.56.60.22'] | [26] | [56]
+GM6IX9B | ['5.56.51.58'] | [25] | [56]
+GM5HG0A | ['5.56.60.34'] | [25] | [23]

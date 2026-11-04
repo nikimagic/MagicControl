@@ -1,0 +1,29 @@
+Первичные внешние справочники корня, проверены20.10.2026
+
+https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/hidsdi/nf-hidsdi-hidd_getattributes
+HID attributes относятся к VID/PID/version descriptor metadata. Они не доказывают
+поддержку конкретного OEM feature report или управление подсветкой.
+
+https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getcaps
+Parsed HID capabilities относятся к top-level collection; UsagePage/Usage и
+размеры input/output/feature reports нужны для выбора правильного интерфейса.
+Один совпавший VID/PID недостаточен для переноса команды другой модели.
+
+https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea
+dwDesiredAccess0 позволяет запросить metadata без data read/write access;
+результат открытия и права всё равно проверяются отдельно.
+
+https://raw.githubusercontent.com/torvalds/linux/master/drivers/platform/x86/huawei-wmi.c
+Просмотрено текущее upstream source: enum HWMI содержит battery/fn/micmute,
+LED setup создает platform::micmute. Наличие huawei::kbd_backlight или
+kbdlight_timeout этим upstream файлом не гарантируется. Наш Linux adapter
+условный: нужны реальные sysfs файлы и разрешения, например в предоставляющем
+их fork/драйвере. Не переносить ABI нового Huawei на HLYL BIOS1.09.
+
+https://cdn.kernel.org/doc/html/latest/leds/leds-class.html
+Kernel LED class описывает naming/brightness интерфейса, но не доказывает
+наличие RGB или подходящего driver на определенном ноутбуке.
+
+Для конкретных команд/версий приоритет у точного локального OEM бинарника,
+его восстановленных методов и физического evidence этой модели. Ссылки
+master/latest плавающие: повторно проверить при будущей интеграции.

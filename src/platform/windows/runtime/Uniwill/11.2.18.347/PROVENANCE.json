@@ -1,0 +1,36 @@
+{
+  "component": "Uniwill OEM ACPI Driver 11.2.18.347",
+  "inf_version": "11.2.18.347",
+  "inf_date": "2024-08-27",
+  "hardware_id": "ACPI\\INOU0000",
+  "service": "UWACPIDriver",
+  "architecture": "NTamd64",
+  "origin": "Owner-provided ControlCenter_5.23.51.56_Eluktronics_V4.zip; app/ZipFiles/UWACPIDriver.zip, extracted without modification",
+  "source_archive_sha256": "55f28ce14493ac678a7d5cf59050e34279ce0539172cbda16bce71d4e4f1b1b7",
+  "driver_zip_sha256": "a478886ab26d1190e8e15ccda1e80a1ac66d39da6b7a940a787a3db4b2418dad",
+  "modified": false,
+  "redistribution_permission": "not established",
+  "magiccontrol_license_applies": false,
+  "signature_evidence": "SYS signed by Uniwill; CAT signed by Microsoft WHCP; SYS and INF catalog membership verified offline with signtool /pa; SYS /kp verified",
+  "reviewed_model_ids": [
+    "eluktronics-hydroc16g2"
+  ],
+  "files": [
+    {
+      "path": "UWACPIDriver.sys",
+      "bytes": 49096,
+      "sha256": "e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2"
+    },
+    {
+      "path": "UWACPIDriver.inf",
+      "bytes": 2033,
+      "sha256": "265df0a2913627328365661867776db7e6331b99eacc27abd66fd5ae700b9b86"
+    },
+    {
+      "path": "UWACPIDriver.cat",
+      "bytes": 11324,
+      "sha256": "97df04eab235f33e21e9a44b5c55a1c8b17b245d658664a3a8aa7b5e1c577444"
+    }
+  ],
+  "corroboration": "Exact SYS/INF/CAT independently match owner-provided XY14PTL_ControlCenter_5.57.1.2_Mechrevo_GX package, CustomizeTarget57; signatures and catalog membership verified. This provenance match does not infer X5SP4NAG hardware-control compatibility."
+}

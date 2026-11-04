@@ -1,0 +1,278 @@
+MagicControl 0.1.75 — статическая ревизия Unknown (internal UI id noname)
+Дата: 19.10.2026. Корень: C:\Users\admin\Documents\mechrevo_dsh\MagicControl
+Область: общий fallback неизвестного ноутбука, обе ОС, общие дампы и portable.
+
+Условия проверки
+Изучены актуальные исходники и уже существующие portable-файлы. Изменён только
+этот отчёт. Не запускались GUI, CLI, тесты, сборки, OEM-бинарники, SSH, установка
+драйверов, EC/HID/firmware команды. Поэтому ниже отделены доказанные ветки кода,
+пробелы реализации и проверки, требующие отдельного аппаратного поручения.
+Unknown не является моделью с единым OEM-пакетом. Код GM6/HYDROC/Honor нельзя
+объявить его родным протоколом без идентификации фактической платы.
+Внешний вид Wujie — эталон общих карточек; геометрия и скролл не менялись.
+
+1. Матрица пяти областей
+
+1) Распознавание / драйверы / допуски
+  Windows и Linux:
+  - DeviceRegistry.cpp:24–30: точное manufacturer/baseBoard/productName matching;
+    unknown/Profile.cpp:4: fallback имеет пустые protocol/backend/identity/caps.
+  - gui/common/DeviceHeader.h:33–56: неизвестная SMBIOS автоматически выбирает
+    индекс3; id noname остаётся presentation id, реальная SMBIOS не подменяется.
+  - Windows BackendFactoryWindows.cpp:7–13 не выдаёт Unknown legacy EcAccess.
+    factories GM6, Huawei и NativeBattery проверяют реальный профиль независимо
+    от пункта меню. Переключение UI-модели не расширяет аппаратные разрешения.
+  - BIOS разрешает PawnIO installer и системную диагностику Unknown, включая
+    его preview на известной машине. Остальные preview writers отключены.
+  - PawnIoStatusWindows.cpp:9–42: SCM config/status только чтение; installed и
+    running разделены, неправильный service type не считается PawnIO-драйвером.
+  - PawnIoInstallWindows.cpp:18–22, 44–93: pinned официальный installer2.2.0,
+    размер/SHA256 и Authenticode, повторная проверка под read lock, обычный
+    интерактивный мастер runas; нет silent install или запуска службы в inspector.
+  - dependencies.json: до/после SCM, image path, state/exit codes, runtime presence
+    и size; ошибка SCM = driver:null, ошибка доступа к файлу = present:null.
+    Наличие файла/службы не выдаётся за успешное чтение датчика.
+  - Linux dependencies явно PawnIO not applicable; Linux EC backend отсутствует.
+  Итог: чужих EC/HID writers в Unknown не найдено. Неполная инвентаризация родных
+  устройств/драйверов — замечание U4 ниже.
+
+2) Температуры и прочая телеметрия
+  Windows:
+  - CPU load: GetSystemTimes; frequency: ProcessorInformation и отдельный WMI
+    provider; ACPI thermal zones сохраняются с именем зоны, не как CPU temperature.
+  - Intel DTS/RAPL: IntelTelemetryWindows.cpp:23–32 — CPUID model allowlist
+    B7/BA/BF/C5/C6, подписанный IntelMSR.bin с pinned hash; это независимый от
+    Unknown EC путь. Другие Intel CPU дают явный unsupported model, не ноль.
+  - Intel PCH: IntelPchWindows.cpp:12–36 — Intel-only, signed/hash-pinned модуль,
+    проверка identity/route и raw valid bits. PCH не подменяет CPU или батарею.
+  - AMD ADL телеметрия не требует EC. PawnTelemetry CPU/RAM на Unknown намеренно
+    не разрешены: MonitoringWindows.cpp:194 и PawnTelemetryWindows.cpp:68–73,
+    165–169. RyzenSMU диагностические таблицы разрешены только Wujie/Honor:
+    DiagnosticSensorsWindows.cpp:31–41. Это ограничение поддержки, не поломка.
+  - Intel I801/SPD5118 на Unknown намеренно закрыт board/CPU guard:
+    IntelMemoryWindows.cpp:11–22. В диагностике сохраняется причина unavailable.
+    Название Intel CPU само по себе не даёт разрешения сканировать чужой SMBus.
+  - SSD: diagnostic режим просматривает PhysicalDrive0..63; Storage properties
+    52/51 и NVMe SMART composite + sensor1..8, raw/ошибки отдельно. UI показывает
+    только первые два диска. Два sensor temperature одного SSD — не два диска,
+    и семантика NAND/controller не угадывается по величине температуры.
+  - Battery Class IOCTL/PowerStatus не зависят от EC; error INVALID_FUNCTION
+    сохраняется с Win32 кодом, Kelvin/10 преобразуется только валидный raw.
+  - Необязательные LibreHardwareMonitor/OpenHardwareMonitor — только уже
+    существующие WMI providers, не запускаются; source/identifier сохраняются.
+  - NVIDIA NVML перечисляет устройства, Windows NVAPI supplement требует PCI
+    identity; raw power anomaly не превращается в0W. PnP D-state до/после опроса,
+    P-state и OEM-request bits — отдельные наблюдения, MUX setter не вызывается.
+  - Intel IGCL V2/legacy ABI versions/sizes пробуются с кодами возврата; на
+    ошибке ОС-видимый Intel адаптер остаётся отдельной строкой.
+  - Radeon ADLX/ADL сохраняются отдельными наблюдениями; dGPU tuning требует
+    собственной identity/type/range и readback. Диагностика tuning не вызывает.
+  Linux:
+  - /proc/stat, cpufreq, coretemp/k10temp, RAPL, spd5118, NVMe hwmon;
+    диагностический hwmon scanner сохраняет все экспортированные numeric channels,
+    labels/path, units, raw и ошибки; power_supply и thermal_zone читаются отдельно.
+  - Intel i915/xe и Radeon amdgpu берутся по PCI/sysfs identity. Runtime suspended
+    для этих путей не трактуется как0; live queries пропускаются. NVML общий.
+  - Linux GPU type Unknown остаётся Unknown, если driver не подтвердил FUSION/
+    discrete; объём VRAM или primary flag не используется как доказательство типа.
+  - Полный EC0..FFF на Linux не имитируется256-байтным ec_sys окном.
+  Итог: зависимые от платы CPU/RAM пути ограничены осознанно; датчики, которых
+  драйвер не экспортирует, не становятся выдуманными показаниями. См.U1,U2,U3,U6,U7.
+
+3) FANs / Default / Max / Manual online / пробы
+  - Unknown не получает FanController, Gm6Controller или HlylFanController.
+    GUI draft CSV общий для всех моделей и обеих ОС; это настройки, не readback.
+  - Windows DiagnosticDumpWindows.cpp:26–51 проверяет фактическую модель до
+    Default. Unknown возвращает attempted=false, confirmed=false. Max EC и NVML
+    после этого пропускаются (общий DiagnosticDump.cpp:462–466, 508–514).
+  - Unknown preview снимается ReadOnly через biosFanProbesAllowed; реальный
+    Unknown сейчас выбирает WithFanProbes в GUI, но hardware ветки всё равно
+    отклоняют его по точной модели. Пакет может содержать общий текст про Default/
+    Max при фактически skipped пробах; это не доказательство аппаратной пробы.
+  - NVML Max отдельно разрешён только единственной RTX4060 Laptop реального GM6,
+    не неизвестному ноутбуку/eGPU и не по случайному device index.
+  - Общий FanMaximum.cpp:14–40 держит разрешённый Max30с, проверяет стабильность
+    последних4RPM, отмена не пропускает cleanup; sampled peak не выдаётся за
+    паспортный предел. Unknown эту функцию не вызывает.
+  - На Linux FANs hardware writers отсутствуют; локальная смена/сохранение
+    пресетов реализована. Доступность/подсветка может вводить в заблуждение: U5.
+
+4) Батарея / защита заряда
+  - Реальная системная карточка SETs работает при null EC и null OEM controller.
+  - Unknown Windows renderSelection() выбирает battery=-1 и updateButtons()
+    не разрешает кнопки зарядки. Linux кнопки изначально insensitive и включаются
+    лишь typed Huawei backend; Unknown его не получает.
+  - NativeBatteryController factory допускает только точные GM6/HYDROC; Unknown
+    не получает записи7A6 или сохранённое startup/resume восстановление этих плат.
+  - Native profiles0/1/2 не объявлены эквивалентными100/95/85. У Unknown нет
+    подтверждённого OEM battery policy, поэтому три процента лишь недоступные
+    общие кнопки. Есть ошибка представления неизвестного AC и неполнота нескольких
+    системных батарей: U3,U7.
+
+5) Подсветка / цикл6 / timeout
+  - Unknown Windows не создаёт KeyboardColorCycle: SettingsPage.cpp:289–290
+    требует Gm6Controller либо проверенный EcAccess Backlight capability.
+  - Unknown SETs disables effects/color/levels/timeout, renderSelection(-1).
+    ColorCycle параметры могут существовать на диске, но не запускают writer.
+  - Linux layout содержит общие effect controls; без typed OEM backend они
+    disabled, cycle writer не реализован. OEM HWND/HID протоколы чужой платы
+    не выбираются по торговому названию ноутбука.
+  - Timer runtime cycle и аппаратный inactivity timeout — разные функции;
+    наличие поля времени в UI не доказывает команду прошивки.
+  Итог: неподтверждённые подсветка/таймаут для Unknown не включены; HID-инвентаризации
+  для будущего восстановления конкретного OEM сейчас не хватает (U4).
+
+2. Доказанные замечания по исходникам
+
+U1 [P2] Частичный успех Radeon provider скрывает другие AMD GPU в vendor dump.
+  src/platform/windows/RadeonGpuWindows.cpp:117–119.
+  Ветка: hasIdentity = any_of(rows, nonempty uuid); DXGI fallback выполняется
+  только если !hasIdentity. Если ADLX/ADL вернули iGPU или один dGPU, а другой
+  адаптер виден ОС, но отсутствует в providers (сон/сбой/старый драйвер), второй
+  не добавится в radeon.json и временную vendor telemetry. graphics.json его
+  сохранит, однако отсутствующая vendor строка не объяснит причину потери.
+  Предложение: сверять каждый OS PCI identity с provider identities и добавлять
+  отдельный unavailable fallback для каждого непокрытого адаптера. Не объединять
+  ADLX/ADL по совпадению имени и не переносить iGPU sensor на dGPU.
+
+U2 [P2] Отмена/timeout не ограничивают первый и последующие fast provider calls.
+  src/platform/common/DiagnosticDump.cpp:218–253, 281–296, 309.
+  Ветка: конструктор делает ready.get() без timeout; promise выдаётся только
+  после monitoring.read(), platform.read(), fan/GPU API и append. Отмена owner
+  подключается к fast_.request_stop только в finish(), а vendor API синхронны
+  и stop_token не принимают. finish/destructor затем безусловно join fast_.
+  Следствие: зависший NVML/ADLX/IGCL/PawnIO/Storage вызов задержит первый sample,
+  отмену и завершение пакета без верхней границы;60с — минимальное окно, не deadline.
+  Это статически подтверждённое отсутствие ограничения; фактическое зависание
+  конкретного драйвера в этой ревизии не воспроизводилось.
+  Предложение: ранняя связь owner cancellation, bounded ожидание baseline и
+  изоляция потенциально зависающих read-only провайдеров по образцу WMI helper.
+  Не завершать поток принудительно внутри живого device API и не отменять cleanup
+  аппаратной пробы. Писать provider deadline/partial пакеты независимо.
+
+U3 [P2] Неизвестное AC состояние сериализуется и показывается как питание от батареи.
+  src/core/include/MagicControl/Monitoring.h:20: bool online{} не имеет unknown.
+  src/platform/windows/MonitoringWindows.cpp:255–270: при ошибке PowerStatus или
+  ACLineStatus==255 online остаётсяfalse, при этом percent может быть известен.
+  src/gui/common/MonitoringCards.h:64–70: если есть battery percent/voltage,
+  false безусловно превращается в «Питание: от батареи», игнорируя flow Unknown.
+  src/platform/common/DiagnosticDump.cpp:494–496: battery.json пишет online=false
+  как установленный факт, не показывает источник/достоверность AC отдельно.
+  Linux: отсутствие/ошибка чтения online также оставляетfalse.
+  Предложение: optional AC/power-source status с null в JSON и «нет данных»
+  в существующей строке; внешний вид и геометрию карточки сохранить.
+
+U4 [P2] Unknown dump не собирает inventory нативных EC/HID interfaces/drivers.
+  src/platform/windows/InventoryDetailsWindows.cpp:277–280 и allowlist
+  src/platform/windows/DiagnosticWmiWindows.cpp:25.
+  Ветка перечисляет только NET/MEDIA/CAMERA/BLUETOOTH/COMPUTEACCELERATOR и NPU/IPU
+  по имени. Нет общей SYSTEM/HIDClass/Keyboard/ACPI записи DeviceID/Service/
+  HardwareIDs/driver path/hash, HID VID/PID/usage/interface descriptors.
+  src/platform/windows/DiagnosticDumpWindows.cpp:106–113 возвращает Unknown до
+  родного диагностического EC-пути; dependencies.json проверяет именно PawnIO.
+  Следствие: пакет Unknown не даёт полного списка установленного OEM EC/HID
+  оборудования для последующего статического разбора вентилятора/подсветки;
+  успешный PawnIO inspector эту информацию не заменяет.
+  Предложение: общий read-only SetupAPI/SCM/HID metadata snapshot с отдельными
+  ошибками доступа, identity/path/подписью и хэшами доступных driver images;
+  не загружать/запускать драйверы и не посылать HID feature commands при inventory.
+
+U5 [P3] FANs без backend оставляет применяющие пресеты активными/подсвеченными.
+  Windows src/gui/windows/FansPage.cpp:657–667: preset availability не требует
+  fanController/ec. selectPreset():865–876 меняет profiles, highlight и CSV до
+  проверки null fanController на886; catch сбрасывает requestedHighlight, но
+  выбранный draft preset и сохранённый файл остаются изменёнными после отказа.
+  Linux src/gui/linux/FansPage.cpp:113–121, 395–405: Max/Manual online активны
+  при отсутствии EC transport и получают primary CSS как выбранный режим.
+  Строка статуса говорит о локальном сохранении/нет EC; аппаратных записей нет.
+  Следствие: доступная кнопка/выделенный Max/online выглядит как управление,
+  хотя реального исполнителя нет. Особенно заметно на новом Unknown ноутбуке.
+  Предложение: отделить draft selection от actual fan mode общей моделью статуса,
+  либо отключить команды применения без backend; редакторы/сохранение draft
+  оставить доступными. Не менять эталонную геометрию/scrollbar Wujie.
+
+U6 [P3] Provenance температуры SSD может быть заменён на другой источник.
+  src/platform/windows/MonitoringWindows.cpp:425, 429–451.
+  Ветка сначала принимает item.celsius из Storage property51/52. В diagnostic
+  режиме затем всегда запрашивает SMART. На451 item.source=NVMe SMART при любом
+  уже имеющемся item.celsius, даже если composite невалиден и значение осталось
+  от Storage property. На456 status становитсяok при любой прежней температуре.
+  Следствие: главный disk reading диагностического timeline приписан SMART ошибочно; raw
+  дополнительные rows сохраняют правильные источники и позволяют разобраться.
+  Предложение: присваивать source одновременно с принятием конкретного значения;
+  отдельно хранить status каждого запроса. Никаких догадок controller/NAND.
+
+U7 [P2] Windows диагностика нескольких system batteries ограничена первой.
+  src/platform/windows/MonitoringWindows.cpp:221–253: сохраняется один HANDLE,
+  break сразу после первой батареи. readBattery() обслуживает только этот handle.
+  src/platform/windows/InventoryDetailsWindows.cpp:139–140: return rows внутри
+  цикла после первого подходящего BATTERY_SYSTEM_BATTERY.
+  Следствие: на неизвестной модели с двумя системными батареями battery.json,
+  Windows inventory и sensor timeline не содержат вторую батарею, её температуру/
+  серийный номер/износ. Суммарный PowerStatus не заменяет отдельные IOCTL sensors.
+  Linux fast PlatformSensors перечисляет все power_supply numeric channels,
+  но GUI/main battery snapshot также ориентирован на первую батарею.
+  Предложение: read-only battery list со стабильным interface identity в dump,
+  оставив существующую карточку Wujie без нового дизайна; выбор/агрегацию для
+  одной карточки сделать явными и не смешивать заряд одного АКБ с износом другого.
+
+3. Полнота/время/ошибки общего дампа
+  - DiagnosticDump.cpp:417–453: начальный EC snapshot до SensorRecorder и Max,
+    bytes/valid/errors отдельно, partial нули не выдаются за считанные байты.
+  - captureEcBlocks():321–366: бюджет180с, блок16байт, максимум3 попытки обычной
+    ошибки, ожидание observation pause и уступка2мс. Бюджет проверяется между
+    вызовами, не может прервать зависший синхронный transport. Unknown туда не входит.
+  - SensorRecorder:180, 198–200, 272–297: минимум60000мс между реально успешно
+    сохранёнными fast rows. Inventory/probes входят в окно только после baseline.
+    Последний sample запрашивается после ожидания, fast exit/error даёт incomplete.
+  - Параметры/факт/fast count/cancelled в sampling-window.json; lifetime min/max
+    optional providers отличаются от observed summary. Минутное окно не обещает
+    ровно61 образец, интервал best effort зависит от времени provider reads.
+  - WMI slow worker отделён от fast timeline. isolatedQuery total deadline8с
+    включает connect/execute/enumerate, helper fixed SELECT allowlist/JobObject,
+    частичные rows и статусы сохраняются. Полный slow pass может занимать до
+    нескольких последовательных8с; завершение штатно drain текущий pass.
+  - Unknown EC unsupported — корректный результат, не полный firmware dump.
+    BIOS/VBIOS flash image не снимается и не обещается.
+  - Vendor/hybrid identity сохранены в graphics.json; PnP/boot_vga/driver state
+    не являются командой переключения MUX. На Linux NVML не сохраняет аналог
+    Windows PnP D-state до/после: предел диагностики Runtime D3, не доказанный баг.
+  - Логи logs_<реальная baseboard>, fallback real product затем Unknown;
+    selected preview не переименовывает/не скрывает фактическую плату.
+  - Session snapshot и settings снимаются в конце; на cancellation это partial.
+  - Дополнительный общий пробел, вне Unknown: фиксированный settings list
+    DiagnosticDump.cpp:526 не включает hydroc16g2-device-settings.ini, хотя
+    NativeBatteryWindows.cpp:37 сохраняет туда политику HYDROC. Передано родителю;
+    профильный агент HYDROC должен включить это в свой итог.
+
+4. Portable статически
+  Рабочие Windows и Linux build-version.txt:0.1.75.
+  SHA256 portable == build binary:
+    Windows 7f55881e552e60200edf9c311d8b81d2c39135f91835c5b2f8bd601c9cd43cb4
+    Linux   431364267fd36bc1693e2c4dc5379197659fca76ec762d888504f8ef614e07c2
+  Windows PawnIO runtime содержит все15 файлов из cmake/PawnIORuntime.cmake,
+  включая RyzenSMU, IntelMSR/PCH, I801, LpcIO и notices. Stager валидирует pinned
+  модули и копирует их по единому списку. Runtime SCM inspector ничего не запускает.
+  Оба stager сохраняют имеющиеся user INI/CSV: packaged defaults копируются лишь
+  при отсутствии destination. Работа модулей/драйверов этим не доказана.
+  Нативные NVML/IGCL/ADLX DLL берутся из установленного display driver, не выдаются
+  за включённые в portable драйверы всех неизвестных ноутбуков.
+
+5. Неизвестное / необходимые отдельные проверки
+  - Физический Unknown экземпляр и его точный OEM package не предоставлены для
+    этой ревизии. Доказать его EC/HID protocol, fan RPM scaling, battery policy
+    или клавиатурные effects по GM6/HYDROC коду нельзя.
+  - Для будущего подключения: точная SMBIOS/BIOS/EC ревизия, pinned родной пакет,
+    восстановленные getters/setters/capability guards, interface identity,
+    полноценные исходные dumps и проверенное восстановление. Пока без writer.
+  - Контролируемые сценарии multi-GPU partial enumeration, runtime suspend/resume,
+    provider timeout/cancel, ACLineStatus unknown, multi-battery и отсутствующий
+    hwmon требуют отдельного разрешения на проверки; здесь их не запускали.
+  - Внешний вид оценивался только по общей code geometry/availability, не по
+    живому screenshot. Pixel-perfect/мерцание/scroll работу эта статическая
+    ревизия не подтверждает и не меняет.
+
+Вывод: архитектурная граница Unknown выдержана — не найден путь заимствования
+родного EC/HID управления другой платы. Основные исправления нужны в полноте
+vendor/driver inventory, bounded cancellation и честном представлении неизвестных
+значений/локального режима. P1 по этому статическому проходу не выявлено.

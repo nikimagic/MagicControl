@@ -1,0 +1,3 @@
+WUJIE [{'name': 'timer_LCALL', 'file_offset': '0x186e1'}, {'name': 'activity_bit23', 'file_offset': '0x2666'}, {'name': 'activity_bit24', 'file_offset': '0x1e488'}]
+GM6_1.11 [{'name': 'timer_LCALL', 'file_offset': '0x186ef'}, {'name': 'activity_bit23', 'file_offset': '0x8fa7'}, {'name': 'activity_bit24', 'file_offset': '0x3432'}, {'name': 'activity_bit24', 'file_offset': '0x1e4d8'}]
+GM6_1.12 [{'name': 'timer_LCALL', 'file_offset': '0x186ef'}, {'name': 'activity_bit23', 'file_offset': '0x8fa7'}, {'name': 'activity_bit24', 'file_offset': '0x3432'}, {'name': 'activity_bit24', 'file_offset': '0x1e4e0'}]

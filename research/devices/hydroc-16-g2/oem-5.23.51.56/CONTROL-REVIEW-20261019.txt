@@ -1,0 +1,120 @@
+HYDROC-16 G2 — батарея, FANs, подсветка. 19.10.2026
+
+Основа: точный пользовательский ControlCenter5.23.51.56 Eluktronics V4,
+GCUService1.0.2.70. Только статический разбор; OEM код/инициализаторы не запускались.
+Все ссылки ниже — readable-csharp в recovered-20261019, с исходными номерами строк.
+Проверки восстановления, хэши и raw-копии — README.txt/audit.json/proof.
+Это не перенос карты GM6 по сходству названия; источником служит сервис HYDROC.
+
+БАТАРЕЯ — ПОДКЛЮЧЕНА В MAGICCONTROL
+020001D1-GCUService.MySystem.BatteryProtection2.cs:520–574:
+SetHealthProtectionStatus выбирает High/Middle/Low для0/1/2.
+High снимает7A6.4/5; Middle включает4, снимает5; Low снимает4, включает5.
+Имена команд — PERFORMANCEDMODE/BALANCEDMODE/HEALTHYMODE.
+Init: для CustomizeTarget17/56 исходный OEM default=1, для остальных0.
+Это не доказательство процентов100/95/85. Private setters7B9/7D0 не имеют
+прямых IL-вызовов; NvramVariable не реализует эти батарейные ключи.
+
+Общий NativeBatteryController обслуживает GM6/HYDROC без двух реализаций.
+HYDROC: точные SMBIOS Eluktronics Inc./HYDROC-16/HYDROC-16 G2, ProjectID26,
+78E.6, PnP ACPI\INOU0000/serviceUWACPIDriver, SHA SYS11.2.18.347:
+e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2.
+Guard проверяется до записи, SYS сверяется снова перед каждым применением.
+Новый узкий вариант общего ACPI backend разрешает только7A6.4–5.
+Read ABI4/16; write8/16, два DWORD addr/value как OEM AcpiCtrl.WriteACPI.
+Fresh masked RMW, stable readback, rollback своих битов только пока они наши.
+Активный GCUService/AiStoneService блокирует setter; служба не останавливается.
+Сохранение BatteryProtection=0/1/2 — hydroc16g2-device-settings.ini, атомарно
+после readback. Старый файл без ключа ничего не включает. После запуска/сна
+восстанавливается лишь явный выбор. Ни default=Баланс, ни чужой INI не применяется.
+FANs/PL/7B9/7D0/WMI/UEFI не меняются. При выходе сброса нет.
+Физическая остановка заряда на новом ноутбуке ещё не измерялась.
+Windows SETs: существующие3 кнопки с native именами, выбор по реальному EC.
+Linux/preview: те же имена, аппаратный writer недоступен. Скролл/геометрия прежние.
+
+ВЕНТИЛЯТОРЫ — ВОССТАНОВЛЕН АКТИВНЫЙ ПУТЬ
+020002D6-MyControlCenter.MyFanCtrl.cs:172–228:
+78E.6 проверяется MyEcCtrl.IsSupportRamFan1p5. GetProject2ExID изменяет только
+Project23/24; для26 возвращает26. CommercialProjectIDs не содержит26.
+По данным дампа740=26/78E=FC выбирается MyFanManager_RamFan1p5,
+а не RamFan2, CML или CML_NV. Это вывод фабрики по присланным EC-значениям,
+не наблюдение запущенного OEM экземпляра на HYDROC.
+
+02000427-...MyFanManager_RamFan1p5.cs:7055–7167:
+751: native Gaming=00, Office=A0, Turbo=10, Custom=00 + отдельная индикация.
+Fan Boost —751.6 через read-modify-write. Custom дополнительно726.7;
+727.6 — CustomerModeLight, это не keyboard RGB.
+Родной SetFanMode пишет целый байт751; при переносе сохранять чужие биты
+и не копировать этот небезопасный для общего контроллера способ буквально.
+
+02000456-...MyFanTableCtrl.cs:28–32,234–280:
+Перед таблицей снять7C6.2; записать таблицу; затем включить7C6.2.
+Включение проверяет F00/F01, чтобы не активировать полностью пустую RAM.
+0200044A-...FanTable_Manager1p5.cs:1302–1449,2971–2980:
+CPU F00 Up/F10 Down/F20 Duty, GPU F30/F40/F50,16 логических точек,
+Duty RAW=2*процент, логическая первая Up=0, последняя rawUp=FF;
+Down[0] не записывается, есть сдвиг индексов Up/Down.
+Respective —7C5.7. Это не гарантирует равенства RPM при одинаковой duty.
+FanInfo: CPU RPM=464:465, GPU RPM=46C:46B; duty75B/75C /2.
+
+КЛЮЧЕВАЯ НАХОДКА: выгрузка внутренних заводских таблиц
+0200044A-...FanTable_Manager1p5.cs:2446–2505:
+RefreshDefaultFanTableAll временно снимает APP presence, запрашивает:
+Gaming mode2, Office mode3, Turbo mode1.
+RefreshDefaultFanTable пишет F5F=mode, F5D=FD, F5E=C9; каждые500мс ждёт,
+пока ОБА маркера изменятся, до10 попыток. Затем GetEcFanTable читает F00–F5F.
+После всей серии возвращает APP presence. Это mailbox-команда с записями,
+а не чтение flash; её нельзя запускать из обычного пассивного опроса.
+Простое чтение F00–F5F при commit=0 НЕ доказывает заводскую таблицу прошивки.
+Для последующего подключения нужен общий RAM1.5 механизм с отдельным HYDROC
+профилем, восстановлением исходных флагов/таблиц, readback и LC ownership.
+7C8.5 в дампе установлен: LC может заменять текущую таблицу.
+Существующий дампер/Max HYDROC в этой сборке остаётся read-only/неподключённым;
+battery capability не включает управление вентиляторами автоматически.
+
+ПОДСВЕТКА — РОДНОЙ ITE HID ПУТЬ НАЙДЕН
+020000D7-LightingModel.LM_Manager.cs:29–95: сначала ITE, затем EC fallback.
+020000DD-LightingModel.ITE_SPEC.cs:10–24:
+VID048D, keyboard PID CE00/6000/6001/6002/6003/6004/6006/6007/600A/600B,
+Usage1; UsagePage FF12=4-zone, FF02=1st per-key, FF03=новые per-key.
+Lightbar имеет отдельные PID7001/7000/6005/6008/6010, не путать с клавиатурой.
+020000C9-UsbHidModel.HIDManager.cs:35–98:
+SetupAPI HID interface + HidD_GetAttributes + HidP_GetCaps. Выбор по VID/PID,
+Usage, далее по UsagePage/FW. FeatureReportByteLength берётся из реальных caps.
+Протокол требует HID Feature Reports, а не записи RGB-регистров EC.
+
+020000DF-LightingModel.LM_ITE_RGB.cs:1217–1339,3860–4299:
+9 значимых байт; буфер при переносе выделять под фактический FeatureReportByteLength.
+08: [0,08,Control,Effect,Speed,Light,ColorIndex,Direction,Save].
+09: [0,09,02,Light,0,0,0,0,0].
+80: запрос FW; чтение ответа с проверкой command80, version bytes2..5.
+88: getter эффекта/скорости/яркости/цветового индекса/направления.
+14: RGB color packet, формат и калибровка зависят от определённого типа клавиатуры.
+1A: [0,1A,Control,Enable,Time,0,0,0,Save] — timeout welcome-эффекта.
+Set_Welcome_TimeOut_Effect_Enable сохраняет также RGBKeyboard1A в UEFI;
+HIDKeyboard callers передают4 при Enable и0 при Disable. Это ещё не
+доказательство таймера выключения при бездействии; единицы Time не установлены.
+Не переносить этот вызов в существующее поле АвтоВыкл как секунды без проверки.
+Effects: Single1, Breathing2, Wave3, Rainbow5; есть дополнительные эффекты.
+Яркость UI0..4 → raw0/8/22/36/50; скорость0..4 →10/7/5/3/1.
+OEM некоторые transport errors глотает и возвращает true без подтверждения;
+при переносе нужны проверка размера/command/readback и явная ошибка.
+
+020000DB-LightingModel.LM_EC_RGB.cs:49–65: fallback SingleZone требует766.2
+и NvramVariable.IsSingleColorKeyboardDetection()!=1.
+В присланном дампе766=93, bit2=0 — этот fallback не заявлен.
+73C=18 — subtype, не значение перечисления RGBKB_Type и не готовый HID ID.
+Текущий inventory.json не содержит VID048D/UsagePage/FW. Конкретный per-key/4-zone
+тип на этом экземпляре пока не подтверждён. Следующий шаг — точная HID
+инвентаризация и getter FW/effect; не выбирать первый похожий PID/чужой RGB writer.
+Никакие Feature Reports или hardware trials в этой работе не отправлялись.
+
+ДОПОЛНЕНИЕ: родной UI, resources.pri из того же x64 MSIX
+Статически выгружен Windows SDK MakePri. Точные строки и SHA PRI:
+BATTERY-UI-STRINGS-20261019.json, resource map en-us.
+strBatteryPerformanceInfo: режим для длительной работы от батареи.
+strBatteryBalancedInfo: эпизодическая работа вне сети без долгой автономности.
+strBatteryHealthyInfo: работа от адаптера, OEM рекомендует для ресурса батареи.
+strBatteryModeInfo: защита ресурса от высокого напряжения.
+Численные напряжения/проценты в этих описаниях не приведены.
+Это назначение OEM-профилей, а не результат физической проверки на экземпляре.

@@ -1,0 +1,15 @@
+Native battery OSD classification audit,26October2026
+
+The special251..253 WM_COMMAND route calls applyVoltageMode before the generic
+requestedNotice assignment. applyVoltageMode set only requestedCommand, so start
+and its activeNotice retained an earlier lighting/power message. Completion
+correctly reused activeNotice, propagating the wrong category/title/icon.
+
+Fix: explicitly select notice for the current native battery command before
+start, with key=battery, Battery icon, mode-specific title and no percent bar.
+Retain contextual OEM mode source keys through the common OSD render so
+Healthy remains Healthy in every language. Existing confirmation/error and
+queue token handling remains unchanged. Native operation checks still verify
+the observed mode and context; no hardware command, geometry or lifecycle changed.
+Both OS builds compile shared title/localization; Linux has no enabled native
+battery writer. No app or hardware execution. Tests not requested,disabled.

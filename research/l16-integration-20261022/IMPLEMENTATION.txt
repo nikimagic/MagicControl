@@ -1,0 +1,48 @@
+L16 integration —22.10.2026
+
+Owner authorization: connect FANs, battery, backlight and CPU limits using existing
+shared implementations; preserve older notebooks. Source boundary: Windows native
+EC, separate exact board data; Linux keeps its existing lack of this EC writer.
+
+Evidence inputs:
+1.zip EC dump0.1.149, Project1A, capability78E=EC,7C3=06,770=FF,7C6=04;
+EC SHA2563F89633108C524FA3345B82B7B7955734613DC92A55CA6DAEA89C7E03DF225F9.
+Exact DSDT ECRR/ECRW, XIF/XST, CYCN4A6, DBD1/DBD2, APL1/2/4 and CGLM.
+Installed reviewed Uniwill SYS10.48.11.331 hash6e360ee4...561235.
+OEM5.60.60.17 decompiled DefaultTool and GCUService constants/types; MyEcCtrl
+reads BIOS74C (not EC Project740). Owner74C=DD/7CA=01 selects low6=29/ID6. The initial IDK attribution in0.1.151 documentation was wrong and corrected; EC Project pin remains1A. Protected methods remain protected stubs.
+
+Connected Windows:
+- typed RAM Default/Manual/Max/Manual online using common writer/rollback/gate;
+- partial online on L16 reads own untouched-channel RAM, not GM6 factory data;
+- AMD CPU/NVIDIA thermal path; RPM/PWM from existing admitted EC map;
+- RGB/effects/brightness0..4 via existing single-zone reader/writer and shared OSD;
+- static RGB startup/resume preferences use own L16 INI;
+- battery XIF/XST/CYCN80, health3000/5200;4A2 OEM temperature/raw2990 with SBS
+  converter and consistency/readiness guards, independent of OS missing field;
+- upper7B9 low7 100(raw0)/95/85, owned rollback, save/restart/resume from L16 INI;
+- native7A6 protection via existing separate policy mechanism;
+- own CPU firmware presets45/45/45,75/85/85,145/145/174, Auto0 and Economy10/15/20;
+  Custom conservative maxima145/145/174, shared AMD FPPT codec, AC required.
+
+Per-model files: l16-device-settings.ini/l16-power.txt/l16-fan-curves.csv.
+Initial L16 fan draft uses common application defaults; creation is not EC apply.
+
+Deliberately not borrowed:
+- platform4/7+ROM04 policy is not L16 platform6; preserve6 and ROM;
+- DBD1/DBD2 is not a demonstrated lower charge threshold;
+- no GM5/GM6 factory-profile table substitution or factory-mailbox trigger;
+- physical OEM whole-system profile cycle remains refused pending exact factory
+  data. The four requested control groups work through independent explicit API.
+- no unconfirmed Linux raw writer, HID lightbar, GPU voltage/MUX or NVRAM path.
+
+Regression review (static, no tests): gmRamFanProfile remains false on Wujie,
+Honor,HYDROC,Unknown; GM6 stillIntel/Project25/files/max140/165/250; GM5 stillAMD/
+stable nonfillProject/files/max100/100/200, DBD exclusions; nativebattery policies
+4/7 unchanged there. Only L16's descriptor is promoted. Existing UI geometry and
+model menu indices are unchanged. Shared RAM reader refactor preserves its exact
+old arithmetic. Other OEM profiles/driver pins are not replaced.
+
+Build-only validation. No tests added/run, no app launch or hardware EC writes
+performed. Command readback and physical effectiveness on L16 remain distinct.
+The owner should send fresh logs after explicit FANs/backlight/limit choices.

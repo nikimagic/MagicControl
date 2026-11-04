@@ -1,0 +1,19 @@
+GM6 CURRENT_CALC interpretation corrections,22.10.2026
+
+Explicit request: correct0x382/0x522 decoding and refresh local gitrelease.
+
+BatteryCurrentDiagnostics.h now describes0382/0383 as BE, retaining the existing raw unsigned/int16 diagnostic interpretations. Existing sampler uses this same descriptor to combine/readback the word and write endian=BE. It does not reverse register accesses or write EC. Bytes07/2C now produce0x072C=1836, instead of the old LE0x2C07=11271. The field remains an intermediate calculation cache and may hold1836 after050A/0434 become0.
+
+0522 remains a LE word. Only its semantic name changes to BMS_requested_voltage_mV_not_measured: value12600 represents a requested12.6V, not12600mA or a measured voltage. Bank1 DE0F copies0522/23 into0836/37; bank0 C935..C943 sends it as ChargingVoltage command15. The current path0834/35 uses command14. No writes or setter meaning changed.
+
+Primary local evidence:
+- research/gm6-current-idle-20261022/current-helpers.asm:EB85..EB90;
+- research/devices/gm6ir0c/battery-all-modes-20261021/ec-handoff-audit/v112-bank1-handoff.c:DE0F;
+- the corresponding v112-bank0-charger.c:C935..C964;
+- research/gm6ir0c-logs8-20261022/correlation.json and REPORT.md: all118 positive frames agree with byte-swapped intermediate; raw522=12600.
+
+BATTERY.md corrects the current GM6 contract, distinguishes requested voltage from physical readings and keepsFFFF/current-ACK limitations. Historical raw logs are not rewritten. Wujie522 remains its separate unconfirmed map; GM5/L16/HYDROC/Honor are not given new fields or units.
+
+Changes are only diagnostic description/byte interpretation and documentation. Same addresses, read cadence, guards, sampler, flow/current/health decoder and controller setters. Presets1/2/3, Economy, native profile/FAN logic and software-completion behavior retained from158.
+
+No tests, GUI/OEM/application or hardware commands executed. Common Windows/Linux build and portable version/SHA256 proof in VERIFICATION-0.1.159.json. Release archive verification recorded separately under GitHub_Releases.

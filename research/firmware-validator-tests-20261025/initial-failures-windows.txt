@@ -1,0 +1,86 @@
+UpdateCTestConfiguration  from :C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows/DartConfiguration.tcl
+Test project C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+    Start 1: firmware_afu_synthetic
+
+1: Test command: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\firmware-offline\windows\Release\firmware_validator_offline_tests.exe "afu"
+1: Working Directory: C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows
+1: Test timeout computed to be: 90
+1: PASS afu: 35 pure-buffer checks; no hardware/vendor code linked.
+1/5 Test #1: firmware_afu_synthetic ...........   Passed    0.10 sec
+test 2
+    Start 2: firmware_fpt16_synthetic
+
+2: Test command: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\firmware-offline\windows\Release\firmware_validator_offline_tests.exe "fpt16"
+2: Working Directory: C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows
+2: Test timeout computed to be: 90
+2: Intel BIOS lacks checked UEFI FV headers or reset jump
+2/5 Test #2: firmware_fpt16_synthetic .........***Failed    0.10 sec
+Intel BIOS lacks checked UEFI FV headers or reset jump
+
+test 3
+    Start 3: firmware_fpt19_synthetic
+
+3: Test command: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\firmware-offline\windows\Release\firmware_validator_offline_tests.exe "fpt19"
+3: Working Directory: C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows
+3: Test timeout computed to be: 90
+3: Intel BIOS lacks checked UEFI FV headers or reset jump
+3/5 Test #3: firmware_fpt19_synthetic .........***Failed    0.16 sec
+Intel BIOS lacks checked UEFI FV headers or reset jump
+
+test 4
+    Start 4: firmware_nvidia_synthetic
+
+4: Test command: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\build\firmware-offline\windows\Release\firmware_validator_offline_tests.exe "nvidia"
+4: Working Directory: C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows
+4: Test timeout computed to be: 90
+4: PASS nvidia: 72 pure-buffer checks; no hardware/vendor code linked.
+4/5 Test #4: firmware_nvidia_synthetic ........   Passed    0.06 sec
+test 5
+    Start 5: firmware_real_files
+
+5: Test command: C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe "C:/Users/admin/Documents/mechrevo_dsh/MagicControl/tests/offline/firmware/verify_real_files.py" "--reader" "C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows/Release/firmware_validator_offline_tests.exe" "--repo" "C:/Users/admin/Documents/mechrevo_dsh/MagicControl" "--scratch" "C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows/real-fixtures"
+5: Working Directory: C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/firmware-offline/windows
+5: Test timeout computed to be: 120
+5: PASS pinned file: wujie-afu-pass1
+5: PASS pinned file: wujie-afu-pass2
+5: Traceback (most recent call last):
+5:   File "C:\Users\admin\Documents\mechrevo_dsh\MagicControl\tests\offline\firmware\verify_real_files.py", line 39, in <module>
+5:     assert completed.returncode == (0 if f['accepted'] else 4), f['id'] + ': unexpected result: ' + completed.stderr
+5:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5: AssertionError: gm6-stock-full-file: unexpected result: Intel BIOS lacks checked UEFI FV headers or reset jump
+5: 
+5/5 Test #5: firmware_real_files ..............***Failed    1.30 sec
+PASS pinned file: wujie-afu-pass1
+PASS pinned file: wujie-afu-pass2
+Traceback (most recent call last):
+  File "C:\Users\admin\Documents\mechrevo_dsh\MagicControl\tests\offline\firmware\verify_real_files.py", line 39, in <module>
+    assert completed.returncode == (0 if f['accepted'] else 4), f['id'] + ': unexpected result: ' + completed.stderr
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: gm6-stock-full-file: unexpected result: Intel BIOS lacks checked UEFI FV headers or reset jump
+
+
+
+40% tests passed, 3 tests failed out of 5
+
+Label Time Summary:
+afu                 =   0.10 sec*proc (1 test)
+firmware            =   1.72 sec*proc (5 tests)
+fpt16               =   0.10 sec*proc (1 test)
+fpt19               =   0.16 sec*proc (1 test)
+nvidia              =   0.06 sec*proc (1 test)
+offline             =   1.72 sec*proc (5 tests)
+private-fixtures    =   1.30 sec*proc (1 test)
+
+Total Test time (real) =   1.83 sec
+
+The following tests FAILED:
+	  2 - firmware_fpt16_synthetic (Failed)                 firmware fpt16 offline
+	  3 - firmware_fpt19_synthetic (Failed)                 firmware fpt19 offline
+	  5 - firmware_real_files (Failed)                      firmware offline private-fixtures

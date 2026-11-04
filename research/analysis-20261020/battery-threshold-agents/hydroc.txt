@@ -1,0 +1,253 @@
+HYDROC-16 G2 — настоящий процентный stop/restart предел батареи
+20.10.2026. Законченный промежуточный статический отчёт
+
+ЗАДАЧА
+======
+Найти отдельный верхний stop100/95/85% и нижний restart80%, как в карточке
+Wujie. Не сопоставлять эти числа с native High Capacity/Balanced/Stationary.
+
+РЕЗУЛЬТАТ
+=========
+Часть процентного формата найдена точно: private upper setter7B9 и private
+lower setter7D0 в BatteryProtection2, а также три поля UEFI-структуры.
+Рабочий процентный путь «setter → включение исполнения → подтверждение
+cutoff → сохранение/возврат» для HYDROC G2 НЕ установлен. Нельзя подключать
+этот половинчатый путь в production или объявлять readback рабочим лимитом.
+Это отсутствие доказательства пока исследована конкретная область, а не
+утверждение, что прошивка G2 в принципе не может ограничивать заряд.
+Дальнейший содержательный шаг требует отсутствующего exact G2 BIOS/EC образа
+либо точных AML/UEFI данных. Аналогичные платы не заменяют этот артефакт.
+
+ОГРАНИЧЕНИЯ РАБОТЫ
+==================
+Прочитаны текущие AGENTS.md и BATTERY.md, материалы battery-levels корня,
+точный восстановленный OEM5.23.51.56 и существующие HYDROC dumps.
+Не изменялись production source, UI/карточки/scrollbar, INI, драйверы и службы.
+Не запускались тесты/сборки/коммиты, MagicControl GUI/CLI, OEM EXE/DLL,
+EC/UEFI/SMU/HID операции или SSH. Для PE использованы только статический
+Windows SDK dumpbin и чтение байтов Python standard library.
+Созданы только этот файл и hydroc-evidence.json рядом.
+
+КОРЕНЬ ПУТЕЙ
+============
+C:\Users\admin\Documents\mechrevo_dsh\MagicControl
+OEM/ ниже означает:
+research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019/readable-csharp/
+
+ТОЧНАЯ ИДЕНТИЧНОСТЬ
+===================
+Eluktronics Inc. / HYDROC-16 G2 / board HYDROC-16, Project26.
+Пользовательский BIOS N.1.13ELU11, EC SMBIOS1.12; Ultra9 275HX/RTX5090 Laptop.
+Доступный ec.bin4096байт — EC RAM, не образ исполняемого EC firmware.
+
+Архив ControlCenter_5.23.51.56_Eluktronics_V4.zip:
+SHA25655f28ce14493ac678a7d5cf59050e34279ce0539172cbda16bce71d4e4f1b1b7.
+GCUService.exe1.0.2.70 из MyControlCenter:
+SHA256e5d388b45515d06567c2e71e4c2b882a1fa9313704d70785f19aec960e361003.
+Работали именно восстановленные тела этого файла; ранние runtime stubs не
+использовались. Audit9151 методов/5512 подтверждённых JIT тел лежит рядом
+с readable-csharp; source hashes и выбранный call graph сохранены в моём JSON.
+
+1. EC ПРОЦЕНТНЫЕ ПОЛЯ: ЧТО ЕСТЬ И ЧЕГО НЕТ
+==========================================
+OEM/020001D1-GCUService.MySystem.BatteryProtection2.cs:
+585–593 SetBatteryChargingLimit_Up(int):
+  read1977=0x7B9; сохранить bit7; limit100 кодировать low7=0,
+  остальные значения непосредственно в low7. Native метод сам не проверяет
+  пользовательский диапазон; это не разрешение выдавать туда произвольный byte.
+596–608 ReadBatteryChargingLimit_Up():
+  mask0x7F; raw0 возвращает100.
+612–622 SetBatteryChargingLimit_Down(int):
+  read2000=0x7D0; допустимые1..95; сохранить bit7 и записать limit.
+626–635 ReadBatteryChargingLimit_Down():
+  raw0 возвращает95, иначе возвращает ВЕСЬ byte без mask7F. Поэтому getter
+  с выставленным bit7 не является даже надёжным нормализованным restart%.
+
+308–310 Up_Default100 и Down_Default95 — пара stop/restart, не три профиля.
+481–486 LoadBatteryLimitationDefault() выставляет m_BatteryLimitationMode=1,
+если параметры отличаются от default. Это единственный явный кандидат enable
+по имени, но он не в рабочей цепочке и не раскрывает firmware semantics.
+
+Точные MethodDef из audit.json:
+060009CB LoadBatteryLimitationDefault —0 direct calls/function pointer refs;
+060009D4 SetBatteryChargingLimit_Up —0;
+060009D6 SetBatteryChargingLimit_Down —0.
+Поиск всех1424 readable types нашёл для getters также только определения.
+Это не исключает любой мыслимый runtime reflection, но ни его рабочая
+маршрутизация, ни публичная команда процентов в данном сервисе не найдены.
+
+App связывает BatteryProtection2.EnableByService/Receive/Resume:
+OEM/02000372-MyControlCenter.App.cs:107,964,1357–1359.
+Реальные Receive/Init/Resume вызывают mode setters7A6.4–5, а не Up/Down.
+Нативные0/1/2 остаются High Capacity/Balanced/Stationary. Никакой подстановки
+0→100,1→95,2→85 в этом исследовании нет.
+
+Другая процентная ветка:
+OEM/02000271-MyControlCenter.MyFanManager_QC.cs:2556–2581 пишет/читает7B9,
+пункты60/70/80/90/100. Однако поиск всех readable types обнаружил только
+собственный constructor MyFanManager_QC:2939, без new этого класса.
+OEM/020002D6-MyControlCenter.MyFanCtrl.cs:173–219 выбирает RAMFan1.5 для
+данного Project26/capability, не QC. Эта ветка не доказывает G2 enforcement,
+не даёт95/85 и не обеспечивает фиксированный lower80.
+
+2. ПОЛЯ UEFI СУЩЕСТВУЮТ, НО ДИСПЕТЧЕР НЕ МЕНЯЕТ ИХ
+===================================================
+OEM/02000256-MyControlCenter.NVRAM_STRUCT.cs:63–75:
+PowerMode, BatteryLimitation, ChargeMaximumLimit, ChargeMinimumLimit,
+MemoryOverClockSwitch. При стандартном sequential layout, вычисленном
+статически без загрузки/исполнения типа:
+  PowerMode0x2F, BatteryLimitation0x30, upper0x31, lower0x32.
+  APVersionCheck0x43; Reserved0x70,76байт; общий размер188байт.
+Расчёт default alignment и hashes исходника сохранены в hydroc-evidence.json.
+Это относительные байты структуры переменной, НЕ EC адреса30/31/32.
+
+В BatteryProtection2 свойства352–403 отправляют:
+  NvramVariable.SetFwVars("ChargeMaximumLimit",byte),
+  NvramVariable.SetFwVars("ChargeMinimumLimit",byte),
+  NvramVariable.SetFwVars("BatteryLimitation",byte).
+
+Но OEM/02000257-MyControlCenter.NvramVariable.cs:651–768:
+switch по длине/имени имеет PowerMode,ApUseFlag,MemoryOverClockSwitch,
+OverClockRecoveryFlag,ApExistFlag,FnKeyStatus,ACRecoveryStatus,OemDisplayMode,
+ICpuCoreVoltageOffsetRangeType,CPUPerformanceAndOverClockMenuSwitch.
+Трёх battery keys в нём НЕТ. Свежий поиск по всему recovered service нашёл
+BatteryLimitation/ChargeMaximumLimit/ChargeMinimumLimit лишь в структуре и
+свойствах BatteryProtection2. DefaultTool и отдельный bridge NvramVariable
+также не имеют этих case.
+
+ВАЖНО: неизвестное имя — не безопасный no-op.
+В active service после switch всё равно исполняется WriteUefi целого
+_fwvars cache (:734–756); если APVersionCheck==0, cache предварительно читается.
+Значение battery field не меняется, а старая структура переписывается целиком.
+Поэтому «подключить private property и посмотреть» не означает записать нужный
+порог: можно лишь отправить прежний cache с побочными действиями на других полях.
+Без точного firmware consumer и scoped RMW это не готовый путь сохранения.
+
+RWBiosVariable/BiosVarID исследованы дополнительно:
+OEM/0200023F-MyControlCenter.RWBiosVariable.cs — generic Get/SetFirmwareEnvironmentVariable;
+OEM/0200023D-MyControlCenter.BiosVarID.cs — RGB keys,TpvSetup,Setup, без battery key.
+Наличие общего writer банка Setup не доказывает скрытый процентный setter.
+
+3. НАСТОЯЩИЙ UEFI_Firmware.dll: СТАТИЧЕСКИ РАЗОБРАНЫ ЭКСПОРТЫ
+=============================================================
+В точном пакете три копии и два разных файла:
+DefaultTool/UEFI_Firmware.dll и AiStoneService/UEFI_Firmware.dll,
+191144байта,SHA2560c019bbe8be303588fba945e3af44d12bf1d2c1c444b0bf9d5eccf046a04ce4e;
+AiStoneService/MyControlCenter/UEFI_Firmware.dll,
+191200байт,SHA2565135c63dac8aaa6e87e63722f938c4e7312409ec93f161297330f50e86a1f5c9.
+Их .text/.rdata в целом различаются, поэтому нельзя объявлять DLL идентичными.
+При этом четыре изученных экспортных тела ReadUefi/ReadUefiExt/WriteUefi/
+WriteUefiExt совпадают ПОБАЙТНО; это отдельно проверено и хэшировано в JSON.
+
+ImageBase180000000; экспорты:
+ReadUefi RVA2190,ReadUefiExt2250,WriteUefi22C0,WriteUefiExt2480;
+пятый экспорт IsHighSpeedSSD25C0 не является battery API.
+IAT18001C090 = GetFirmwareEnvironmentVariableW,
+IAT18001C108 = SetFirmwareEnvironmentVariableW.
+
+Из native UTF16 строк по точным RVA:
+24EC0/24F40/24FB0 — GUID{9f33f85c-13ca-4fd1-9c4a-96217722c593};
+24F10 OemMagicVariable;24F90 UniWillVariable;25000 OemMagicDoor.
+Другие GUID из пользовательского inventory (системный UEFI resource GUID)
+не являются этими storage GUID и не должны смешиваться с ними.
+
+ReadUefi2190–2244:
+  поднимает привилегии helper2EA0, читает до512байт OemMagicVariable;
+  при отсутствии fallback UniWillVariable, возвращает static buffer.
+  Параметры start/end в этом теле не выделяют отдельный battery range.
+ReadUefiExt2250–22B1:
+  читает до512байт OemMagicDoor того же GUID.
+WriteUefi22C0–2479:
+  generic read-modify-write банка OemMagicVariable с fallback UniWillVariable;
+  только копирует указанный диапазон и передаёт прежнюю длину банка в
+  SetFirmwareEnvironmentVariableW. Никакого switch battery mode/EC7B9/7D0,
+  включающего charge policy, в этом теле нет.
+WriteUefiExt2480–25B5:
+  тот же принцип для OemMagicDoor.
+
+Дополнительная причина НЕ использовать DLL буквально:
+  WriteUefi диапазон end INCLUSIVE:22C0..23A3 считает end-start+1;
+  managed вызов NvramVariable.cs:756 передаёт(0,NVRAM_STRUCT_SIZE,array).
+  Структура/array имеют188байт, а native цикл запрашивает189. Нельзя копировать
+  эту потенциальную ошибку границы в наш API или выдавать вызов за checked save.
+  Native WriteUefi имеет void export и игнорирует BOOL финального SetFirmware
+  (244F), так что сам факт возврата также не подтверждает запись NV bank.
+Это формат транспорта данных UEFI, а не прочитанный алгоритм EC firmware.
+
+4. ВКЛЮЧЕНИЕ/ИСПОЛНЕНИЕ/CUTOFF: ЧЕГО НЕ УДАЛОСЬ ДОКАЗАТЬ
+=========================================================
+В проверенном service нет активного path, который устанавливает BatteryLimitation
+и затем вызывает рабочие Upper/Lower. Из одного поля нельзя вывести, что enable=1
+запускает percentage limit в N.1.13ELU11/EC1.12.
+Readback7B9/7D0 и UEFI bank не доказывает, что EC сравнивает их с реальным SOC.
+7B9.bit7 кандидат Reached по семейству, но controlled cutoff на G2 не записан.
+Чужие0x497/0x4AB/0x87F/0x984 и Wujie7C3=4/7 не получают write permission.
+0x78E.3 — профильная зацепка, не доказанный percentage capability.
+
+Существующий G2 snapshot0.1.69:
+7A6=08(mode0),7B9=00,7D0=00,7C3=0D; SOC100%,16.842V,0W,current=null,
+health82.8125%. Это исходный одиночный снимок, не trial95→cutoff/restart80.
+В нём нет actual UEFI OemMagicVariable/OemMagicDoor snapshot.
+Выводить процентный предел из health82.8% или сниженного cell voltage нельзя.
+
+Точных G2 AML/BIOS/EC executable images в проверенных локальных каталогах
+HYDROC research, build/research-hydroc16g2, audit bundles и релевантных файлах
+Telegram Desktop не найдено. Есть BIOS_OTA.exe как программа обновления, но
+не соответствующий G2 firmware payload. Наличие generic MyOTA_Manager/MR_OTA
+не является самим образом; updater не запускался и firmware не угадывалась.
+
+По переданной корнем первичной ссылке ACPI battery limiting (_BST/_BMD/_BMC)
+можно искать declared limiting status и временное разрешение/приостановку.
+Без точного G2 AML не установлено, какие методы реально есть и как они
+связаны с7B9/7D0. Стандартный _BMC не заявляется процентным setter.
+Ссылка для следующей проверки:
+https://uefi.org/specs/ACPI/6.6/03_ACPI_Concepts.html#battery-charge-limiting
+
+5. G1/HydroControl: ПОЛЕЗНО, НО НЕ ДОКАЗАТЕЛЬСТВО ДЛЯ G2
+=======================================================
+Проверены локальные primary source файлы из Gumwars/HydroControl,
+commitfc4024ce1456b8477313b28db3d41170e6464f4a:
+build/battery-thresholds-20261020/hydrocontrol/{DESIGN.md,
+charge_path_probe.py,charge-profiles.json,provenance.json}.
+Exact target G1/i9-14900HX/RTX4090/EC117.ELUK, НЕ наш G2.
+
+DESIGN.md:95–204 различает profile7A6 от threshold7B9, докладывает ECRW/WKBC
+readback и полный цикл76→100 при неизменном7B9=80 и Reached=false.
+«FIXCGLM shadow registers» не превращаются в рабочий рецепт: часть read-only,
+часть overlay bookkeeping; SCHG/GCHG не найдены в stock AML этого G1.
+Это сильное предупреждение readback-only, но не доказательство инертности G2.
+
+Существенная оговорка DESIGN.md:747–794:
+есть account владельца о прежнем непрерывном переписывании charge registers,
+bang-bang stop/resume без deadband и затем latched неверном state. Это не
+валидированный единичный enable setter, а недоопределённый аварийный опыт;
+он не даёт механизма безопасного включения и не переносится на G2.
+В этой работе keepalive/переписывание во время polling НЕ предлагается.
+
+6. КОНКРЕТНОЕ СЛЕДУЮЩЕЕ СВИДЕТЕЛЬСТВО
+=====================================
+Нужно одно из следующего, прежде чем реализовывать процентный backend G2:
+A) Exact OEM BIOS N.1.13ELU11 + EC1.12/HYDROC-16 G2 update payload, либо
+   оригинальный исполняемый образ EC с подтверждённым происхождением/hash.
+   Статически найти firmware consumers7B9/7D0, gate, SOC source, Reached и
+   ветвь stop/restart. Соседний G1/GM6 firmware не заменяет это доказательство.
+B) Точные G2 ACPI tables (DSDT+SSDT) и read-only UEFI bank snapshots указанного
+   GUID с длиной/версией. Проверить, кто потребляет BatteryLimitation0x30,
+   Maximum0x31,Minimum0x32 и как трактует _BST/_BMD/_BMC. Если поле лишь
+   резервный compatibility slot, не включать его в публичный UI setter.
+C) Подтверждённый поддерживаемый OEM percentage API и парная trace его
+   команды/активации/персистентности с физическим rate/current cutoff.
+
+Если после статического доказательства будет отдельное аппаратное поручение:
+однократная запись, явные requested/saved/actual, наблюдение SOC/remaining/full/
+design capacity/voltage/current/rate/AC и только затем cutoff около верхней
+границы и restart ниже80. Возврат должен быть подтверждён; периодические
+keepalive writes и настройка battery gate из FANs запрещены.
+Минутный лог полезен для источников/ошибок, но не заменяет достижение порога.
+
+ГРАНИЦА ГОТОВНОСТИ
+==================
+Формат двух процентов и UEFI storage зафиксирован; отсутствующий enable/
+firmware enforcement не замаскирован переименованием native profiles.
+Production/UI остались неизменными. Следующая нужная вещь — exact G2 firmware
+или AML/UEFI артефакт, а не ещё один пример похожего Uniwill ноутбука.

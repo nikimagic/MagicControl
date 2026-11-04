@@ -1,0 +1,28 @@
+                                <StackPanel x:Name="BreathingIndexPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="-5,10,0,0">
+                                    <StackPanel.Children>
+                                        <Grid x:Name="B_1" Margin="5,0,0,0" Width="30" Height="30">
+                                            <Grid.Children>
+                                                <Rectangle Fill="#FFFF0000" Width="30" Height="30" />
+                                                <Border BorderThickness="2" />
+                                            </Grid.Children>
+                                        </Grid>
+                                        <Grid x:Name="B_2" Margin="5,0,0,0" Width="30" Height="30">
+                                            <Grid.Children>
+                                                <Rectangle Margin="0" Width="30" Height="30" Fill="#FF008000" />
+                                                <Border BorderThickness="2" />
+                                            </Grid.Children>
+                                        </Grid>
+                                        <Grid x:Name="B_3" Margin="5,0,0,0" Width="30" Height="30">
+                                            <Grid.Children>
+                                                <Rectangle Margin="0" Width="30" Height="30" Fill="#FF0000FF" />
+                                                <Border BorderThickness="2" />
+                                            </Grid.Children>
+                                        </Grid>
+                                        <Grid x:Name="B_4" Margin="5,0,0,0" Width="30" Height="30">
+                                            <Grid.Children>
+                                                <Rectangle Margin="0" Width="30" Height="30" Fill="#FFFFFFFF" />
+                                                <Border BorderThickness="2" />
+                                            </Grid.Children>
+                                        </Grid>
+                                    </StackPanel.Children>
+                                </StackPanel>

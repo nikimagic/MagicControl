@@ -1,0 +1,165 @@
+Eluktronics HYDROC-16 G2: Control Center 5.23.51.56 — разбор от 19.10.2026
+
+1. Источник и выполненная работа
+Архив пользователя: ControlCenter_5.23.51.56_Eluktronics_V4.zip.
+Размер: 282561277 байт.
+SHA256: 55f28ce14493ac678a7d5cf59050e34279ce0539172cbda16bce71d4e4f1b1b7
+Распаковано 247 ZIP entries; внутри Inno Setup 6.3.0.
+Установщик распакован innoextract; OEM EXE/DLL не запускались.
+Не выполнялись установка драйверов, импорт REG, запуск PowerShell из пакета,
+обращения к оборудованию, смена UEFI/EC, перезапуск родных служб.
+
+2. Найденный драйвер EC
+Файлы сохранены в drivers/UWACPIDriver рядом с этим отчётом:
+- UWACPIDriver.sys: 49096 байт;
+  SHA256 e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2.
+- UWACPIDriver.inf: 2033 байта;
+  SHA256 265df0a2913627328365661867776db7e6331b99eacc27abd66fd5ae700b9b86.
+- uwacpidriver.cat: 11324 байта;
+  SHA256 97df04eab235f33e21e9a44b5c55a1c8b17b245d658664a3a8aa7b5e1c577444.
+По INF: DriverVer=08/27/2024,11.2.18.347; hardware ID ACPI\INOU0000;
+ServiceName UWACPIDriver; device description ACPIDriver; StartType=3.
+SYS имеет действительную embedded-подпись Uniwill Technology Inc.
+CAT подписан Microsoft Windows Hardware Compatibility Publisher.
+Signtool verify /kp /c CAT SYS: Successfully verified.
+Это проверка файла пакета; установленная на HYDROC копия пока не сопоставлена.
+
+3. Цепочка доступа EC
+GCUService / DefaultTool -> MyECIO.MyEcCtrl -> MyECIO.AcpiCtrl ->
+Windows DeviceIoControl -> \\.\ACPIDriver -> UWACPIDriver.sys -> ACPI/EC.
+
+Сверено тремя независимыми частями пакета:
+- DefaultTool: читаемые C# методы Read/Write/ReadACPI/WriteACPI;
+- native ACPIDriverDll.dll: дизассемблированные экспорты ReadEC / WriteEC;
+- native SYS: dispatcher сравнивает эти же IOCTL.
+EC read:  0x9C40A488.
+EC write: 0x9C40A48C.
+DefaultTool byte reader: вход DWORD address (4 байта), ответ DWORD (4 байта),
+берётся младший байт; writer: два DWORD address/value (8 байт), ответ4 байта.
+Native DLL использует огромные общие буферы по0x400000; это особенность wrapper,
+не требование читать4МиБ EC. В драйвере есть и дополнительные CM/MMIO/PCI/IO,
+SmartAPC/custom команды. Их наличие не означает универсальный безопасный доступ.
+Доказательства: ACPIDriverDll-ioctl.asm, UWACPIDriver-ioctl.asm и
+ decompiled-interfaces/MyECIO.AcpiCtrl.cs.
+
+4. Отличие от уже исследованного GM6
+Версия GCUService у обоих пакетов1.0.2.70, однако файлы разные:
+HYDROC package GCUService SHA256
+ e5d388b45515d06567c2e71e4c2b882a1fa9313704d70785f19aec960e361003.
+GM6 active GCUService SHA256
+ 8fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf.
+Прежний GM6 SYS был46352 байта, SHA2566e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235.
+Совпадение имени устройства и IOCTL позволяет переиспользовать транспортный слой,
+но не выбирает карту регистров, формат таблиц, identity или право записи HYDROC.
+
+5. Второй SYS — виртуальный HID
+Файлы drivers/AirplaneDriver: vhidmini.sys / vhidmini.inf / wudf.cat.
+SYS22944 байта, SHA2561372ad8322bf4e0e3d0668c8719b259691c55998fd1cb00340db8882e3e70038.
+Подпись SYS Microsoft WHCP, Valid. INF: root\vhidmini, HID ACPI driver,
+служба vhidmini и штатный mshidkmdf. Это отдельный virtual-HID/airplane путь,
+а не транспорт чтения EC. В GCUService присутствует строка \\.\Vhidcontrol.
+Полные хэши шести файлов драйверов: drivers-manifest.json.
+
+6. Что действительно декомпилировано
+Обновление19.10.2026: описанный ниже первоначальный предел снят точным
+извлечением5512 JIT body и6 DynamicIL body. Полная выгрузка/проверки находятся
+в recovered-20261019/README.txt. Значение5313 ниже — первоначальный текстовый
+подсчёт; точная таблица метаданных содержит5513 ссылок на общую заглушку,
+5512 шифрованных записи и один отдельный throw защитного загрузчика.
+GCUService1.0.2.70:1424 top-level C# типа, metadata-token decompilation errors=0.
+Но5313 тел методов содержат защитную заглушку Runtime exception,
+часть оставшихся обращается к обфусцированным массивам делегатов.
+Эти тела НЕ считаются восстановленным рабочим кодом.
+
+DefaultTool5.2.6.0:176 top-level типов, errors=0, основные EC/HID тела читаемы.
+GCUBridge:28 типов, errors=0.
+IntelOverclockingSDK.dll:110 типов, errors=0.
+GCUServicePlugin.dll:12 типов, errors=0.
+SensorsData.Analytics.dll:12 типов, errors=0.
+Извлечён41 embedded DLL ресурс Costura, без загрузки этих DLL в процесс.
+
+UWP frontend GamingCenter3_Cross.dll29334528 байт и EXE22016 байт —
+нативные PE без CLR metadata (обе CLR directories равны0).
+Обычная C# декомпиляция к ним неприменима; материал не выдан за C# исходники.
+Список бинарников MSIX проверен, дополнительных SYS/INF там не найдено.
+Native ACPIDriverDll.dll / GPUInfoDLL.dll разобраны по PE exports/imports
+и целевым x64 функциям, а не полностью восстановлены в C++.
+
+Полный результат в build/research-hydroc16g2:
+ gcu-by-token/, defaulttool-by-token/, decompiled-bridge/,
+ decompiled-intel-sdk/, decompiled-plugin/, decompiled-sensors/,
+ embedded/, uwp-x64/, installer/.
+Читаемые интерфейсы EC/константы скопированы в decompiled-interfaces здесь.
+Ни один сторонний статический инициализатор не исполнялся.
+
+7. Кандидаты чтения identity и функций
+Из читаемого DefaultTool:
+- Project ID: EC0x740;
+- BIOS project ID: EC0x74C, маска4/6бит зависит от признака поддержки;
+- RamFan1.5 support:0x78E.bit6;
+- LC fan table support:0x7C8.bit5;
+- keyboard type дополнительно зависит от EC0x73C и firmware ITE.
+ECSpec содержит tach Main0x464/0x465, Second0x46C/0x46B,
+Duty L/R0x75B/0x75C. Реальные роли каналов и масштаб PWM HYDROC не измерены.
+register-candidates.json содержит249 констант с источниками и строками;
+все помечены confirmed_on_hydroc=false.
+
+Пакет поддерживает RamFan1, RamFan1.5, RamFan2 и LC-ветви.
+RamFan2 имеет карты для трёх физических fan tables с отдельными CPU/GPU
+температурными кривыми и duty: это не побайтовая карта двух каналов GM6.
+Из защищённого GCUService пока не доказано, какую ветвь выбирает HYDROC.
+JSON UserFanTables содержит разные семейства и общие DefaultFanTable:
+они не объявляются считанной заводской таблицей этого HYDROC.
+
+8. Подсветка
+DefaultTool содержит нормальный исходный путь ITE HID:
+HIDManager -> штатные hid.dll / SetupAPI -> VID048D, Usage1.
+Keyboard PID candidates: CE00,6000,6001,6002,6003,6004,6006,6007,600A,600B.
+Lightbar PID candidates:7001,7000,6005,6008,6010.
+Тип выбирается по UsagePage FF12/FF02/FF03, firmware revision и EC subtype.
+Есть firmware version getter и HID feature reports; данные выбираются до setter.
+Перечень эффектов включает static, breathing, rainbow, ripple, raindrop,
+aurora, neon, music, custom и другие. Наличие эффекта в общем коде не
+подтверждает поддержку любой конкретной HID firmware HYDROC.
+Свойства HID устройства данного ноутбука пока не предоставлены.
+
+9. Графика и MUX
+GPUInfoDLL.dll экспортирует GetNVTemperature / GetNVGpuInfo / GetNVPState,
+SetNVGpuCoolerLevels / SetNVGpuFanPolicyControl, а также OC/Whisper/thermal APIs.
+Нативный GetNVTemperature использует NVAPI thermal settings version2.
+Наличие setters не доказывает возможность управления вентилятором RTX5090:
+нужны реальные ответы getters, поддержка policy и возможность возврата.
+
+DGgpuDirectConnectionMode содержит Intel iGPU_only=1, dGPU_only=2, Dynamic=4.
+В структуре NVRAM есть OemDisplayMode. UEFI_Firmware.dll импортирует
+GetFirmwareEnvironmentVariableW / SetFirmwareEnvironmentVariableW.
+В бинарнике найдены OemMagicVariable / UniWillVariable / OemMagicDoor и GUID
+{9f33f85c-13ca-4fd1-9c4a-96217722c593}.
+Это путь к политике UEFI, а не доказанный Runtime D3 или мгновенное переключение.
+DefaultTool декларирует также некоторые P/Invoke, которых нет в экспортах
+соответствующей DLL: декларацию саму по себе нельзя считать рабочим API.
+
+10. CPU, батарея и связь служб
+IntelOverclockingSDK — .NET клиент, а не SYS драйвер.
+Мониторинг через net.pipe://localhost/ExtremeTuningUtility/Monitoring;
+есть отдельные Event и ServiceInfo endpoint, поле IocbiosDriverVersion.
+Файла IOCBIOS/XTU SYS в распакованном комплекте не найдено.
+Это не означает, что такой драйвер отсутствует в уже установленной системе.
+
+В ECSpec есть ecBt1Temperature=0x4A2. Это конкретный кандидат для батареи,
+но ширина, единицы, valid flags и применимость к HYDROC ещё не доказаны:
+читаемого действующего getter в этом наборе пока не получено.
+Батарейные System Battery Class wrappers также есть; Windows Win32=1 в
+пользовательском дампе не исправляется одним фактом наличия константы.
+
+GCUBridge содержит MQTT bridge, TCP port13688. Это программный посредник,
+не kernel driver. Работа через bridge требует установленной родной службы;
+его наличие в пакете не доказывает, что она запущена на ноутбуке.
+
+11. Итог для следующего шага
+Родной драйвер и транспорт EC найдены и проверены статически.
+Можно проектировать отдельный read-only HYDROC adapter с точным SMBIOS match,
+проверкой PnP ACPI\INOU0000 и фактических ProjectID/capability bytes.
+Управление FANs/лимитами/подсветкой включается после определения конкретной
+ветви и аппаратной проверки. Разбор архива сам по себе не разрешает перенос
+проверенных на GM6/X5 битовых масок на HYDROC.

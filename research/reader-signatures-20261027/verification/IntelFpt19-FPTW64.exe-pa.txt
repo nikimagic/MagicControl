@@ -1,0 +1,85 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\IntelFpt19\FPTW64.exe
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha384): C7D589D7A62EFBD3F994E3AEED8C5C600D039CC5755388B813AA7FB5259F391750F61A14FDCB05656A013F5209594B48
+
+Signing Certificate Chain:
+    Issued to: Sectigo Public Code Signing Root R46
+
+    Issued by: Sectigo Public Code Signing Root R46
+
+    Expires:   Thu Mar 22 02:59:59 2046
+
+    SHA1 hash: CCBBF9E1485AF63CE47ABF8E9E648C2504FC319D
+
+
+        Issued to: Sectigo Public Code Signing CA R36
+
+        Issued by: Sectigo Public Code Signing Root R46
+
+        Expires:   Sat Mar 22 02:59:59 2036
+
+        SHA1 hash: 0BC5E76773D2E44FC9903D4DFEFE451553BBEC4A
+
+
+            Issued to: Intel Corporation
+
+            Issued by: Sectigo Public Code Signing CA R36
+
+            Expires:   Fri Mar 14 02:59:59 2025
+
+            SHA1 hash: 58A57C68EB033C6C016134AF7DBC2A40DBF967F1
+
+
+The signature is timestamped: Tue Feb 18 13:27:46 2025
+
+Timestamp Verified by:
+    Issued to: USERTrust RSA Certification Authority
+
+    Issued by: USERTrust RSA Certification Authority
+
+    Expires:   Tue Jan 19 02:59:59 2038
+
+    SHA1 hash: 2B8F1B57330DBBA2D07A6C51F70EE90DDAB9AD8E
+
+
+        Issued to: Sectigo Public Time Stamping Root R46
+
+        Issued by: USERTrust RSA Certification Authority
+
+        Expires:   Tue Jan 19 02:59:59 2038
+
+        SHA1 hash: 853D632D938282617CD09035C491DE92C142DAC7
+
+
+            Issued to: Sectigo Public Time Stamping CA R36
+
+            Issued by: Sectigo Public Time Stamping Root R46
+
+            Expires:   Sat Mar 22 02:59:59 2036
+
+            SHA1 hash: C6AE54E47886F17C3D5512488C69C34A7AF9C2DD
+
+
+                Issued to: Sectigo Public Time Stamping Signer R35
+
+                Issued by: Sectigo Public Time Stamping CA R36
+
+                Expires:   Sun Apr 15 02:59:59 2035
+
+                SHA1 hash: F8609819A6FB882CF7E85297F2A119521A16775F
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\IntelFpt19\FPTW64.exe
+
+
+Number of signatures successfully Verified: 1
+
+Number of warnings: 0
+
+Number of errors: 0
+

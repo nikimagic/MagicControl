@@ -1,0 +1,38 @@
+Independent static review: power-input three-state diagnostic wizard
+Date: 2026-10-20
+Reviewer: Wujie agent. Scope: read-only source review; no tests, builds, GUI, EC operations, driver operations or hardware probes.
+
+FINAL DISPOSITION
+No remaining actionable P1/P2 release blocker established in the inspected paths after the two corrections below. This is static review, not compilation or device validation. No production files were edited by this reviewer.
+
+CORRECTED P2-1: zero-rate baseline depended on the investigated status flag
+PowerInputDump.cpp:48-51 now admits stage 2 from known online state (line 47), SOC >=99.5 and finite |watts| <=0.05, without a charging/discharging flag veto. Stage 0 line 46 depends only on known offline state. Stage 1 line 53 still requires flow==charging and watts>0.1. This preserves the distinction between positive charging evidence and flags being studied in offline/zero-rate cases.
+The previous flow==discharging veto could reject a valid full/zero-rate baseline for the very flag anomaly this procedure is intended to investigate. It is absent in the final source inspected.
+
+CORRECTED P2-2: abandoned Windows worker could share mutable session with a new worker
+Windows BiosPage.cpp:197-201 now cancels the old task AND resets powerSession before dropping the job. The old detached worker retains its captured shared_ptr (line 427); a later invocation creates a different session (line 413). Thus two workers cannot mutate the same nextStage/attempt/attempts/checkpoint state after a preview/profile change. The previous wait on the abandoned task's hardwareGate alone was insufficient because PowerInputDump.cpp:110 supplies a new nested dump gate.
+Normal defer/resume remains same-process and occurs after task completion publication: Windows worker done.store(release) line 457; completion reads acquire. Linux keeps the active dump job through profile refresh and does not admit a second job while it exists.
+
+OTHER REVIEWED CONTRACTS
+- Stage order labels/instructions: PowerInputDump.cpp:31-35, unplugged -> charging -> full/zero-rate. Three accepted captures each require >=3 matching samples, no contradictory samples and observed span >=60000 ms (Window/validateWindow).
+- Actual-model admission is SMBIOS/profile based; only actual GM6/HYDROC, not UI preview. Session identity is checked on continuation (PowerInputDump.cpp:89-92).
+- Guided capture passes ReadOnly and empty FAN/default/probe callbacks at PowerInputDump.cpp:110. No FAN, battery threshold, power-limit, active load or connector-switch command was found in this scenario. Background controllers are explicitly unchanged, so 'read-only scenario' does not imply that all other application controllers stop writing.
+- Ordinary dump output location is unchanged when optional outputRoot is empty (DiagnosticDump.cpp:615); the wizard supplies a distinct stage root.
+- DiagnosticDump sensor JSONL strips trailing CR/LF/space/tab from raw battery JSON before embedding (append path around lines 329-339), preventing the former multiline-record problem. JSON preflight files may contain legal whitespace inside an ordinary JSON document.
+- Prompt bridge uses a shared channel and stop-aware condition-variable wait, not an EC/device-operation gate (DiagnosticPrompts.h). Waiting for user action holds no EC gate.
+- Windows modal handling copies task/owner/DPI before modal invocation and only replies through the captured shared task afterwards; no page-state access after that modal return in the prompt branch. MessageDialog handles owner/window lifetime in its modal loop.
+- Linux worker captures shared job/session and immutable display snapshot. Prompt callback retains parent and job, replies via the shared channel and returns without further BiosState access after the modal dialog. Session display update occurs before synchronized reply while the worker is waiting. No demonstrated P1/P2 close/cancel lifetime defect found.
+- Connector provenance is explicitly not proven by Windows online/flow data. Owner instruction is required; raw same-offset EC candidates remain marked unverified. EC completeness is separate from successful three-state OS collection.
+
+LIMITS
+No physical charge-state cycle, cancellation stress run, GUI rendering, compiler or runtime JSON parsing was executed. SOC >=99.5 represents the displayed-full acceptance tolerance, not proof that the gauge reports an exact unrounded 100.0. No assertion is made about the physical charging gate or correctness of any candidate EC flag.
+
+SOURCE HASH SNAPSHOT
+src/platform/common/PowerInputDump.cpp SHA256=BED8AF4CD8D233517F567416F44682DDF9E268E6113693AA1398163E62CCE32B
+src/platform/common/DiagnosticDump.cpp SHA256=292DCDEFE336D7BFDC9271B523F598CE83F2D466CF416987FE4BCDA1802D9F6F
+src/core/include/MagicControl/PowerInputDump.h SHA256=C28ED0C3D8B004FE9D904628E9A459C23B1D2E84E07126889D4E5242A4A89F3D
+src/gui/common/DiagnosticPrompts.h SHA256=4D75D493CEC1D3ABD24C9B6987D223062BF453DE11CBB7B4E3533DB6CC9158D5
+src/gui/windows/BiosPage.cpp SHA256=F0A2232F00966BAD88BC8176BD27FC361E07904417D3BF2A5B3F6A6962A6C8E1
+src/gui/windows/MessageDialog.cpp SHA256=D3A75B3534D1AE5E40758C92B3AA03556613BD427C40EBA6C45C38F1CCF80407
+src/gui/linux/BiosPage.cpp SHA256=A6B9E0F2D5F91A0F443B7FF2150849A4A42422420EDF96EDB00F4299AB538797
+src/gui/linux/Ui.cpp SHA256=1DD6708B43E41D3215608794673D524843F2093FE3186769EC8C23BBCFF2F0D0

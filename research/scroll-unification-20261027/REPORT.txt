@@ -1,0 +1,51 @@
+Unified project scroll mechanism,27October2026
+
+Owner request: remove LicenseView and drag-handler duplication, use existing
+PageMechanics, keep independent positions, geometry/margins unchanged, record
+one-project-scroll rule, build both platforms, update portable, commit.
+No hardware/application/GUI run. No tests added/run per AGENTS.md.
+
+Implementation
+One ScrollModel arithmetic implementation retained verbatim. Eight Windows
+state declarations retained: FANs,SETs,KEYs,INFO,GPU,laptop list,license,message.
+LicenseView now uses shared scrollThumb/drawThumb/wheel/scrollPress/scrollDrag.
+FANs,SETs,both KEYs procedures,GPU and laptop-menu click/drag math now call
+those same existing helpers. INFO/MessageDialog already used them unchanged.
+Native positioning and fixed lane hit/hover/capture-release routing stay
+in the OS view adapter; there is no second scroll controller or renderer.
+
+Units and pixel preservation
+Native EDIT extent/viewport/position remain line counts, synchronized from
+EM_GETLINECOUNT/EM_GETFIRSTVISIBLELINE. Its wheel uses lineUnits1 and retains
+its old one-line overlap for WHEEL_PAGESCROLL. Other pages retain their old
+DPI-scaled24pixel step, system line count capped100 and model page overlap.
+Native callback overloads restore the previous model position before asking
+scrollTo to move the real HWND/EDIT. Thus the adapter still sees the correct
+old->new delta. Wheel fractional state remains in the original core model.
+
+The original LicenseView rectangle used left=(lane-thickness)/2 and exact
+whole thickness. Existing page helper used center +/- thickness/2, which
+truncates odd widths differently. A shared exactWidth parameter preserves
+license's former rectangle; the default formula remains verbatim. Simply
+switching license to the old default would shift/widen the thumb at someDPI.
+Vertical track8,offset4,minlength28 and nominal5/7 widths retain old values.
+Laptop menu y is translated by viewport.top once; other old origins retained.
+No arrange(), content/card width, gutter, margin or DPI frame change.
+
+Rule
+AGENTS.md, coreScrollModel.h and PageMechanics comments now explicitly require
+one project mechanism. Per-window state is allowed/necessary. Native adapter
+unit/coordinate conversion is allowed; formula/renderer copies are forbidden.
+Linux remains the existing shared scrolledWidget/GTK adjustment adapter with
+no Windows-only input code transplanted. Project map/parity notes updated.
+
+Verification
+Read established Git references497841e/75abefd/d84343d before change.
+Protected source hashes: ScrollModel.cpp,Geometry.h,LinuxUi.cpp/Ui.h,
+FanControlLimits.h and user-modifiedEcByteEditor.h unchanged.
+License arrange() text and all MoveWindow/SetWindowPos source lines in seven
+consumer files match baseline. Source scan confirms all seven Windows files
+use shared pointer helpers; private travel formulas removed from consumers.
+These are static source/geometry-contract checks, not interactive visual tests.
+Both GUI+mctl Release builds and actual working portable versions/SHA256 are
+recorded after success inVERIFICATION.json. No GitHub archive/publication.

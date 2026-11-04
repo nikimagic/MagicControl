@@ -1,0 +1,10 @@
+# ripgrep search defaults only. Files stay on disk, in Git and in builds.
+# Evidence/log/release tasks: rg --no-ignore ... research/<case> or Users_logs/<case>.
+/.git/
+/build/
+/out/
+/research/
+/Users_logs/
+/GitHub_Releases/
+/MagicControl/
+/archive/

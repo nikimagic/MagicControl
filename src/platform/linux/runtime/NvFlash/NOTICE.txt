@@ -1,0 +1,10 @@
+NVIDIA NVFlash 5.867.0 - unmodified standard linux x64 distribution.
+Copyright NVIDIA Corporation. Proprietary vendor software; this notice grants no rights.
+Source: https://www.computerbase.de/downloads/systemtools/grafikkarten/nvflash/
+Windows EXE is unsigned; the two embedded driver references are Microsoft WHCP signed 1.21.0.
+Linux archive: nvflash_5.867_linux.zip, x64/nvflash (ELF x86_64).
+Only fixed list/save commands are connected, without firmware programming flags.
+Compatibility must be checked on the actual adapter; no hardware test by the assistant.
+No driver-policy bypass, display-driver disable, module-unload or flash scripts supplied.
+Third-party notices embedded in the vendor binary are preserved in THIRD-PARTY-NOTICES.txt.
+This private local build is not a new public redistribution authorization.

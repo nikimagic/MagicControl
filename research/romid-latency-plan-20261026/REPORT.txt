@@ -1,0 +1,125 @@
+What can be fixed: WUJIE ROM-ID latency,26October2026
+
+Read-only research: saved AML/ASL, saved native driver disassembly/bindings,
+current source and existing owner logs. The installed SYS was HASHED AS A FILE
+only,not loaded/invoked by this analysis. No app/device/ACPI/EC calls or writes.
+EVIDENCE.json contains exact paths,hashes,method extracts and driver bindings.
+No product source,settings or portable build changed.
+
+1. Root cause now traced beyond timestamps
+
+Current user log shows36reads0x770(FF) cost2060.399ms in action179 and
+2060.591ms in action190,about57ms each. UnderROM04 the same36reads2.825ms.
+Source: research/button-speed-20261026/BREAKDOWN.json and REPORT.txt.
+
+Exact WUJIE DSDT:
+70415bytes,SHA2560171f11732dcba93dfa8037a713c74040363f932daed8d5eb0011779d12d53f5.
+build/windows/ddr5-acpi/01_DSDT.dat equals the saved WUJIE table in
+research/battery-restart-firmware-search-20261022/acpi/01-DSDT.dat.
+The same hash is already pinned by our WUJIE ACPI BIOS reader.
+
+ASL ECRR line11527:
+read MMRW(0xFED50000+offset,read,byte,0).
+If returned byte==FF, call EC0.RECM(low_offset,high_offset).
+RECM line8971 sets LDAT/HDAT and RFLG,then waits for DRDY through a loop that
+does Sleep(0x32)=50ms BEFORE checking the completion flag on each iteration.
+Up to20-count admission/timeout logic also exists; it is not a fixed57ms timer.
+One iteration plus execution overhead closely explains the observed57..63ms.
+The FF branch is in WUJIE BIOS AML,not a MagicControl Sleep(50ms) per ROM read.
+It uses FF as a reason to try a second path,even when FF is valid ROM-ID data.
+
+The10.48.11.331 driver disassembly:
+IOCTL9C40A488 ->handlerRVA2AD4 ->helper2130,ACPI method ECRR.
+IOCTL9C40A490 ->handlerRVA2C5D ->helper1784,ACPI method MMRB.
+MMRB(physical_address) calls MMRW(address,read,byte,0),without the FF fallback.
+Fixed target for WUJIE offset770 would be FED50770,a DWORD-representable address.
+This does NOT require the unavailable64-bit ROM3-address interface.
+
+Installed fileC:/Windows/System32/drivers/UWACPIDriver.sys SHA256:
+6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235,
+matching our10.48.11.331 reference. This attests disk bytes,not a dump of the
+currently loaded kernel image. The three reviewed SYS versions all bind
+A488->ECRR andA490->MMRB. Swapping to the reviewed11.2 driver alone would not
+remove WUJIE AML's FF branch.
+
+2. Why this is not a global Uniwill defect / all-laptop patch
+
+Both saved GM6 DSDT decompilations independently show ECRR:
+MMRW(0xFE410000+offset,read,byte,0),then return. NO FF->RECM branch.
+GM6 and WUJIE also have DIFFERENT physical EC windows.
+This is an OEM AML implementation difference,not proof every AMD/Intel model
+shares either behavior. No such assertion is made for HYDROC,GM5,L16,Honor or
+inventory-only models. Their existing transports remain unchanged.
+Keep the common battery/OSD/application core; bind any exceptional fast reader
+to actual reviewed board/firmware/driver capability inside the transport.
+
+3. Concrete improvement candidates
+
+A. Defer unrelated telemetry on percent/policy commands,as native mode already
+does. The current UI still reads keyboard,power,battery/SMU data after those
+commands. In the recorded slow percent examples roughly0.5s remains AFTER
+LIMIT confirmed before settings.apply completes. A small dedicated fresh
+upper/lower/gate/platform/ROM confirmation can update the affected card;
+unrelated values retain acquisition times until the normal poll.
+This saves the UI tail but does not remove the~2s repeated-FF cost inside core.
+No projected exact new runtime is promised before measuring an owner session.
+
+B. Stop diagnostic-only journal snapshots from performing duplicate physical
+reads when the same actual pair was JUST obtained by a mandatory guard/commit.
+Change::apply reads a pair for requireContext and again for before/after
+snapshots;commit checks the pair then reads it yet again for policy_committed.
+At least the commit snapshot can reuse its actual checked readbacks and their
+real observation timestamps. Three stable snapshots would cost~6driver ROM
+reads(~0.34s here),but not all are automatically redundant across mutation.
+Preserve append-only histories,startup-before-autoapply evidence and the
+difference between intent,write return and confirmed readback.
+Never log expected/requested IDs as observed values; never remove hard guards,
+ownership checks,final persistent/live confirmation or rollback for this goal.
+
+C. Large improvement: a fixed read-only MMRB path for WUJIE0x770.
+It would avoid ECRR's unnecessary50ms fallback for a valid FF while retaining
+fresh per-check reads. The measured address-specific cost suggests room to
+remove most of the2.06s component,not proof of a new end-to-end runtime.
+Start with this one byte,not a general arbitrary-physical-memory API.
+No new write IOCTL,new driver,BIOS patch,ROM-ID substitution or PawnIO required.
+
+4. Mandatory validation before enabling candidate C by default
+
+FF may also mean that the MMIO window is inaccessible. Do not accept arbitrary
+FF as proof that the real ROM-ID is FF. A naked replacement of ECRR with MMRB
+for every read/laptop is unsafe and is NOT the proposed patch.
+
+Admission: exact actual WUJIE board,reviewed N.1.20MRO15 DSDT hash,reviewed
+installed SYS/binding,known FED50000/1000 aperture and fixed address allowlist.
+Probe known non-FF identity fields454/456/740 through the same fast path and
+compare to82/72/26 and the existing reader. Read pairs stably,keep the shared
+EC transaction,validate output integer length/canaries/range instead of taking
+an unchecked output byte. The outer bytes-returned may be16 even when only
+4/8bytes were copied by the OEM driver; reuse the existing audited frame rules.
+
+First provide a separate optional READ-ONLY comparison capture: old ECRR and
+new MMRB values/timings/identity/context,including errors,AC/DC and resume.
+It must NOT construct restore/controllers,install/start services,collect a
+full hardware EC dump that changes FANs,or switch platform/ROM to benchmark.
+Observe whichever policy the owner has already selected; no automatic04 write.
+No such comparison has been executed in this task.
+
+On unknown hash,unavailable MMIO,identity mismatch,invalid/unstable reply or
+disagreement retain the existing ECRR route and log the cause. Resume and power
+epoch must invalidate fast-reader admission. Do not cache the ROM-ID value
+globally; caching a transport's evidence is not caching the current byte.
+The precise runtime health checks/fallback still require review against the
+comparison results before any default fast-path admission,especially near sleep.
+
+5. Recommended sequence / current decision
+
+First implement A and the provably duplicate part of B with phase timings.
+Prepare optional comparison capture for C without executing it on hardware.
+After owner-run read-only evidence confirms parity,enable C only on its exact
+reviewed firmware capability. Leave GM6 and other current transports alone.
+
+Do NOT: pick7/04 just for speed;patch AML/SYS;remove50ms from RECM's real mailbox
+protocol;trust a global cached FF;drop final guards;claim a percentage limit or
+native voltage enforcement from performance/readback alone.
+
+This deliverable is a concrete research/proposal,not an applied backend patch.

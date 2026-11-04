@@ -1,0 +1,55 @@
+NVFlash read order review,27October2026
+Research only: no source/binary/settings changes, no vendor/hardware execution.
+
+Conclusion
+Standalone ordinary --save does not require a preceding separate --check.
+Vendor/OEM instructions and published scripts perform backup directly after
+adapter discovery. Two ordinary reads and SHA256/shape checks are our extra
+collector verification, not a prerequisite prescribed by the OEM manuals.
+--check means checking supported EEPROM, not validating a ROM file checksum.
+A recognized part geometry remains required for OUR full-EEPROM completeness
+claim. Ordinary result and entire result must remain independent.
+
+Primary evidence reviewed online
+1. Fastwel VIM556/VIM556RC manufacturer manual,version1.2,October2015,
+section5.1,p33(zerobasedPDF32): directly save the original NVIDIA firmware,
+then preserve backup; write-protection changes occur only afterwards in its
+separate flashing procedure. No preliminary check is stated for save.
+https://www.fastwel.com/upload/iblock/124/VIM556_v1.2_2manual.pdf
+Scope: older Quadro/MXM product, not GM6/RTX4060 certification.
+
+2. cyclone-github/nvidia_vbios author's Linux procedure states Debian11/12/13
+usage and list followed by save. Its later flashing steps are outside our
+read-only scope and were neither run nor copied into MagicControl.
+https://github.com/cyclone-github/nvidia_vbios/blob/main/nvflash_how_to_linux.txt
+
+3. danindiana/rtx3080-rebar-vbios rebar-enable.sh,master, backup block before
+its check block. README identifies LinuxNVFlash5.867.0. Published session log
+has a successful999424-byte post-flash read. This is an author's report and
+source evidence for that desktopGPU, not independent GM6 reproduction.
+The project's interpretation of check as ROM compatibility is NOT adopted;
+its write/driver-unload/kill sequence is NOT part of our implementation.
+https://github.com/danindiana/rtx3080-rebar-vbios/blob/master/rebar-enable.sh
+https://github.com/danindiana/rtx3080-rebar-vbios/blob/master/flash-session.log
+
+Exact local payload evidence
+research/nvflash-save-scope-20261025/windows-embedded-help.txt:
+check is supported-EEPROM detection; save reads to a file.
+entire-full-embedded-help.txt distinguishes raw compare from flashing-style
+verify transformations. Prior exact Windows/Linux5.867 disassembly establishes
+--entire offset0/capacity and16MiB cap, separately from ordinary ROM length.
+Current source preserves EEPROM admission before entire, exact length, two
+identical reads and raw compare. Unsupported status-register text alone does
+not refuse a valid ID/geometry. No protectoff/override/reset/flash is added.
+No current complete official NVIDIA5.867 public manual was located; historical
+forum help and OEM manuals do not prove new flags or all GPU compatibility.
+
+Important correction of confidence
+GM6 archive19 ends at eeprom_capacity after check exit0. It has no crash event
+or termination reason. The previous collector source ALREADY proceeded to
+ordinary save even when capacity.admitted was false. Moving ordinary save
+before check is a justified separation and removes exposure to the optional
+probe before basic backup, but is NOT proof of the cause or cure of the old
+abrupt termination. Only owner-run new evidence or an offline reproduced
+failure could establish that. No successful MagicControl GM6 ROM capture is
+claimed by this review. Current0.1.233 still needs that validation.

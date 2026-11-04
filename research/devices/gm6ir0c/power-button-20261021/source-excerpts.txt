@@ -1,0 +1,774 @@
+
+### oem_wmi — build/research-gm6ir0c/all-active/0200033E-MyControlCenter.WMIEC.cs
+
+59: 	public void WMIHandleEvent(object sender, EventArrivedEventArgs e)
+60: 	{
+61: 		try
+62: 		{
+63: 			int num = Convert.ToInt32(e.NewEvent.SystemProperties["ULong"].Value.ToString());
+64: 			switch (num)
+65: 			{
+66: 			case 64:
+67: 				LogCtrl.Write("---------------" + LogCtrl.GetTime() + "---------------");
+68: 				LogCtrl.Write($"AP receive 0x{num:X} OSD_WINKEY_LOCK");
+139: 			case 176:
+140: 				LogCtrl.Write("---------------" + LogCtrl.GetTime() + "---------------");
+141: 				LogCtrl.Write($"AP receive 0x{num:X} OSD_FanModeSwitch");
+142: 				m_MyFan.ModeSwitchChanged();
+143: 				break;
+144: 			case 167:
+303: 	public void StartWMIReceiveEvent(EventArrivedEventHandler WMIHandleEvent)
+304: 	{
+305: 		try
+306: 		{
+307: 			WqlEventQuery query = new WqlEventQuery("SELECT * FROM AcpiTest_EventULong");
+308: 			watcher = new ManagementEventWatcher(new ManagementScope("\\\\.\\Root\\WMI"), query);
+309: 			watcher.EventArrived += WMIHandleEvent;
+310: 			watcher.Start();
+311: 		}
+
+### oem_dispatch — build/research-gm6ir0c/all-active/020002B9-MyControlCenter.MyFanCtrl.cs
+
+190: 	}
+191:
+192: 	public void ModeSwitchChanged()
+193: 	{
+194: 		m_Manager.ModeSwitchChanged();
+195: 	}
+196:
+197: 	public void FanBoostUpdate()
+
+### oem_manager — build/research-gm6ir0c/all-active/020003F0-MyControlCenter.MyFan.MyFanManager_RamFan1p5.cs
+
+719: 	public override void ModeSwitchChanged()
+720: 	{
+721: 		if (g_TurboModeSupport == 0)
+722: 		{
+723: 			switch (m_Option.OperatingMode)
+724: 			{
+725: 			case 1u:
+726: 				SetModeSwitchChangeThread(0);
+727: 				break;
+728: 			case 0u:
+729: 				SetModeSwitchChangeThread(1);
+730: 				break;
+731: 			case 3u:
+732: 				SetModeSwitchChangeThread(3, fromscancode: true);
+733: 				break;
+734: 			case 2u:
+735: 				break;
+736: 			}
+737: 			return;
+738: 		}
+739: 		if (m_nAppType == 3)
+740: 		{
+741: 			switch (m_Option.OperatingMode)
+742: 			{
+743: 			case 1u:
+744: 				SetModeSwitchChangeThread(2);
+745: 				break;
+746: 			case 0u:
+747: 				SetModeSwitchChangeThread(1);
+748: 				break;
+749: 			case 2u:
+750: 				SetModeSwitchChangeThread(0);
+751: 				break;
+752: 			}
+753: 			return;
+754: 		}
+755: 		if (CustomizeCtrl.GetCustomId() == 39)
+756: 		{
+757: 			switch (m_Option.OperatingMode)
+758: 			{
+759: 			case 1u:
+760: 				SetModeSwitchChangeThread(2);
+761: 				break;
+762: 			case 0u:
+763: 				SetModeSwitchChangeThread(1);
+764: 				break;
+765: 			case 2u:
+766: 				SetModeSwitchChangeThread(0);
+767: 				break;
+768: 			}
+769: 			return;
+770: 		}
+771: 		switch (m_Option.OperatingMode)
+772: 		{
+773: 		case 1u:
+774: 			SetModeSwitchChangeThread(2);
+775: 			_OPperatingMode = 2;
+776: 			break;
+777: 		case 0u:
+778: 			SetModeSwitchChangeThread(1);
+779: 			_OPperatingMode = 1;
+780: 			break;
+781: 		case 2u:
+782: 			SetModeSwitchChangeThread(3);
+783: 			break;
+784: 		case 3u:
+785: 			SetModeSwitchChangeThread(0);
+786: 			_OPperatingMode = 0;
+787: 			break;
+788: 		}
+789: 	}
+790:
+874: 	public override void UserSet_Mode1()
+875: 	{
+876: 		cGpuFeatures.SetGpuConfigurableTgpFunCtrlEnable(1);
+877: 		cGpuFeatures.SetGpuConfigurableTGPTarget(95, _SmartApcTable.DefaultTGP);
+878: 		if (m_nAppType == 3)
+879: 		{
+880: 			m_Option.OperatingMode = 2u;
+881: 			RefreshCurrentProfile(m_Option.OperatingMode, save: false);
+882: 			UserSet_FanBoost(0u);
+883: 			SetUserProfile(2u);
+884: 			WriteMainOptionToJson("OperatingMode", 2u);
+885: 			NvramVariable.SetFwVars("PowerMode", Convert.ToByte(2u));
+886: 		}
+887: 		else
+888: 		{
+889: 			m_Option.OperatingMode = 1u;
+890: 			UserSet_FanBoost(0u);
+891: 			RefreshCurrentProfile(m_Option.OperatingMode, save: false);
+892: 			SetUserProfile(1u);
+893: 			WriteMainOptionToJson("OperatingMode", 1u);
+894: 			NvramVariable.SetFwVars("PowerMode", Convert.ToByte(1u));
+895: 		}
+896: 		cGpuFeatures.SetGpuConfigurableTgpFunCtrlEnable(0);
+897: 	}
+898:
+899: 	public override void UserSet_Mode2()
+900: 	{
+901: 		cGpuFeatures.SetGpuConfigurableTgpFunCtrlEnable(1);
+902: 		cGpuFeatures.SetGpuConfigurableTGPTarget(95, _SmartApcTable.DefaultTGP);
+903: 		m_Option.OperatingMode = 0u;
+904: 		RefreshCurrentProfile(m_Option.OperatingMode, save: false);
+905: 		UserSet_FanBoost(0u);
+906: 		SetUserProfile(0u);
+907: 		WriteMainOptionToJson("OperatingMode", 0u);
+908: 		NvramVariable.SetFwVars("PowerMode", Convert.ToByte(0u));
+909: 		cGpuFeatures.SetGpuConfigurableTgpFunCtrlEnable(0);
+910: 	}
+911:
+912: 	public override void UserSet_Mode3()
+913: 	{
+914: 		cGpuFeatures.SetGpuConfigurableTgpFunCtrlEnable(1);
+915: 		cGpuFeatures.SetGpuConfigurableTGPTarget(115, _SmartApcTable.DefaultTGP);
+916: 		m_Option.OperatingMode = 2u;
+917: 		RefreshCurrentProfile(m_Option.OperatingMode, save: false);
+918: 		UserSet_FanBoost(0u);
+919: 		SetUserProfile(2u);
+920: 		WriteMainOptionToJson("OperatingMode", 2u);
+921: 		NvramVariable.SetFwVars("PowerMode", Convert.ToByte(2u));
+922: 		SetDynamicBoostforTurboMode();
+923: 	}
+924:
+925: 	public override void UserSet_Mode4(bool fromscancode = false)
+926: 	{
+927: 		m_Option.OperatingMode = 3u;
+928: 		if (fromscancode)
+929: 		{
+930: 			m_Option.CustomProfileIndex = (m_Option.CustomProfileIndex + 1) % 5;
+931: 			RefreshCurrentProfile(m_Option.OperatingMode, save: false);
+932: 		}
+933: 		else
+934: 		{
+935: 			RefreshCurrentProfile(m_Option.OperatingMode, save: false);
+936: 		}
+937: 		SetUserProfile(3u);
+938: 		WriteMainOptionToJson("OperatingMode", 3u);
+939: 		NvramVariable.SetFwVars("PowerMode", Convert.ToByte(3u));
+940: 	}
+941:
+942: 	public override void SetPairedProfileIndex(uint index)
+943: 	{
+2295: 	private void SetUserProfile(uint mode, bool supportGPU = true)
+2296: 	{
+2297: 		LogCtrl.Write("#######################I'm set mode : " + mode);
+2298: 		SetFanMode(mode);
+2299: 		UpdateStatusToTray();
+2300: 		m_FanSafetyProtect = GetFanSafetyProtectStatus();
+2301: 		if (m_FanSafetyProtect == 1)
+2302: 		{
+2303: 			m_Option.FanSafetyProtectNotify = 1u;
+2304: 			switch (mode)
+2305: 			{
+2306: 			case 1u:
+2307: 				FanTable.SetFanTable("DefaultFanTable_Gaming");
+2308: 				break;
+2309: 			case 0u:
+2310: 				FanTable.SetFanTable("DefaultFanTable_Office");
+2311: 				break;
+2312: 			case 2u:
+2313: 				FanTable.SetFanTable("DefaultFanTable_Turbo");
+2314: 				break;
+2315: 			case 3u:
+2316: 				FanTable.SetFanTable("DefaultFanTable_Gaming");
+2317: 				break;
+2318: 			}
+2319: 		}
+2320: 		else
+2321: 		{
+2322: 			m_Option.FanSafetyProtectNotify = 0u;
+2323: 			FanTable.SetFanTable(currentProfile.FAN.TableName);
+2324: 		}
+2325: 		WriteMainOptionToJson("FanSafetyProtectNotify", m_Option.FanSafetyProtectNotify);
+2326: 		if (!m_OcSupport)
+2327: 		{
+2328: 			return;
+2329: 		}
+2330: 		if (m_IsAMDPlatform)
+2331: 		{
+2332: 			if (mode == 3)
+2333: 			{
+2334: 				SetPL1Value(currentProfile.CPU.AmdSPL);
+2335: 				SetPL2Value(currentProfile.CPU.AmdSPPT);
+2336: 				SetPL4Value(currentProfile.CPU.AmdFPPT);
+2337: 				if (currentProfile.CPU.AmdSPL >= 75 || currentProfile.CPU.AmdSPPT >= 75)
+2338: 				{
+2339: 					SetCpuVrmCurrentLimit(65, 120);
+2340: 				}
+2341: 			}
+2342: 			else
+2343: 			{
+2344: 				SetPL1Value(0);
+2345: 				SetPL2Value(0);
+2346: 				SetPL4Value(0);
+2347: 			}
+2348: 			if (currentProfile.CPU.TccOffsetSwitch == 1)
+2349: 			{
+2350: 				SetCpuTccOffset(currentProfile.CPU.AmdTccTarget, bApExist: true);
+2351: 			}
+2352: 			else
+2353: 			{
+2354: 				SetCpuTccOffset(0, bApExist: false);
+2355: 			}
+2356: 			if (NvramVariableInfo.ACpuOverClockSupport == 1)
+2357: 			{
+2358: 				SetCpuAmdCoreFreq(currentProfile.CPU.AmdCoreFreq);
+2359: 				SetCpuAmdCoreVoltage(currentProfile.CPU.AmdCoreVoltage);
+2360: 			}
+2361: 		}
+2362: 		else
+2363: 		{
+2364: 			if (mode == 3)
+2365: 			{
+2537: 	private void SetFanMode(uint mode)
+2538: 	{
+2539: 		switch (mode)
+2540: 		{
+2541: 		case 1u:
+2542: 			if (m_Option.FanBoostEnable == 1)
+2543: 			{
+2544: 				BitArray bitArray3 = new BitArray(new byte[1]);
+2545: 				bitArray3[6] = true;
+2546: 				EcCtrl.Write(GetType().Name, 1873, ConvertToByte(bitArray3));
+2547: 			}
+2548: 			else
+2549: 			{
+2550: 				EcCtrl.Write(GetType().Name, 1873, 0);
+2551: 			}
+2552: 			FanTable.CustomerModeLightOff();
+2553: 			break;
+2554: 		case 0u:
+2555: 			if (m_Option.FanBoostEnable == 1)
+2556: 			{
+2557: 				BitArray bitArray4 = new BitArray(new byte[1] { 160 });
+2558: 				bitArray4[6] = true;
+2559: 				EcCtrl.Write(GetType().Name, 1873, ConvertToByte(bitArray4));
+2560: 			}
+2561: 			else
+2562: 			{
+2563: 				EcCtrl.Write(GetType().Name, 1873, 160);
+2564: 			}
+2565: 			FanTable.CustomerModeLightOff();
+2566: 			break;
+2567: 		case 2u:
+2568: 			if (m_Option.FanBoostEnable == 1)
+2569: 			{
+2570: 				BitArray bitArray2 = new BitArray(new byte[1] { 16 });
+2571: 				bitArray2[6] = true;
+2572: 				EcCtrl.Write(GetType().Name, 1873, ConvertToByte(bitArray2));
+2573: 			}
+2574: 			else
+2575: 			{
+2576: 				EcCtrl.Write(GetType().Name, 1873, 16);
+2577: 			}
+2578: 			FanTable.CustomerModeLightOff();
+2579: 			break;
+2580: 		case 3u:
+2581: 		{
+2582: 			byte b = 0;
+2583: 			if (currentProfile.OverClockingEnabled == 1)
+2584: 			{
+2585: 				b = 16;
+2586: 			}
+2587: 			FanTable.CustomerModeLightOn();
+2588: 			if (m_Option.FanBoostEnable == 1)
+2589: 			{
+2590: 				BitArray bitArray = new BitArray(new byte[1] { b });
+2591: 				bitArray[6] = true;
+2592: 				EcCtrl.Write(GetType().Name, 1873, ConvertToByte(bitArray));
+2593: 			}
+2594: 			else
+2595: 			{
+2596: 				EcCtrl.Write(GetType().Name, 1873, b);
+2597: 			}
+2598: 			break;
+2599: 		}
+2600: 		}
+2601: 		byte Data = 0;
+2602: 		EcCtrl.Read(GetType().Name, 1830, ref Data);
+2603: 		Data = ((mode != 3) ? ((byte)(Data & 0x7F)) : ((byte)(Data | 0x80)));
+2604: 		EcCtrl.Write(GetType().Name, 1830, Data);
+2605: 	}
+2606:
+2607: 	internal byte ConvertToByte(BitArray bits)
+2608: 	{
+2609: 		_ = bits.Count;
+2610: 		_ = 8;
+3331: 	private async void SetModeSwitchChangeThread(int _mode, bool fromscancode = false)
+3332: 	{
+3333: 		if (_mode == -1)
+3334: 		{
+3335: 			return;
+3336: 		}
+3337: 		if (FansemporeSlim4.CurrentCount == 0)
+3338: 		{
+3339: 			LastCommand4 = _mode;
+3340: 			LastCommandScancode = fromscancode;
+3341: 			return;
+3342: 		}
+3343: 		await FansemporeSlim4.WaitAsync();
+3344: 		try
+3345: 		{
+3346: 			stopwatch4.Reset();
+3347: 			stopwatch4.Start();
+3348: 			SetModeSwitchChange(_mode, fromscancode);
+3349: 			await Task.Delay(200);
+3350: 			stopwatch4.Stop();
+3351: 			_ = stopwatch4.ElapsedMilliseconds;
+3352: 		}
+3353: 		catch
+3354: 		{
+3355: 		}
+3356: 		finally
+3357: 		{
+3358: 			FansemporeSlim4.Release();
+3359: 			if (LastCommand4 != -1)
+3360: 			{
+3361: 				SetModeSwitchChange(LastCommand4, LastCommandScancode);
+3362: 				LastCommand4 = -1;
+3363: 				LastCommandScancode = false;
+3364: 			}
+3365: 		}
+3366: 	}
+3367:
+3368: 	private void SetModeSwitchChange(int mode, bool fromscancode = false)
+3369: 	{
+3370: 		switch (mode)
+3371: 		{
+3372: 		case 1:
+3373: 			App.m_Osd.ShowOSDByName(TransToGlobalType(1u));
+3374: 			LogCtrl.TraceMessage("Switch to Gaming", "SetModeSwitchChange", "E:\\WorkSpace\\CCU\\MyControlCenter\\MyControlCenter\\MyFan\\MyFanManager_RamFan1p5.cs", 4500);
+3375: 			UserSet_Mode1();
+3376: 			break;
+3377: 		case 0:
+3378: 			App.m_Osd.ShowOSDByName(TransToGlobalType(0u));
+3379: 			LogCtrl.TraceMessage("Switch to Office", "SetModeSwitchChange", "E:\\WorkSpace\\CCU\\MyControlCenter\\MyControlCenter\\MyFan\\MyFanManager_RamFan1p5.cs", 4507);
+3380: 			UserSet_Mode2();
+3381: 			break;
+3382: 		case 2:
+3383: 			App.m_Osd.ShowOSDByName(TransToGlobalType(2u));
+3384: 			LogCtrl.TraceMessage("Switch to Turbo", "SetModeSwitchChange", "E:\\WorkSpace\\CCU\\MyControlCenter\\MyControlCenter\\MyFan\\MyFanManager_RamFan1p5.cs", 4514);
+3385: 			UserSet_Mode3();
+3386: 			break;
+3387: 		case 3:
+3388: 			LogCtrl.TraceMessage("Switch to Custom", "SetModeSwitchChange", "E:\\WorkSpace\\CCU\\MyControlCenter\\MyControlCenter\\MyFan\\MyFanManager_RamFan1p5.cs", 4521);
+3389: 			UserSet_Mode4(fromscancode);
+3390: 			if (CustomizeCtrl.GetCustomId() == 9)
+3391: 			{
+3392: 				App.m_Osd.ShowOSDByName(TransToGlobalType(3u), m_Option.CustomProfileIndex.ToString());
+3393: 			}
+3394: 			else
+3395: 			{
+3396: 				App.m_Osd.ShowOSDByName(TransToGlobalType(3u), (m_Option.CustomProfileIndex + 1).ToString());
+3397: 			}
+3398: 			LoadOverClockingValue(currentProfile.OverClockingEnabled);
+3399: 			break;
+3400: 		}
+3401: 		UpdateStatusToClient(1);
+3402: 		FanTable.GetFanTable(currentProfile.FAN.TableName);
+3403: 		LiquidHWOC.Instance.RamFan1P5SetMode(mode);
+3404: 	}
+3405:
+
+### oem_light — build/research-gm6ir0c/all-active/0200041C-MyControlCenter.MyFan.FanTable.MyFanTableCtrl.cs
+
+139: 	private void SetFanControlByRamFan1p5(bool status)
+140: 	{
+141: 		byte Data = 0;
+142: 		byte b = 251;
+143: 		byte b2 = 0;
+144: 		byte b3 = 0;
+145: 		if (status)
+146: 		{
+147: 			byte Data2 = 0;
+148: 			byte Data3 = 0;
+149: 			EcCtrl.Read(GetType().Name, 3840, ref Data2);
+150: 			EcCtrl.Read(GetType().Name, 3841, ref Data3);
+151: 			b2 = (byte)((Data2 != 0 || Data3 != 0) ? 4 : 0);
+152: 		}
+153: 		else
+154: 		{
+155: 			b2 = 0;
+156: 		}
+157: 		EcCtrl.Read(GetType().Name, 1990, ref Data);
+158: 		b3 = (byte)((Data & b) + b2);
+159: 		EcCtrl.Write(GetType().Name, 1990, b3);
+160: 	}
+161:
+162: 	private void SetAPCustomerModeLightOn()
+163: 	{
+164: 		byte Data = 0;
+165: 		byte b = 64;
+166: 		byte b2 = 0;
+167: 		EcCtrl.Read(GetType().Name, 1831, ref Data);
+168: 		b2 = (byte)(Data | b);
+169: 		EcCtrl.Write(GetType().Name, 1831, b2);
+170: 	}
+171:
+172: 	private void SetAPCustomerModeLightOff()
+173: 	{
+174: 		byte Data = 0;
+175: 		byte b = 191;
+176: 		byte b2 = 0;
+177: 		EcCtrl.Read(GetType().Name, 1831, ref Data);
+178: 		b2 = (byte)(Data & b);
+179: 		EcCtrl.Write(GetType().Name, 1831, b2);
+180: 	}
+181:
+182: 	private byte ReadAPCustomerModeLight()
+183: 	{
+184: 		byte Data = 0;
+185: 		byte b = 64;
+186: 		EcCtrl.Read(GetType().Name, 1831, ref Data);
+187: 		return (byte)(Data & b);
+188: 	}
+189:
+190: 	public void CustomerModeLightOn()
+191: 	{
+192: 		SetAPCustomerModeLightOn();
+193: 	}
+194:
+195: 	public void CustomerModeLightOff()
+196: 	{
+197: 		SetAPCustomerModeLightOff();
+198: 	}
+199:
+200: 	public byte ReadCustomerModeLightStatus()
+201: 	{
+202: 		return ReadAPCustomerModeLight();
+203: 	}
+
+### oem_app — build/research-gm6ir0c/all-active/02000341-MyControlCenter.App.cs
+
+434: 		{
+435: 			LogCtrl.Write("[Application_Exit] Disable MyFan");
+436: 			m_MyFan?.DisableByService();
+437: 			LogCtrl.Write("[Application_Exit] Disable MyRgbKeyboard");
+438: 			if (rgbkeyboard != null)
+439: 			{
+440: 				rgbkeyboard?.DisableByService();
+441: 			}
+442: 			if (CustomizeInfo.m_sLightbarType == "2")
+443: 			{
+444: 				LogCtrl.Write("[Application_Exit] Disable MyRgbLightbar");
+445: 				m_RGBLB?.DisableByService();
+446: 			}
+447: 			LogCtrl.Write("[Application_Exit] Disable MySetting");
+448: 			m_MySetting?.DisableByService();
+449: 			LogCtrl.Write("[Application_Exit] Disable OSDManager");
+450: 			m_Osd?.DisableByService();
+451: 			LogCtrl.Write("[Application_Exit] Set_APExistToEC");
+452: 			EcCtrl.Set_APExistToEC(bExist: false);
+453: 			LogCtrl.Write("[Application_Exit] Unload EC");
+460: 		LogCtrl.Write("[InitalizeStartPerparation]");
+461: 		LogCtrl.Write("[InitalizeStartPerparation] InitFanTable " + DateTime.Now.ToString());
+462: 		if (m_MyFanTable != null)
+463: 		{
+464: 			m_MyFanTable.FanTable_Init();
+465: 		}
+466: 		LogCtrl.Write("[InitalizeStartPerparation] Set_APExistToEC");
+467: 		EcCtrl.Set_APExistToEC(bExist: true);
+468: 		CustomizeCtrl.Init();
+469: 		WKD_AMD.Intel_WiFi6_YB_Recovery();
+470: 		WKD_CriticalBatterySetting.HardCodeLevel();
+471: 		LogCtrl.Write("[InitalizeStartPerparation] KeyBoardType: " + CustomizeInfo.m_sKeyboardType.ToString());
+472: 		if (bDebug)
+473: 		{
+474: 			CustomizeInfo.m_sLightbarType = "2";
+475: 		}
+476: 		LogCtrl.Write("[InitalizeStartPerparation] LightbarType: " + CustomizeInfo.m_sLightbarType.ToString());
+477: 		LogCtrl.Write("[InitalizeStartPerparation] Get ACLineStatus");
+478: 		m_PowerModeEvent?.RefreshACLineStatus();
+479: 		LogCtrl.Write("[InitalizeStartPerparation] 開啟 WMIReceiveEvent for 監聽 EC scancode");
+480: 		m_Wmi.StartWMIReceiveEvent(m_Wmi.WMIHandleEvent);
+481: 		LogCtrl.Write("[InitalizeStartPerparation] 開啟 PowerModeChanged Events");
+578: 	{
+579: 		m_PowerModeEvent?.RefreshACLineStatus();
+580: 		LogCtrl.TraceMessage("Set_APExistToEC", "ModernOn", "E:\\WorkSpace\\CCU\\MyControlCenter\\MyControlCenter\\App.xaml.cs", 766);
+581: 		EcCtrl.Set_APExistToEC(bExist: true);
+582: 		LogCtrl.TraceMessage("Resume MyFan", "ModernOn", "E:\\WorkSpace\\CCU\\MyControlCenter\\MyControlCenter\\App.xaml.cs", 769);
+583: 		m_MyFan.Resume();
+
+### oem_presence — build/research-gm6ir0c/all-active/020000EC-MyECIO.MyEcCtrl.cs
+
+304: 	public void Set_APExistToEC(bool bExist)
+305: 	{
+306: 		byte Data = 0;
+307: 		Read(GetType().Name, 1857, ref Data);
+308: 		byte b = (byte)Convert.ToUInt64(Data);
+309: 		b = ((!bExist) ? ((byte)(b & 0xFE)) : ((byte)(b | 1)));
+310: 		Write(GetType().Name, 1857, b);
+311: 	}
+312:
+
+### dsdt — build/research-gm6ir0c/samples/DSDT.dsl
+
+133238:
+133239:             Method (WMBC, 3, NotSerialized)
+133240:             {
+133241:                 If ((Arg1 == One))
+133242:                 {
+133243:                     Return (GETC (Arg0))
+133244:                 }
+133245:
+133246:                 If ((Arg1 == 0x02))
+133247:                 {
+133248:                     Return (SETC (Arg0, Arg2))
+133249:                 }
+133250:
+133251:                 If ((Arg1 == 0x03))
+133252:                 {
+133253:                     VINS (Arg0)
+133254:                     If ((ECD2 == Zero)){}
+133255:                     SAC1 = Arg2
+133256:                     Notify (AMW0, 0xD2) // Hardware-Specific
+133257:                     Return (Zero)
+133258:                 }
+133259:
+133260:                 If ((Arg1 == 0x04))
+133272:             Method (_WED, 1, NotSerialized)  // _Wxx: Wake Event, xx=0x00-0xFF
+133273:             {
+133274:                 If ((Arg0 == 0xD0))
+133275:                 {
+133276:                     Return (SAA1) /* \_SB_.AMW0.SAA1 */
+133277:                 }
+133278:
+133279:                 If ((Arg0 == 0xD1))
+133280:                 {
+133281:                     Return (SAB1) /* \_SB_.AMW0.SAB1 */
+133282:                 }
+133283:
+133284:                 If ((Arg0 == 0xD2))
+133285:                 {
+133286:                     Return (SAC1) /* \_SB_.AMW0.SAC1 */
+133287:                 }
+133288:
+133289:                 Return (0xFFFFFFFF)
+133290:             }
+133291:
+133292:             Method (OEMG, 1, NotSerialized)
+134516:             OperationRegion (ECXP, SystemMemory, (ECMA + 0x0400), 0xFF)
+134517:             Field (ECXP, ByteAcc, Lock, Preserve)
+134518:             {
+134519:                 XIF0,   16,
+134520:                 XIF1,   16,
+134595:                 Offset (0x77),
+134596:                 Offset (0x78),
+134597:                 HBTN,   8,
+134598:                 BRTS,   8,
+134599:                 W8BR,   8,
+134600:                     ,   1,
+134601:                 TOPD,   1,
+134602:                 WUSB,   1,
+134603:                 FGPT,   1,
+134604:                 WEBC,   1,
+134605:                 BLTH,   1,
+134606:                 DV3G,   1,
+134607:                 WLAN,   1,
+134608:                 OSDF,   8,
+134609:                 CGVT,   8,
+134610:                 Offset (0x8A),
+135173:             Name (OSDT, Zero)
+135174:             Method (_Q53, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+135175:             {
+135176:                 Sleep (0x14)
+135177:                 OSDT = OSDF /* \_SB_.PC00.LPCB.EC0_.OSDF */
+135178:                 ^^^^AMW0.WMBC (Zero, 0x03, OSDT)
+135179:                 OSDT = Zero
+135180:                 Sleep (0x14)
+135181:                 OSDF = Zero
+135182:             }
+135183:
+
+### our_subscriptions — src/platform/windows/OemEventMonitor.cpp
+
+50:     CoSetProxyBlanket(service.Get(), RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, nullptr,
+51:                       RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, nullptr, EOAC_NONE);
+52:     struct Subscription { std::string name; ComPtr<IEnumWbemClassObject> events; };
+53:     std::vector<Subscription> subscriptions;
+54:     const bool uniwill=deviceProfile(readBoardDescriptor()).id=="wu-jie-15-xpro";
+55:     for (const wchar_t* provider : {L"AcpiTest_EventULong", L"AcpiTest_EventString", L"AcpiTest_EventPackage", L"HID_EVENT20", L"WmiMonitorBrightnessEvent"}) {
+56:         if(!uniwill&&wcscmp(provider,L"WmiMonitorBrightnessEvent")!=0)continue;
+57:         std::wstring query = L"SELECT * FROM " + std::wstring(provider);
+58:         BSTR language = SysAllocString(L"WQL"), statement = SysAllocString(query.c_str());
+59:         ComPtr<IEnumWbemClassObject> events;
+60:         const HRESULT result = service->ExecNotificationQuery(language, statement,
+61:             WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, nullptr, &events);
+62:         SysFreeString(language); SysFreeString(statement);
+63:         const auto providerName = utf8(provider, static_cast<ULONG>(wcslen(provider)));
+64:         if (SUCCEEDED(result)) {
+65:             subscriptions.push_back({providerName, std::move(events)});
+66:             if (log_) log_("OEM events: subscribed to "+providerName);
+67:         } else if (log_) log_(std::format("OEM events: provider={} subscription failed HRESULT=0x{:08X}",providerName,static_cast<unsigned>(result)));
+68:     }
+69:     if (log_) log_(std::format("OEM events: {} WMI providers connected", subscriptions.size()));
+70:     while (!stop_.load(std::memory_order_acquire)) {
+71:         for (auto& subscription : subscriptions) {
+72:             ComPtr<IWbemClassObject> item; ULONG returned{};
+73:             if (subscription.events->Next(0, 1, &item, &returned) != WBEM_S_NO_ERROR || returned == 0) continue;
+74:             VARIANT value{};
+
+### our_dispatch — src/gui/windows/MainWindow.cpp
+
+805:             if (provider != "AcpiTest_EventULong") return;
+806:             const auto at = osd::now();
+807:             const bool cameraOwned = code==207 && osd_ && osd_->hasPendingCommand("switch-Camera");
+808:             if (osd_) {
+809:                 if (code >= 59 && code <= 63) osd_->show(osd::keyboard(static_cast<int>(code - 59), "", at));
+810:                 else if (code == 64 || code == 65)
+811:                     osd_->show({"switch-Windows", code == 64 ? "Windows заблокирована" : "Windows разблокирована", "Клавиша Windows", osd::Icon::Windows, {}, false, false, at});
+812:                 else if (code == 165 || code == 184)
+813:                     osd_->show({code == 184 ? "switch-Fn" : "switch-Windows", code == 184 ? "Блокировка клавиши Fn" : "Блокировка клавиши Windows", "Настройка изменена", code == 184 ? osd::Icon::Keyboard : osd::Icon::Windows, {}, false, false, at});
+814:                 else if (code == 179 || code == 180)
+815:                     osd_->show({"keyboard", "Подсветка клавиатуры", "Настройка изменена", osd::Icon::Keyboard, {}, false, false, at});
+816:                 else if (code == 167 || code == 176 || code == 188)
+817:                     osd_->show({"power", "Производительность", "Настройка изменена", osd::Icon::Power, {}, false, false, at});
+818:                 else if (code == 164)
+819:                     osd_->show({"switch-Wifi", "Wi-Fi", "Проверяю состояние Windows…", osd::Icon::Wifi, {}, false, true, at});
+1053:     osd_->setEnabled(!preferences_.osdDisabled);
+1054: }
+1055:
+1056: void MainWindow::handleOemEvent(std::uint64_t code, std::uint64_t receivedAt) {
+1057:     if ((code==64 || code==65) && keysPage_) keysPage_->observeState(0,code==64);
+1058:     if (code >= 59 && code <= 63) {
+1059:         if (settingsPage_) settingsPage_->observeKeyboardLevel(static_cast<int>(code - 59));
+1060:         return; // Feedback was already delivered on the independent OSD thread.
+1061:     } else if (code == 208) {
+1062:         screenFlipPending_ = !screenFlipPending_; screenFlipAt_ = receivedAt;
+1063:         if (!screenFlipRunning_) startScreenFlip(receivedAt);
+1064:     } else if (code == 207) {
+1065:         return; // Windows device notifications finish the camera observation.
+1066:     } else if (code == 4 || code == 5) {
+1067:         return;
+1068:     } else if (code == 164) {
+1069:         const auto state = mc::windows::readDevice(mc::windows::DeviceKind::Wifi);
+1070:         if (osd_) osd_->show({"switch-Wifi", "Wi-Fi", state.enabled.has_value() ? (*state.enabled ? "Включён" : "Выключен") : "Состояние Windows не подтверждено", osd::Icon::Wifi,{},false,false,receivedAt});
+1071:     } else if (code == 167 || code == 176 || code == 188) {
+1072:         return;
+1073:     } else if (code == 186) {
+1074:         openFromTray(); return;
+1075:     } else {
+
+### our_controller — src/devices/mechrevo/gm6ir0c/ControlWindows.cpp
+
+91: void putTables(Journal& j,const gm6::Curves& curves,bool respective=true) {
+92:     validate(curves);
+93:     j.put(gm6::commit,0,4);
+94:     // OEM FanControlRespective: 0x7C5.7, NOT X5's other split flag.
+95:     j.put(gm6::respective,respective?128:0,128);
+96:     for(int ch=0;ch<2;++ch)for(int i=0;i<16;++i) {
+97:         const auto base=gm6::table[ch];
+98:         // Logical point0 is the CSV graph anchor/initial duty, not an extra
+99:         // visible EC marker. OEM raw Up starts with the NEXT transition.
+100:         j.put(static_cast<std::uint16_t>(base+i),i<15?curves[ch][i+1].up:255);
+101:         if(i<15)j.put(static_cast<std::uint16_t>(base+16+i+1),curves[ch][i].down); // preserve Down[0]
+102:         j.put(static_cast<std::uint16_t>(base+32+i),curves[ch][i].duty*2);
+103:     }
+104:     j.put(0x741,1,1); // OEM Set_APExistToEC; explicit table application only
+105: }
+167:     }
+168:     void automatic(){
+169:         guard(DeviceFeature::Fans,true);
+170:         try{stopOnline();}catch(const OwnershipChanged&){online=false;onlineFields.clear();logMessage("gm6ir0c","Explicit Default after lost online ownership; old snapshot is not restored");}
+171:         EcAccess::Transaction transaction(*ec);Journal j{*ec};j.put(gm6::commit,0,4);
+172:         j.put(gm6::custom,0,128);j.put(gm6::light,0,64);j.put(gm6::mode,0,64);
+173:         j.done=true;readbackConfirmed=true;needsRestore=false;onlineStatus="GM6IR0C: штатное управление EC";
+174:         ownedFanFields.clear();ownedFanMode.clear();
+175:         logMessage("gm6ir0c","Default: RAM/custom/override/boost disabled and verified; tables, mode and power overrides preserved");
+176:     }
+207:         if(!changed)return;
+208:         auto tables=onlineTemplate;
+209:         for(int ch=0;ch<2;++ch)if(onlineControlled[ch]||protection)for(auto& point:tables[ch])point.duty=targets[ch];
+210:         Journal journal{*ec};putTables(journal,tables,true);journal.put(gm6::custom,128,128);journal.put(gm6::light,64,64);journal.put(gm6::mode,0,240);journal.put(gm6::commit,4,4);journal.done=true;
+211:         confirmOnline(journal);onlineLast=targets;onlineProtection=protection;readbackConfirmed=true;
+212:         onlineStatus=protection?"GM6IR0C: Manual online · защита85°C →100% обоим":"GM6IR0C: Manual online · Intel DTS/NVIDIA · readback RAM подтверждён";
+213:         logMessage("gm6ir0c",std::format("ONLINE CPU/GPU temperature={}/{} target={}/{} linked={}; native RAM duty, PL untouched",*sample.processors[0].celsius,*sample.processors[1].celsius,targets[0],targets[1],onlineLinked));
+214:     }
+372:     // Only783/784/785 can be written here. No stopOnline, mode751, RAM or FAN flags.
+373:     void applyCpuPowerLocked(const std::array<int,3>& values,bool saveDraft) {
+374:         validatePower(values);const bool reset=values==std::array<int,3>{};
+375:         SYSTEM_POWER_STATUS supply{};
+376:         if(!reset&&(!GetSystemPowerStatus(&supply)||supply.ACLineStatus!=1))
+377:             throw std::runtime_error("Intel PL-пресеты и ручные лимиты доступны только от сети");
+378:         if(!reset&&(ec->readStable(gm6::light)&128))
+379:             throw std::runtime_error("PL4 Double: масштаб этой ревизии ещё не подтверждён; используйте штатные лимиты");
+380:         Journal journal{*ec};
+381:         try{
+382:             for(int i=0;i<3;++i)journal.put(gm6::power[i],values[i]);
+383:             // Confirm the complete triple, including unchanged fields, before save.
+384:             for(int i=0;i<3;++i)if(ec->readStable(gm6::power[i])!=values[i])
+385:                 throw std::runtime_error("EC не подтвердил всю тройку CPU PL");
+386:             if(saveDraft){std::string error;
+387:                 const auto text=std::format("{} {} {}\n",values[0],values[1],values[2]);
+388:                 if(!savePortableText(portableSettingsPath("gm6ir0c-power.txt"),text,error))
+389:                     throw std::runtime_error("Черновик CPU PL не сохранён: "+error);
+390:             }
+391:         }catch(const std::exception& failure){
+392:             const std::string reason=failure.what();
+393:             // A new OEM owner or changed identity must also block rollback.
+394:             const auto rollback=journal.rollback([this]{guard(DeviceFeature::PowerLimits,true);});
+395:             throw std::runtime_error(reason+(rollback.empty()?"; собственные изменения PL возвращены/подтверждены":"; возврат PL НЕ ПОДТВЕРЖДЁН: "+rollback));
+396:         }
+397:         journal.done=true;readbackConfirmed=true;
+398:         logMessage("gm6ir0c",std::format("CPU-only EC override readback PL1={} PL2={} PL4={}; saved_draft={}; fan_writes=0 mode_writes=0; CPU enforcement not measured",values[0],values[1],values[2],saveDraft));
+399:     }
+685: void Gm6Controller::setMode(int mode) {
+686:     setCpuPreset(mode); // Legacy callers must also obey SETs/FANs separation.
+687: }
+688: std::array<int,3> Gm6Controller::setCpuPreset(int preset) {
+689:     if(preset<0||preset>=static_cast<int>(gm6::powerDefaults.size()))throw std::invalid_argument("Неизвестный CPU PL-пресет GM6IR0C");
+690:     std::lock_guard lock(impl_->gate);impl_->guard(DeviceFeature::PowerLimits,true);
+691:     auto& ec=*impl_->ec;EcAccess::Transaction transaction(ec);
+692:     // Use this machine's current firmware defaults. Archived45/75/140 watt
+693:     // profiles establish provenance only and are never fallback values.
+694:     const auto values=impl_->cpuPresetValues(preset);
+695:     impl_->applyCpuPowerLocked(values,false);
+696:     logMessage("gm6ir0c",std::format("CPU-only application preset={} uses firmware default PL triple; native whole-system751 mode/FANs/online unchanged",preset));
+697:     return values;
+698: }
+699: void Gm6Controller::resetCpuPower() {
+700:     std::lock_guard lock(impl_->gate);impl_->guard(DeviceFeature::PowerLimits,true);
+701:     EcAccess::Transaction transaction(*impl_->ec);
+702:     impl_->applyCpuPowerLocked({0,0,0},false);
+703:     logMessage("gm6ir0c","CPU-only Auto: zero overrides read back; FANs, native mode and saved manual draft unchanged");
+715: void Gm6Controller::setCurves(const gm6::Curves& curves) {
+716:     validate(curves);std::lock_guard lock(impl_->gate);++impl_->fanCommandGeneration;impl_->ownedFanFields.clear();impl_->ownedFanMode.clear();impl_->stopOnline();impl_->guard(DeviceFeature::Fans,true);
+717:     auto& ec=*impl_->ec;EcAccess::Transaction transaction(ec);Journal j{ec};
+718:     putTables(j,curves);j.put(gm6::light,64,64);j.put(gm6::custom,128,128);
+719:     j.put(gm6::mode,0,0xF0); // OEM custom mode, OverClocking=false, Fan Boost off
+720:     j.put(gm6::commit,4,4);
+721:     j.done=true;impl_->readbackConfirmed=true;impl_->ownedFanFields=impl_->fanFields(true);impl_->ownedFanMode="Manual";logMessage("gm6ir0c","Manual CPU/GPU16-point RAM curves verified; physical response unconfirmed");
+722: }

@@ -1,0 +1,169 @@
+INFO/KEYs revision,30.10.2026
+
+Checkpoint73b230e8 precedes product changes. Authored investigations and
+reports preserved; private settings/logs/dumps and bulk extracted OEM trees
+excluded. This checkpoint is not a product build.
+
+Reviewed routes
+INFO refresh: Windows BiosPage -> InfoWorker/InfoOperations;
+Linux BiosPage -> BiosOperationsLinux. Both now use
+executeInfoInventoryResource for collect/cancel/save/result. Inventory-only
+CLI retains its explicit collect-only semantics and uses the same provider.
+INFO dumps: Windows,GTK,CLI converge at executeInfoDumpResource and the
+existing typed EC/BIOS/VBIOS/PowerInput services. OS dialogs, prompts and
+thread completion delivery remain UI adapters. No collector/writer changed.
+INFO driver: Windows installer preparation remains existing verified service;
+its interactive launch belongs to Windows, unavailable Linux stays unavailable.
+Copy report/support/Nahimic links are presentation actions, not device writers.
+
+KEYs:11 actions Windows/OSD/Fn/USB/AC/Copilot/Wifi/Bluetooth/Camera/Touchpad/Mic.
+keysBackend describes admitted routes; Windows typed resource adapters and
+Linux confirmed Fn/microphone adapters retain device admission. GUI and CLI
+use their existing executeKeyOperation/executeKeyHardwareCommand. Explicit
+hardware completion is now completeKeyResource on both OS: fresh supported,
+available matching value before one keys-settings writer. Windows previously
+used the requested value as its completion value for some hardware rows;
+it now always reads observeKeyHardware. A failure is reported, not saved as
+a confirmed setting. Linux GUI's second confirmation removed.
+Lifecycle uses the existing single KeysLifecycle; its observe/restore policy
+is intentionally separate from explicit commands. Bluetooth is excluded from
+lifecycle replay. No per-model restore loop added.
+
+Removed: unused Linux GUI collect() and unused inventory collect/cache-save
+wrappers; GUI cache save; duplicate GTK confirmation and Win assumed-value
+completion branch. Preserved geometry, unified scroll, capability policy,
+backend commands, settings schema and native ownership guards.
+
+Limits of this stage
+UI still creates worker tasks, binds prompts, translates text and renders.
+It also still contains scheduling/queue and local OSD presentation state.
+This is the first concrete consolidation, not a claim that every UI workflow
+has already been moved into one common cross-platform worker. Follow-up:
+shared operation result/lifecycle for INFO and KEYs, typed operation intent
+instead of overlapping request flags, then delete remaining redundant adapters.
+Do not remove model-specific hardware differences to reduce search matches.
+
+Verification: git diff whitespace check, Windows/Linux GUI+mctl common build,
+four staged binary hashes verified by Build-All. Results in VERIFICATION.json.
+No application/driver/vendor/hardware execution or new tests performed.
+No release packaging/publication requested for this revision.
+
+INFO consolidation, second phase,30.10.2026
+
+InfoOperationRequest/Result/Services + InfoOperation in the EXISTING
+InfoResourceControl.h and platform/common/InfoDumpResource.cpp now own all
+INFO jobs: one worker launch, cancellation, owned device/session capabilities,
+progress, prompt rendezvous, result publication, audit and transcript completion.
+Windows and GTK pages no longer create threads, local Job/InventoryJob/DumpJob,
+reference-output DTOs or call OperationMessages::finish. GTK uses one timer and
+one active operation instead of separate inventory/dump completion paths.
+The Windows start entry takes one enum, replacing overlapping operation flags.
+
+Deleted InfoWorkerWindows.cpp, BiosOperationsLinux.cpp and .h; removed their
+CMake entries. InfoOperationsWindows now only supplies existing typed FAN
+callbacks and the official PawnIO adapter. Verified preparation remains on the
+worker; the interactive wizard is launched exactly once on the UI apartment,
+then actual installed-version confirmation returns through the shared result.
+Cancellation while waiting for UI continuation finalises without starting it.
+No callback captures a page/window pointer. Closing retains the previous
+hardware cleanup gate and does not wait for an unbounded WMI call.
+
+DiagnosticPromptChannel moved from gui/common/DiagnosticPrompts.h to existing
+core/PowerInputDump.h; localisation stays in GUI. Lower dump collectors and
+CLI collect-only semantics unchanged. BIOS reader/PCI/driver selection and
+exact-board guards remain in existing collectors. No firmware commands changed.
+The old INFO fixture block in test_settings_queue_windows.cpp was adapted to
+InfoOperation and its injected collectors, preserving cancellation/save order,
+partial VBIOS and preparation failure cases; no new tests added or run.
+Source audit no longer reads the deleted Linux wrapper.
+
+Verification for this phase is recorded after the common build below.
+
+Completed 0.1.399: Windows/Linux GUI+mctl built and staged; all four
+actual working portable hashes independently compared with build outputs and
+Build-All manifest. Final fingerprint 8167a19ddc7f859a1b212ea07b5919e94638045c211d9474415d91976ef31e4f.
+Final early-error/cancellation-to-OSD fix changed inputs during the first
+build; source guard rejected completion. Build-All -Resume rebuilt/staged both
+OS on the final inputs and finished complete/verified with the same version.
+No app/hardware/vendor execution or tests run. Geometry/render/scroll source
+comparison against da7d5afd passed (INFO-SOURCE-CHECK.json). Existing compiler
+warnings outside changed INFO logic remain; no claim of a warning-free project.
+
+KEYs consolidation,30.10.2026, baseline c9581e0c
+
+One KeysOperations in existing KeyResourceControl.h / KeysLifecycle.cpp owns
+explicit queue, worker, gate reservations, radio preparation, canonical snapshot,
+read overlays, OSD completion data, audit/status classification and result delivery.
+Both native pages submit intent and present KeyOperationResult only. GUI local
+threads, pending arrays, queued action/reservation, KeysResult and restoration
+callbacks/controllers were removed. OS factories own typed backend lifetime;
+only PostMessage/GTK idle and the GTK lifetime guard stay UI bindings.
+No new architecture files. Replaced Windows snapshot/plan/result DTOs and two
+callback outputs of executeKeyHardwareCommand removed; CLI uses the same typed
+KeyBackendResult. Existing plan fixture references updated to shared API.
+
+The old KeysLifecycle implementation and Bluetooth exclusion remain unchanged;
+it remains a separate restore/observed-state policy/worker, owned by the common
+coordinator. Existing Windows/LINUX typed setters/readers, exact-board admission,
+fresh confirmation and keys-settings.ini writers preserved. OS-specific OSD
+transaction ordering retained, including the Windows rollback snapshot copy.
+Linux raw OEM/microphone evidence moved with execution into its OS adapter.
+
+Explicit clicks during passive refresh use the common one-item queue on both
+OS. It holds the same interactive gate reservation and performs radio preparation
+on the UI thread after the read. A newly unavailable queued target now returns
+an explicit failed result/OSD completion. Rejected commands still never execute.
+Local OSD and external observation overlays cannot be overwritten by an older
+passive read. Application/UI callbacks are never called by the hardware worker.
+GTK sleep events now pass to the same lifecycle bridge; owner pause is retained.
+
+KEYS-SOURCE-CHECK.json records exact unchanged geometry/scroll/render sections
+and old lifecycle/typed hardware paths against c9581e0c. Window rendering differs
+only in delegating disabled-state classification to the common coordinator.
+No tests added/run, no app/driver/reader/hardware execution. Build result follows.
+
+Completed 0.1.400: common build complete/verified on final fingerprint
+2caacfdc6ea80fc6198d6667f5aef3eed82343c14776c25a29339551020eee44.
+Windows/Linux GUI+mctl staged to actual working portable directories; all
+four versions/hashes independently compared with build outputs and manifest.
+Whitespace/source comparisons passed. Existing tests only adapted for moved
+plan/snapshot names, not executed. No application, driver, firmware reader or
+hardware run; no packaging/publication. Prior runtime/user data excluded.
+
+Second INFO/KEYs architecture audit,30.10.2026, baseline 0bbbed37
+
+Found/fixed active residue:
+1. CLI inventory still collected then saved InventoryCache itself (old path since
+   e01208f4/77502e33). Previous collect-only documentation was inaccurate. It now
+   uses executeInfoInventoryResource, as GUI refresh already does, preserving JSON
+   output and successful persistence while refusing to save a cancelled snapshot.
+2. KEYs had two explicit-worker creation/publication blocks, for read and command.
+   They now share startWorker and publish/failure. The pre-existing KeysLifecycle
+   worker remains an intentionally separate restore/observe policy.
+3. Windows GUI Row.available and unused KeyId/include residue removed. Permission
+   remains in the common coordinator; GUI still owns only presentation state.
+4. External changes to another KEYs row during a command could be overwritten by
+   its old baseline. They are now overlaid as during refresh. The command's own
+   row remains a fresh hardware confirmation; local OSD is authoritative after
+   all overlays. These are source-inferred failure cases, not observed new logs.
+5. INFO could accept duplicate/late installer completion or overwrite it through
+   an exception after synchronous completion. A single guarded publish makes the
+   terminal result immutable. Raw callback outcomes remain audited separately.
+   This is defensive lifetime correctness, not a claimed reproduced hardware bug.
+6. PowerInput had a distinct declared resource key but was routed through EC's
+   conditional handler. It now has its own binding to the SAME existing collector.
+
+No old parallel GUI executors remain. Legitimate roles retained: Win32/GTK event
+adapters, GUI asynchronous vs CLI synchronous coordination, separate actual OS
+backends, collect-only API (not the CLI inventory command), restoration policy,
+cache reads, explicit APP/Copilot teardown, and per-window scroll positions.
+No new architecture files or hardware protocol/reader changes introduced.
+Static audit and final shared build evidence follows. No tests or app/hardware run.
+
+Second audit complete in 0.1.401; final fingerprint
+77c5eb34156a50e68b62ee58e27b8e30e2dec5027a9061e5278375d8cd446a46.
+Windows/Linux GUI+mctl built, actual portable versions and four SHA-256
+compared independently to build outputs and manifest. Source checks stored in
+VERIFICATION.json / second_audit. No tests, app/GUI/driver/reader/hardware run.
+No source inputs changed during this build. Existing unrelated compiler warnings
+remain; this audit does not claim a warning-free or physically validated product.

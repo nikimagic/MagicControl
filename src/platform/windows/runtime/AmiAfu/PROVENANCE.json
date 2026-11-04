@@ -1,0 +1,30 @@
+{
+  "component": "AMI AFUWIN x64",
+  "version": "5.17.00.0153",
+  "source_url": "https://f.hubspotusercontent10.net/hubfs/9443417/Support/BIOS_Firmware_Update/Aptio_V_AMI_Firmware_Update_Utility.zip",
+  "source_sha256": "b59f141c37d5f55179459f6e07f0d1ed81fa742d1998b50954f1f9d6f3955307",
+  "source_member": "afu/afuwin/64/AfuWin64.zip",
+  "files": [
+    {
+      "path": "AFUWINx64.exe",
+      "bytes": 1161328,
+      "sha256": "535633b1c097581f34d31c3e2b9c594779c6e88dfd52cf3c02ac72c1b3e6649b"
+    },
+    {
+      "path": "amigendrv64.sys",
+      "bytes": 37744,
+      "sha256": "4892914632d4a8c327e6963b8a841266d6cdc466af03603b99d486799d947b64"
+    },
+    {
+      "path": "LICENSE.txt",
+      "bytes": 7743,
+      "sha256": "4535a8222f47865d0b548e8ac25a7afae3b2693f3c1ba21fef7102386dce782a"
+    },
+    {
+      "path": "readme.txt",
+      "bytes": 5756,
+      "sha256": "38dbd38488e551c635f5b70ea68ffdadba9534a07e55e8c42ce61bbb201d6d5b"
+    }
+  ],
+  "usage": "Explicit BIOS SAVE /O only; original bytes; no flash programming; Windows-only embedded runtime; public redistribution remains governed by AMI license"
+}

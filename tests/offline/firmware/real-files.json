@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "scope": "Existing owner WUJIE and GM6 files only; no hardware run, new capture or firmware upload.",
+  "fixtures": [
+    {
+      "id": "wujie-afu-pass1",
+      "path": "MagicControl/windows/logs_WUJIE_Series-X5SP4NAG/bios-dumps/bios-20261024-193321-0/bios.bin",
+      "bytes": 33554432,
+      "sha256": "2870a75a8c2518199cd9c572c3cd466d9f971b41bb047edbd3dda85ec6d2aaad",
+      "route": "afu",
+      "smbios_bytes": 33554432,
+      "accepted": true,
+      "kind": "declared_rom_image",
+      "provenance": "Owner WUJIE AFU capture0.1.186; complete manifest, identical second pass. Not an independent physical SPI or bootability proof."
+    },
+    {
+      "id": "wujie-afu-pass2",
+      "path": "MagicControl/windows/logs_WUJIE_Series-X5SP4NAG/bios-dumps/bios-20261024-193321-0/bios-verify.bin",
+      "bytes": 33554432,
+      "sha256": "2870a75a8c2518199cd9c572c3cd466d9f971b41bb047edbd3dda85ec6d2aaad",
+      "route": "afu",
+      "smbios_bytes": 33554432,
+      "accepted": true,
+      "kind": "declared_rom_image",
+      "provenance": "Second pass of the same owner AFU capture; expected bytes come from its saved manifest."
+    },
+    {
+      "id": "gm6-stock-full-file",
+      "path": "Users_logs/backup.zip",
+      "member": "backup.fd",
+      "bytes": 33554432,
+      "sha256": "2039277e2adfc54ec11983fd5822dcc070648b41217fe86b57a3f5779f2f7722",
+      "route": "intel",
+      "smbios_bytes": 0,
+      "accepted": true,
+      "kind": "intel_spi",
+      "descriptor_bytes": 33554432,
+      "provenance": "Owner supplied GM6 stock full image; file-only IFD2 fixture relevant to FPT16. Does not establish capture with our FPT16 or FPT19 reader."
+    },
+    {
+      "id": "gm6-patched-full-file",
+      "path": "Users_logs/new.zip",
+      "member": "new.fd",
+      "bytes": 33554432,
+      "sha256": "ac379a0bfbf9aa079e92d4e386b4f80eafbbe72f3f23b66a8d1f8c0ce53a5e12",
+      "route": "intel",
+      "smbios_bytes": 0,
+      "accepted": true,
+      "kind": "intel_spi",
+      "descriptor_bytes": 33554432,
+      "provenance": "Owner supplied patched GM6 full file; structural regression fixture only, not a recommendation to flash or a bootability guarantee."
+    },
+    {
+      "id": "gm6-region-is-not-full-spi",
+      "path": "Users_logs/logs_GM6IR0C (15).zip",
+      "member": "logs_GM6IR0C/bios-dumps/bios-20261024-203144-0/pass1.partial.bin",
+      "bytes": 16777216,
+      "sha256": "e6f32976b391d66a20649b71b5cfb0bd44d5c42a521f30e46ef5c71dd09a68ff",
+      "route": "intel",
+      "smbios_bytes": 33554432,
+      "accepted": false,
+      "reason": "Flash Descriptor missing",
+      "provenance": "Actual saved GM6 region/partial capture. A negative full-SPI fixture, not evidence of a defective motherboard or destroyed firmware."
+    }
+  ],
+  "unavailable_real_fixtures": ["FPT19/HYDROC/YAOSHI capture", "NVFlash VBIOS/entire EEPROM capture"],
+  "privacy": "Commit metadata and hashes only. Do not commit, upload or modify private firmware images."
+}

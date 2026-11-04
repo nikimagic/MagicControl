@@ -1,0 +1,9 @@
+Original PawnIO 2.2.0 installer, unmodified.
+Source: https://github.com/namazso/PawnIO.Setup/releases/download/2.2.0/PawnIO_setup.exe
+SHA256: 1f519a22e47187f70a1379a48ca604981c4fcf694f4e65b734aaa74a9fba3032
+Bytes: 3410960
+Authenticode checked locally: Valid, namazso.eu (namazso), 2026-10-21.
+The bundled installer is extracted only after the explicit INFO install action.
+No automatic driver installation or service start. The original interactive
+installer retains its own license/installation choices.
+PawnIO source: https://github.com/namazso/PawnIO/tree/2.2.0

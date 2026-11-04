@@ -1,0 +1,11 @@
+BASELINE 70/90
+{"Time":"2026-10-18T13:36:10.0503352+03:00","PowerOnline":true,"Charging":true,"Discharging":false,"ChargeRate":20984,"DischargeRate":0,"RemainingCapacity":33326}
+STOP AT 80
+charge_start=70 charge_end=80 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+{"Time":"2026-10-18T13:36:15.2641811+03:00","PowerOnline":true,"Charging":true,"Discharging":false,"ChargeRate":16482,"DischargeRate":0,"RemainingCapacity":33433}
+{"Time":"2026-10-18T13:36:20.2907525+03:00","PowerOnline":true,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":2566,"RemainingCapacity":33433}
+{"Time":"2026-10-18T13:36:25.3171410+03:00","PowerOnline":true,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":4475,"RemainingCapacity":33425}
+{"Time":"2026-10-18T13:36:30.3490082+03:00","PowerOnline":true,"Charging":false,"Discharging":true,"ChargeRate":0,"DischargeRate":4475,"RemainingCapacity":33425}
+RESTORE 70/90
+charge_start=70 charge_end=90 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+{"Time":"2026-10-18T13:36:35.4791982+03:00","PowerOnline":true,"Charging":true,"Discharging":false,"ChargeRate":0,"DischargeRate":0,"RemainingCapacity":33410}

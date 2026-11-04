@@ -1,0 +1,5 @@
+LOW
+keyboard_level=1 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания
+keyboard_level=1 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания
+HIGH
+keyboard_level=2 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания

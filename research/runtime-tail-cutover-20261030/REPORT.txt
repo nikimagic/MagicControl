@@ -1,0 +1,35 @@
+Runtime tail cutover,30.10.2026. Baseline98df3b20/0.1.405.
+Checkpoint0.1.406: GUI native thread/async creators0. Shared update::Operations
+owns ResourceWorker, stop source, release/progress/completion on both OS; one
+UpdatePresentation translates semantic state only on native UI thread.
+Windows OSD uses OS WindowEventLoop with core ResourceActor lease: create/ready,
+native GetMessage pump, close/join and same-thread cleanup. No finite-pool OSD
+loop, no moved renderer or new geometry. Existing native render command queue
+is a window binding, not another application job executor. Linux OSD remains
+native GTK/D-Bus/Pulse event handling and has no own GUI thread constructor.
+Windows rotation parity/result/token/queue moved from MainWindow to existing
+WindowsDisplay adapter and ResourceWorker. Readback/backend command unchanged.
+Layout/paint/OSD placement comparison in SOURCE-406.json. No application/tests,
+update checks/downloads, OS rotation, EC or firmware tools were executed.
+Both Release GUI/CLI portable406 built and hash-verified in VERIFICATION-406.json.
+This is a completed-build checkpoint. User added Linux Sc parity while406 was
+building: that functionality is the next implementation, not claimed here.
+Remaining native external-process waiters are AMI reader, Linux NVFlash reaper,
+and PawnIO installer exit observation; no application GUI worker was added there.
+
+User steering implemented after406: Linux Sc.
+DisplayRotationOperations moved to core/DisplayRotationControl.h and Windows-only
+operation class/body deleted, leaving only native CCD adapter. Both OS now share
+parity/token/queue/audit/readback outcome through the same finite ResourceWorker.
+Linux display action uses explicit KDE/KScreen or real X11/XRandR, unique active
+internal panel, +180deg, unchanged physical connector identity and actual reread.
+No XWayland fallback and no unrelated output selection. GIO helpers have bounded
+private context/timeout, argv without shell. No command or portal was run here.
+Linux global input uses session-owned GlobalShortcuts portal plus focused GTK
+fallback only when unbound; no evdev, keylogger, root, own GUI thread or driver patch.
+The desktop may require user consent. Kernel must deliver KEY_ROTATE_DISPLAY;
+KEY_UNKNOWN is not interpreted as Sc. KDE Wayland/X11 implemented; GNOME/wlroots
+Wayland display adapters remain explicitly unsupported. See docs/LINUX-SC.txt.
+Existing strict JSON reader promoted to core/mc::json; old update header removed,
+all production consumers updated. No second parser created; the namespace avoids
+collision with the schema-specific legacy inventory reader. Tests not run.

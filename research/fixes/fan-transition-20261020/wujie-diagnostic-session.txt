@@ -1,0 +1,112 @@
+Wujie X5SP4NAG diagnostic FANs session —2026-10-20
+Implementation requested after fresh0.1.95 dump113108. This report supersedes
+only the former post-dumpDefault policy in wujie.txt; earlier evidence/limits
+remain historical. Root's fresh analysis found Default at14:31:08, dump finish
+14:34:49 and no subsequent Manual request, not proof of a physical Manual failure.
+
+Changed files (only these two by this agent)
+src/devices/mechrevo/x5sp4nag/windows/FanControlWindows.cpp
+src/platform/windows/FanControlWindows.h
+No card/renderer/scrollbar, calibration, temperatures, table encoding, CSV/INI,
+backend protocol or unrelated subsystem changed. Root owns core session contract,
+GUI factory, dump orchestration, documents, build/portable and commit.
+
+API / worker ownership
+FanController::prepareDiagnostic() returns the root-shared FanDiagnosticSession.
+A DiagnosticPrepare request and awaited promise execute on the same single FAN
+worker as explicitManual/Max/online/Default. Snapshot source is the worker's
+confirmed own Intent, never editor drafts, savedCSV, a button highlight or a
+foreign-session payload. Before copying intent, fresh owned flags and RAM bytes
+must match expected. AutonomousManual checks only CPU47 owned bytes, ignoring
+Down[0] and never reading GPU table. Online checks48 bytes per controlled channel;
+Max is flags-only. A mismatch/unknown becomes Unconfirmed with no old-intent
+replay; explicit requestedDefault may still proceed.
+
+The ordinaryNative writer then establishesDefault; its normalrelease behavior
+releases the channel/service lease. No lease/OEM service remains paused throughout
+the dump. AfterDefault and lease release, the worker rechecksDefault and captures
+the six masked control fields. Only this prepared readback fulfills the promise.
+If preparation throws, promise exceptions are propagated; no callback is returned.
+
+Lifetime
+PrivateImpl changed from unique_ptr to shared_ptr. The returned callback captures
+only weak_ptr<Impl> and an immutable plan, not a rawcontroller/GUI/state pointer.
+A temporary strong lock exists on the external dump thread while waiting for the
+worker result; no strong self-reference is captured by the worker or plan, so no
+worker-owned last destructor/join cycle is introduced. A dead controller produces
+an explicit unconfirmed result without writes. Self-worker calls cannot await
+on themselves. GUI/job factory retains its sharedcontroller for the dump lifetime.
+
+Automatic restore admission
+The one-shot plan captures userGeneration, X5 powerEpoch and shared commonEpoch.
+commonEpoch is diagnosticFanEpoch(), used only for cancel/admission invalidation. A normal accepted FAN
+intent incrementsuserGeneration, including an explicitDefault no-op. Diagnostic
+prepare/restore, MaximumProbe and Performance do not increment it. Power events
+still increment the existing X5 epoch. A newer generation/epoch returns
+superseded=true,confirmed=false without old replay. Foreign/unknown is not
+classified as superseded; it is unconfirmed for the root warning/report.
+
+The callback admits its own DeviceOperation (bounded5s wait for brief other work),
+queues DiagnosticRestore and awaits its promise. Generation/epoch are checked
+before admission/wait, request queue insertion and again by the worker. The
+exception superseded flag uses the same three checks. Before writes, freshDefault and the
+six masked post-Default fields must match the plan. It rechecks after acquiring
+its channel lease. A previousDefault plan is a read-only confirmedno-op and needs
+no OEMabsence preflight; a previousunconfirmed intent is not fabricated asManual.
+
+For Manual/online/Max replay, the existing shared read-only OEM service/process
+preflight must be known inactive; active/unknown yields refusal. Automaticbegin
+explicitly disallows service pause, so it never stops/starts a newly active OEM
+controller to reclaim control. After admission, existing masked writers compare
+fresh owned bits against expected before changing them. Unknown/foreign masks
+cause no blindDefault/snapshot rollback. External OEM processes do not honor our
+mutex; preflight is not claimed to be a global exclusive hardware lease.
+
+Replay uses the ordinary writer
+Only a fresh FanCurveProfiles value built from the capturedIntent is passed to
+the existing normalManual/online/Maximum path. CurrentAPU profile/limits are not
+restored from oldIntent.mode; the fan writer keeps its usual fan-only masks.
+AutonomousManual retains CPU-only/Down0 behavior; online retains its own two-channel
+software-loop behavior; Max still sets its singleFanBoost field. No new table
+values, firmware-map aliases or hostPWM loop in autonomousManual are introduced.
+The promise is completed only after the ordinary table/flag readback path and
+power check. attempted records whether write-phase admission was reached;
+confirmed is mode/table readback, never proof of physical curve execution.
+
+MaximumProbe status / promise correction
+On successful cleanup, freshNativeflags (and retained ownership if present)
+produce a new FanControlStatus with this probe's revision, nonbusy/nonapplying
+state and the verified mode message. It no longer leaves request()'s stale
+“Применяю…” message. Publishing still preserves newer requested revisions.
+The two new visible nonDefault/unknown messages are Russian whole-message keys
+provided to root for all4 translations; existingDefault wording is reused.
+Power interruption now completes probe/preparation/restore promises with the
+existing interrupted path. The unsuccessfulprobe/power branch continues after
+that completion, avoiding a secondset_value on an already faultedpromise.
+Normal exceptions/foreign flags also complete every attached diagnostic promise.
+
+Root orchestration boundary
+Root invokes restore only after all requested evidence/sensors/firmware passes,
+and skips callback on known cancellation/GUIclose or unconfirmedcleanup. The
+backend callback signature has no stop_token; root installs an active-dump
+stop_callback that invalidates the shared diagnostic epoch. A cancelled restore
+waiting for DeviceOperation admission is therefore skipped. Shared epoch is an
+admission guard only: after write-phase admission, restore finishes logical
+readback/normalpower handling rather than blindly aborting a partial RAMwrite.
+A newer explicit FAN command/X5 power epoch is independently protected as above.
+No whole-machine settings replay is attached to this session.
+
+Validation / limits
+Read AGENTS/FAN_MODES/architecture contracts and the current diff. Static review
+covered all promise success/failure/pending-suspend branches, weak lifetime,
+generation/mask guards, fresh payload ownership, no-service-control admission and
+separation of autonomousManual from online. gitdiff--check reported no whitespace
+error. No test, GUI/CLI app, EC/driver/hardware probe, build or commit was run by
+this agent. No physical execution or successful compiledbinary is claimed here.
+Root performs the common build and portable update after sourcefreeze.
+
+Final frozenSHA256
+FanControlWindows.cpp
+242eca132b696a7fbc87d1e1895ed8d5087a59f0c68590b357c07ecc4a94defb
+FanControlWindows.h
+10c4ececade70ca14ad185bda2b93320d8ebec0a080e4a23061efe31a0cb1d1b

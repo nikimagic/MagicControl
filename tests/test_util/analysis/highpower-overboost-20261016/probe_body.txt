@@ -1,0 +1,59 @@
+original_flag_bits=None;flag_touched=False
+def set_flag_bits(bits,restoring=False):
+ global flag_touched
+ assert bits&~0x90==0
+ lock_ec()
+ try:
+  before=read_ec(0x7a5);value=(before&~0x90)|bits
+  if value!=before:
+   flag_touched=True
+   packet=(W.DWORD*2)(0x7a5,value);buf=(C.c_ubyte*16)();n=W.DWORD()
+   if not k.DeviceIoControl(h,0x9c40a48c,packet,8,buf,16,C.byref(n),None):raise C.WinError(C.get_last_error())
+   time.sleep(.03)
+  after=read_ec(0x7a5)
+  emit('candidate_bits',address='0x7a5',mask='0x90',before=before,requested_bits=bits,actual=after,
+   latched=(after&0x90)==bits,unrelated_bits_preserved=(after&~0x90)==(before&~0x90),restoring=restoring)
+ finally:k.ReleaseMutex(m)
+def flags_for_platform(label):
+ collect(label+'_baseline',6)
+ for bits,name in [(0x80,'highpower'),(0x10,'overboost'),(0x90,'both')]:
+  guard();check_supply();set_flag_bits(bits);collect(label+'_'+name,8)
+  set_flag_bits(original_flag_bits,restoring=True);collect(label+'_'+name+'_restored',6)
+try:
+ check_supply();first=snapshot();battery_sample()
+ if [first[hex(a)] for a in [0x454,0x456,0x740]]!=[82,72,26]:raise RuntimeError('Wrong board')
+ if first['0x7c3']!=4 or first['0x770']!=255:raise RuntimeError('Expected platform 4 and ROM FF')
+ if expected_ac and max(first['0x7cd'],first['0x7ce'])!=100:raise RuntimeError('Expected 100W adapter')
+ if any(first[hex(a)] for a in [0x783,0x784,0x785]):raise RuntimeError('Manual overrides active')
+ original_flag_bits=first['0x7a5']&0x90
+ if original_flag_bits:raise RuntimeError('Expected initially clear candidate bits')
+ original={0x7c3:first['0x7c3'],0x751:first['0x751'],0x783:0,0x784:0,0x785:0}
+ baseline_flags={hex(a):first[hex(a)] for a in [*fan_addresses,0x783,0x784,0x785]}
+ tables_before=table_hash()
+ with (out/'before.json').open('w',encoding='utf-8') as f:
+  json.dump(dict(utc=stamp(),original_ec=first,original_candidate_bits=original_flag_bits,tables_sha256=tables_before,
+   write_allowlist=['0x7a5 mask 0x90','0x7c3','0x751 mask 0xb0 ONLY'],fan_writes=0,smu_setters=False),f,indent=2);f.flush();os.fsync(f.fileno())
+ if lib.pawnio_open(C.byref(module))<0:raise RuntimeError('PawnIO open failed')
+ data=(runtime/'RyzenSMU.bin').read_bytes();blob=C.create_string_buffer(data)
+ if lib.pawnio_load(module,blob,len(data))<0:raise RuntimeError('PawnIO load failed')
+ # Isolate candidates under Turbo; keep all fan gates/table bytes as they were.
+ profile(0x10)
+ flags_for_platform('turbo_platform4')
+ guard();check_supply();write_ec(0x7c3,7);flags_for_platform('turbo_platform7')
+ write_ec(0x7c3,4,restoring=True);profile(original[0x751]&0xb0);collect('restored_original',8)
+ after=table_hash();emit('completed',tables_before=tables_before,tables_after=after,tables_unchanged=after==tables_before,fan_writes=0,smu_setters=False)
+except BaseException as error:emit('error',error=str(error),traceback=traceback.format_exc())
+finally:
+ if flag_touched and original_flag_bits is not None:
+  try:set_flag_bits(original_flag_bits,restoring=True)
+  except BaseException as e:emit('restore_error',address='0x7a5 mask 0x90',error=str(e))
+ for address in [0x7c3,0x751]:
+  if address in own and own[address]!=original[address]:
+   try:
+    if read_ec(address)!=original[address]:write_ec(address,original[address],restoring=True)
+   except BaseException as e:emit('restore_error',address=hex(address),error=str(e))
+ try:emit('final',ec=snapshot(),smu=smu() if module else None,tables_sha256=table_hash(),battery=battery_sample())
+ except BaseException as e:emit('final_read_error',error=str(e))
+ if bat_handle:k.CloseHandle(bat_handle)
+ if module:lib.pawnio_close(module)
+ k.CloseHandle(pci);k.CloseHandle(m);k.CloseHandle(h);log.close()

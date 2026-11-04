@@ -1,0 +1,88 @@
+MagicControl0.1.91 preparation — shared localization correction, Wujie agent
+Date2026-10-20. Files frozen after root-approved final corrections.
+
+Owned production files
+src/gui/common/Localization.h
+src/gui/common/TranslationCatalog.inc (new, included in the common Entry initializer)
+No other production/UI/geometry/card/scrollbar/config/hardware file edited here.
+
+Catalog
+905 ordinal-unique RU keys,3620 nonempty language cells: RU/EN/SC/TW.
+Original201 keys retained;704 complete messages/templates/atomic labels added.
+No empty field, conflicting duplicate RU key, or placeholder-multiset mismatch
+in the static text inspection. This inspection is not an application test.
+Root independently confirmed these counts and glyph-resource coverage.
+
+Coverage added
+- Shared monitoring: missing/absent/stale source states, battery/power fields,
+  CPU/APU/GPU terminology, charge activation versus stored threshold.
+- All four-language update/dialog/startup/button/tooltip/color/OSD captions and
+  named update templates requested by Windows and Linux adapter owners.
+- BIOS/inventory labels, units and EDID/DXGI/SMBIOS limitations; driver/PawnIO
+  setup explanations, preview/Unknown and diagnostic-dump scope.
+- Wujie FAN ownership, stale temperature, foreign table/flags, sleep recovery,
+  Default/Manual/Max/online/link and false-confirmation boundaries.
+- GM6/HYDROC native protection versus percentage thresholds, OEM ownership,
+  PL4 scaling unknown, command readback versus enforcement, restore failures.
+- Honor/Huawei automatic/manual PWM, temperature safeguards, ownership loss,
+  rollback unknown, keyboard idle/retained-off states and OEM timeout limits.
+- Shared keyboard cycle/power/restore guards and requested/readback/physical
+  distinctions. Unknown external API/driver errors remain verbatim payloads.
+Raw logs, commands, stored settings and driver data are not localized by this API.
+
+Mechanism
+Public activeLanguage/languageIndex/setLanguage/Entry/translations/translate API
+is preserved. Added shared formatMessage(source, initializer_list<pair<view,view>>).
+Named placeholders{name} are substituted exactly once after language selection;
+explicit caller arguments are opaque. Semantic arguments must be translated by
+the caller before passing them; model names,owners,paths,IDs remain unchanged.
+
+translate() first uses whole-key matching (including exact English aliases for
+our own English backend errors). Protected names Unknown/Default/Manual/Max/
+Manual online/FANs/SETs/KEYs/BIOS/CPU=GPU/CPU≠GPU retain their product spellings.
+Windows/UNC/sysfs/home/tmp/PCI/USB/HID/ACPI/HTTP paths are not translated.
+
+Reviewed anchored templates support existing concatenated messages. Whole
+structured rows split only on explicit bullet/semicolon/newline boundaries;
+a segment must be a known message/field/number or an opaque non-Cyrillic value.
+One unknown Cyrillic segment preserves the whole row. Unknown sentences do not
+undergo the old per-word replacement (e.g. no longer produce “No показаний”).
+Whole exact field-label + colon and numeric label readouts keep existing common
+cards working without duplicating any page or altering geometry.
+
+Inferred detail/effect/mode/state slots are separately reviewed display values.
+Quantity slots total/free/limit/enforced/minimum/maximum/default use ONLY the
+strict quantity parser: full scalar + known unit, or complete reviewed pair/range.
+No general message recursion for quantity slots; no translation of arbitrary
+model/owner/path/ID arguments. Capacity pairs such as99.07Wh /82.04Wh use the
+same quantity path. Numeric bytes/grouping/decimal formatting are not changed by
+this code: locale display formatting belongs to the shared DisplayFormat owner.
+Atomic units Wh/Hz/V/GB/GiB/MiB/MHz etc keep physical and binary scales distinct.
+
+Semantic corrections
+- TW power label is耗電功率, not energy quantity耗電量 for a W value.
+- Wujie lighting preset is Default preset/Lighting preset, not Firmware mode.
+  The command itself is unchanged; the Windows owner updated its action caption.
+- Cyan is青色; Six-color cycle is named explicitly in EN.
+- Readback is not translated as measured physical enforcement.
+- Honor retained-off-after-resume describes observed OFF, not a new OFF command.
+- Root-approved final SC/TW PL restored/confirmed wording preserves the／choice;
+  it does not promise both a rollback write and confirmation occurred.
+
+Review and limits
+font_zh_tw independently reviewed EN/TW meanings and placeholders; supplied
+spacing and Honor resume wording corrections were applied only to target cells.
+Root reviewed quantity admission, catalog cardinality/duplicates/placeholders,
+and requested removal of the extra EOF blank line; completed.
+No build, test executable, GUI, EC probe, hardware mutation, driver/service or
+commit was run in this correction task. Root owns the final common0.1.91 build.
+Actual visual fitting and fallback at different DPI require the separate visual
+verification requested/managed by root. No card or scrollbar redesign was made.
+Unknown vendor/runtime error payloads intentionally remain original; catalog
+coverage is not a guarantee that arbitrary third-party text can be translated.
+
+Final frozen SHA256
+Localization.h
+852b85f4760be6411f3fd184349279cf2e47084f33eeff101024357a82111eaf
+TranslationCatalog.inc
+bc1ecd659b80245aa09b5c52c57c29d045d2c244db6ea2b8e23f02bbef5157fb

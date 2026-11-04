@@ -1,0 +1,55 @@
+Shared modal close / application flicker,27October2026
+
+User reports whole interface blinking when Close in Update window is pressed,
+MagicControl0.1.242. Screenshot alone does not establish exact paint timing.
+Source audit found a documented Win32 activation-order defect.
+
+Before
+Update Close/X/Escape destroyed the popup while runModalDialog still held
+its owner disabled. Only after DestroyWindow returned and loop exited did
+it EnableWindow(owner,TRUE), SetActiveWindow and restore focus. Windows can
+activate another window while the owner is disabled, then reactivate ours.
+Same shared lifecycle affected project license and information/choice.
+
+Fix
+Store the exact modal owner/context as a private HWND property while the
+shared loop is running. All actual modal close paths use closeModalDialog:
+restore only the owner disabled by THIS loop, remove its property, THEN
+destroy popup. Reentrant enabling is idempotent; originally disabled/nested
+owners are not enabled. Modeless operation windows have no context and
+therefore never enable an unrelated owner. Context binding failure destroys
+the hidden dialog before any owner disable. Loop cleanup handles quit/error
+and externally destroyed windows; property identity prevents using a reused
+HWND as the old modal instance.
+
+Update Close/title-X/Escape and deferred busy-close/ready converge on the
+same helper. Busy worker still receives stop and finishes before closing;
+installation/update result/join behavior and firmware logic are unchanged.
+Skip redundant SetActiveWindow if owner already active. Restore previous
+focus only if it is a live enabled owner/descendant, not an arbitrary HWND.
+Audit ui.modal_close records owner_enabled_before_destroy for actual restored
+modal owners. No extra full-tree redraw, erase or redraw-freeze workaround.
+
+Primary API reference
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enablewindow
+Microsoft explicitly requires enabling a disabled main owner before destroying
+a modeless HWND used modally; otherwise another window can receive activation.
+https://learn.microsoft.com/en-us/windows/win32/dlgbox/using-dialog-boxes
+DestroyWindow remains the correct destructor for these custom modeless HWNDs;
+do not substitute EndDialog, which is for native DialogBox-managed dialogs.
+
+Validation/scope
+Original layout bodies and positioning source calls match baseline. Protected
+Geometry/PageMechanics/coreScrollModel/FANs/SETs/KEYs/MainWindow/NumericFieldTheme/
+LinuxUi/FanControlLimits and localEcByteEditor hashes unchanged. Shared modal
+consumers checked; modeless cancellation gate retained. No scroll refactor,
+geometry, palette, telemetry, curves, hardware or reader change.
+No new tests or GUI/hardware/product/vendor execution per AGENTS.md and scope.
+This is static source/API validation plus both-OS compilation, not an
+interactive confirmation that the reported visual symptom no longer occurs.
+Common build/actual portable version and four hashes saved in VERIFICATION.json.
+No GitHub packaging/publication requested or performed.
+
+Common build0.1.243 completed. Both actual working portable GUI/CLI pairs
+match all four generated SHA256 values and version sidecars. Protected
+source hashes still match. Interactive close/paint verification not run.

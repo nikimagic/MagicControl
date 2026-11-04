@@ -1,0 +1,7 @@
+Battery voltage display: volts, two decimals.
+Shared batteryVoltageSummary divides raw millivolts by1000.0 and uses the
+existing displayNumber(value,2), including the Russian decimal comma.
+17800 ->17,80 V;17000 ->17,00 V;800 ->0,80 V in RU display.
+Online/offline/retained/unknown semantics remain unchanged. Both OS adapters
+consume the same formatter. Raw EC values, logs, writers and geometry unchanged.
+Source review and Release builds only; no application/hardware execution.

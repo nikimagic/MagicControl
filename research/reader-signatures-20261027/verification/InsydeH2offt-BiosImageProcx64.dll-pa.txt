@@ -1,0 +1,138 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\InsydeH2offt\BiosImageProcx64.dll
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha1): C5EF840684730E0CE6ED6A86561AB3D0DF656FC8
+
+Signing Certificate Chain:
+    Issued to: VeriSign Class 3 Public Primary Certification Authority - G5
+
+    Issued by: VeriSign Class 3 Public Primary Certification Authority - G5
+
+    Expires:   Thu Jul 17 02:59:59 2036
+
+    SHA1 hash: 4EB6D578499B1CCF5F581EAD56BE3D9B6744A5E5
+
+
+        Issued to: Symantec Class 3 Extended Validation Code Signing CA - G2
+
+        Issued by: VeriSign Class 3 Public Primary Certification Authority - G5
+
+        Expires:   Mon Mar 04 02:59:59 2024
+
+        SHA1 hash: 5B8F88C80A73D35F76CD412A9E74E916594DFA67
+
+
+            Issued to: Insyde Software Corp.
+
+            Issued by: Symantec Class 3 Extended Validation Code Signing CA - G2
+
+            Expires:   Thu Jul 14 02:59:59 2016
+
+            SHA1 hash: FF94883B73EC5E46DB2A89B26F2C5BBB801DDE75
+
+
+The signature is timestamped: Wed Dec 16 14:41:56 2015
+
+Timestamp Verified by:
+    Issued to: Thawte Timestamping CA
+
+    Issued by: Thawte Timestamping CA
+
+    Expires:   Fri Jan 01 02:59:59 2021
+
+    SHA1 hash: BE36A4562FB2EE05DBB3D32323ADF445084ED656
+
+
+        Issued to: Symantec Time Stamping Services CA - G2
+
+        Issued by: Thawte Timestamping CA
+
+        Expires:   Thu Dec 31 02:59:59 2020
+
+        SHA1 hash: 6C07453FFDDA08B83707C09B82FB3D15F35336B1
+
+
+            Issued to: Symantec Time Stamping Services Signer - G4
+
+            Issued by: Symantec Time Stamping Services CA - G2
+
+            Expires:   Wed Dec 30 02:59:59 2020
+
+            SHA1 hash: 65439929B67973EB192D6FF243E6767ADF0834E4
+
+
+
+Signature Index: 1
+Hash of file (sha256): 3648F3D1FBDEC92781901360E848167F8D76C05EFB86EFFA7653DC52B21B3154
+
+Signing Certificate Chain:
+    Issued to: VeriSign Class 3 Public Primary Certification Authority - G5
+
+    Issued by: VeriSign Class 3 Public Primary Certification Authority - G5
+
+    Expires:   Thu Jul 17 02:59:59 2036
+
+    SHA1 hash: 4EB6D578499B1CCF5F581EAD56BE3D9B6744A5E5
+
+
+        Issued to: Symantec Class 3 Extended Validation Code Signing CA - G2
+
+        Issued by: VeriSign Class 3 Public Primary Certification Authority - G5
+
+        Expires:   Mon Mar 04 02:59:59 2024
+
+        SHA1 hash: 5B8F88C80A73D35F76CD412A9E74E916594DFA67
+
+
+            Issued to: Insyde Software Corp.
+
+            Issued by: Symantec Class 3 Extended Validation Code Signing CA - G2
+
+            Expires:   Thu Jul 14 02:59:59 2016
+
+            SHA1 hash: FF94883B73EC5E46DB2A89B26F2C5BBB801DDE75
+
+
+The signature is timestamped: Wed Dec 16 14:42:19 2015
+
+Timestamp Verified by:
+    Issued to: Thawte Timestamping CA
+
+    Issued by: Thawte Timestamping CA
+
+    Expires:   Fri Jan 01 02:59:59 2021
+
+    SHA1 hash: BE36A4562FB2EE05DBB3D32323ADF445084ED656
+
+
+        Issued to: Symantec Time Stamping Services CA - G2
+
+        Issued by: Thawte Timestamping CA
+
+        Expires:   Thu Dec 31 02:59:59 2020
+
+        SHA1 hash: 6C07453FFDDA08B83707C09B82FB3D15F35336B1
+
+
+            Issued to: GeoTrust 2048-bit Timestamping Signer 2
+
+            Issued by: Symantec Time Stamping Services CA - G2
+
+            Expires:   Wed Dec 30 02:59:59 2020
+
+            SHA1 hash: CE3118B4CD650C83D9143CC24A191B41E8A6F500
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\InsydeH2offt\BiosImageProcx64.dll
+
+
+Number of signatures successfully Verified: 2
+
+Number of warnings: 0
+
+Number of errors: 0
+

@@ -1,0 +1,76 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\IntelFpt-driver-reference.sys
+
+
+Signature Index: 1
+Hash of file (sha256): 5D67071DCB8A060517C51F03039BFAA1B807D354B734BD4F76E1EDD678C1C343
+
+Signing Certificate Chain:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Windows Third Party Component CA 2014
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Oct 15 23:41:27 2029
+
+        SHA1 hash: 1906DCF62629B563252C826FDD874EFCEB6856C6
+
+
+            Issued to: Microsoft Windows Hardware Compatibility Publisher
+
+            Issued by: Microsoft Windows Third Party Component CA 2014
+
+            Expires:   Thu Sep 01 22:15:59 2022
+
+            SHA1 hash: 8B2627FECD69A799EC949D7989D90D4B3E8801AB
+
+
+The signature is timestamped: Sun Feb 20 17:00:58 2022
+
+Timestamp Verified by:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Time-Stamp PCA 2010
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Wed Jul 02 00:46:55 2025
+
+        SHA1 hash: 2AA752FE64C49ABE82913C463529CF10FF2F04EE
+
+
+            Issued to: Microsoft Time-Stamp Service
+
+            Issued by: Microsoft Time-Stamp PCA 2010
+
+            Expires:   Mon Apr 11 22:02:14 2022
+
+            SHA1 hash: A9C92B731AE7D10B21A6EA338E9FA5F8349F34BF
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\IntelFpt-driver-reference.sys
+
+
+Number of files successfully Verified: 1
+
+Number of warnings: 0
+
+Number of errors: 0
+

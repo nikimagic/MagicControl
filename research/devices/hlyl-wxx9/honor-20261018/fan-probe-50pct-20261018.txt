@@ -1,0 +1,10 @@
+CPU=47C RPM=0/0
+BEFORE flags=00 period=200 duty0=0 duty1=0 target0=0 target1=0
+MANUAL flags=02 period=200 duty0=100 duty1=100 target0=100 target1=100
+CPU=44C RPM=4945/3587
+CPU=41C RPM=5014/3587
+CPU=38C RPM=5014/3581
+CPU=37C RPM=4968/3605
+CPU=36C RPM=5002/3599
+AUTOMATIC RESTORED; target bytes restored
+AFTER flags=00 period=200 duty0=100 duty1=100 target0=0 target1=0

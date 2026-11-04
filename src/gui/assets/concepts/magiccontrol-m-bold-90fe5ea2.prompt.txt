@@ -1,0 +1,11 @@
+Created with the built-in imagegen tool as a new MagicControl icon concept.
+Output: magiccontrol-m-bold-90fe5ea2.png
+Opaque square background; selected by the user and installed as the current app icon.
+
+Initial direction: One custom uppercase M, bold outer strokes and a deep central
+V, violet on the left transitioning to cyan on the right, a subtly folded surface,
+clear silhouette at small sizes. Midnight-indigo background. No sparkles, extra
+glyphs, labels or watermark.
+
+Final imagegen edit prompt:
+Deliver this MagicControl M logo on a completely opaque, perfectly uniform solid midnight-indigo background #111122. Preserve the large purple-to-cyan M letter, its shape, size and position. Fill ALL dark negative space above and below the M with that one uniform color. No black blotches, no smoky patterns, no texture, no transparency anywhere. Fill the entire square canvas, including its corners, with the same opaque flat color. This is a clean flat digital app-icon asset: just the colorful M and an absolutely plain solid dark square. Do not add a frame, outer margins, sparkle, text or shadow.

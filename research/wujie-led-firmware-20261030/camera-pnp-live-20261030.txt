@@ -1,0 +1,33 @@
+Microsoft PnP Utility
+
+Instance ID:                USB\VID_2B7E&PID_B663&MI_00\7&2789a4b1&0&0000
+Device Description:         HD Webcam
+Class Name:                 Camera
+Class GUID:                 {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+Manufacturer Name:          ����������
+Status:                     Started
+Driver Name:                usbvideo.inf
+Hardware IDs:               USB\VID_2B7E&PID_B663&REV_0008&MI_00
+                            USB\VID_2B7E&PID_B663&MI_00
+Compatible IDs:             USB\COMPAT_VID_2b7e&Class_0e&SubClass_03&Prot_00
+                            USB\COMPAT_VID_2b7e&Class_0e&SubClass_03
+                            USB\COMPAT_VID_2b7e&Class_0e
+                            USB\Class_0e&SubClass_03&Prot_00
+                            USB\Class_0e&SubClass_03
+                            USB\Class_0e
+
+Instance ID:                USB\VID_2B7E&PID_B663&MI_02\7&2789a4b1&0&0002
+Device Description:         IR Camera
+Class Name:                 Camera
+Class GUID:                 {ca3e7ab9-b4c3-4ae6-8251-579ef933890f}
+Manufacturer Name:          ����������
+Status:                     Started
+Driver Name:                usbvideo.inf
+Hardware IDs:               USB\VID_2B7E&PID_B663&REV_0008&MI_02
+                            USB\VID_2B7E&PID_B663&MI_02
+Compatible IDs:             USB\COMPAT_VID_2b7e&Class_0e&SubClass_03&Prot_00
+                            USB\COMPAT_VID_2b7e&Class_0e&SubClass_03
+                            USB\COMPAT_VID_2b7e&Class_0e
+                            USB\Class_0e&SubClass_03&Prot_00
+                            USB\Class_0e&SubClass_03
+                            USB\Class_0e

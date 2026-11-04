@@ -1,0 +1,51 @@
+VBIOS result contract after instruction review,27October2026
+
+Primary research and limits:
+research/nvflash-instructions-recheck-20261027/REPORT.txt.
+OEM backup and the actual embedded NVFlash help support standalone ordinary
+save. They do not prove GM6 compatibility, and neither a public project nor
+the old abrupt log establishes the exact cause or cure of the0.1.210 session.
+No code here claims to have reproduced that crash.
+
+Corrections
+1. Ordinary save already precedes optional EEPROM capacity in0.1.233. Keep it;
+no protectoff, override, driver-disable, flash or arbitrary vendor argv added.
+Two reads/SHA/structure, PCI/index binding and full EEPROM capacity/compare
+remain unchanged. No product/vendor/hardware invocation in this task.
+2. Shared typed VbiosRomDumpResult.outcome supplies completed,
+completed_partial, failed or cancelled. Full saved still requires both modes;
+CLI exit0/4 unchanged. A valid ordinary VBIOS is independent of full EEPROM.
+3. Previously both GUI adapters sliced away the two per-mode flags when
+copying the result into DiagnosticDumpResult. Both now retain the typed
+result and audit the outcome plus vbios_saved/eeprom_saved. CLI also exposes
+outcome/cancelled without changing existing fields.
+4. Neither mode verified now ends manifest as failed, not partial. Final
+capture_finished records outcome and error alongside separate flags.
+5. Shared transcript shows mode_failed and entire_refused immediately.
+It reports ordinary verified VBIOS independently. Generic capacity errors
+are suppressed until the concrete refusal; combined final VBIOS/EEPROM
+errors are split into the same deduplication keys as the earlier stage rows.
+No new window/scroll component, geometry or localization bypass added.
+6. Normative documentation now states actual order: ordinary read+validation,
+then optional capacity detection and admitted entire reads. check is EEPROM
+support detection, not a ROM checksum command. Two passes are our added
+verification, not an OEM prerequisite.
+
+Build and validation
+Primary still contains pre-existing unfinished HPBSD/Honor changes that
+failed the preceding primary build. Reuse the existing isolated worktree
+MagicControl-build-233, retaining its completed0.1.233 source plus only the
+seven updated task files. Build-All allocates common0.1.234 and compiles both
+GUI+mctl platforms. Record actual portable SHA256 after using repository
+stagers. Do not change the primary failed build record into a fake success.
+Unrelated work is neither reverted nor included in the task commit.
+Only static source/diff review and compilation: no tests added/run because
+AGENTS.md requires a specific request. Real GM6 capture remains unverified.
+
+Completed Windows/Linux common build0.1.234. Both actual portable GUI/mctl
+pairs and both exact version files match the completed build. Four hashes
+and seven task source hashes verified. Pre-existing unfinished source files
+match their preservation snapshot. No hardware or tests executed.
+Primary unfinished233 session was not rewritten; the next primary build
+after completing HPBSD work should allocate a fresh version (-NewVersion),
+not resume the older failed233 over the newer verified working portable.

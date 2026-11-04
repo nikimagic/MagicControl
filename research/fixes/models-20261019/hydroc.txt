@@ -1,0 +1,119 @@
+HYDROC/shared Uniwill corrections — 19.10.2026
+================================================
+Изменения выполнены по поручению родителя. GUI, настройки пользователя,
+capabilities профиля HYDROC, сборки/тесты и аппаратные операции не затронуты.
+Сборку и wiring общего дампера выполняет родитель после интеграции.
+
+HYD-02: bounded restore retry
+-----------------------------
+src/platform/windows/NativeBatteryWindows.cpp:
+- До5 попыток, deadline30с от первой допущенной попытки, backoff1/2/4/8с,
+  общий DeviceOperation gate. Ожидание за явной операцией не тратит retry budget.
+- Только типизированные WindowsEcNotReady/EcObservationBusy или EcIoError с
+  ERROR_NOT_READY/DEVICE_NOT_CONNECTED/BUSY/SEM_TIMEOUT и только ДО любой записи.
+- identity/pin/unknown mode/INI/OEM owner/uncertain write не повторяются.
+- OEM проверяется до open, затем вновь под EC transaction: queued restore
+  не ждёт, пока родной сервис завершится, чтобы отнять его политику.
+- Новый явный set отменяет старый retry, даже если новый запрос завершился
+  ошибкой. Новый startup/resume начинает новое ограниченное окно.
+- Статус retry/final error сохраняется в observations, причины логируются.
+- Изначальная masked запись7A6 и rollback сохранены; FANs/PL/HID не затрагиваются.
+
+src/platform/windows/BackendWindows.h и uniwill-acpi/BackendWindows.cpp:
+WindowsEcNotReady наследует BackendUnavailable, поэтому прежние обработчики
+совместимы. Классификация ограничена transient open Win32 codes; missing driver,
+access denied, wrong board или pin не становятся retryable.
+Только WAIT_TIMEOUT transaction gate даёт EcObservationBusy; прочие ошибки
+mutex остаются terminal. Это не новое разрешение на доступ/запись.
+
+Общий read-only ownership helper:
+src/platform/windows/UniwillControlOwnerWindows.h.
+Battery и factory diagnostics используют одинаковую fail-closed проверку
+GCUService/AiStoneService; ошибка перечисления не трактуется как «свободно».
+Службы не останавливаются. Существующая GM6 механика не переписана.
+
+HYD-06: PawnIO load diagnostics
+-------------------------------
+src/platform/windows/pawnio/SensorModuleWindows.h:
+Сохраняются moduleName, stage, точный hexadecimal HRESULT для pawnio_open/load,
+Win32 для LoadLibrary, expected SHA и actual SHA при несовпадении, размер blob.
+Failed partial open сбрасывает handle/library до повторной попытки; ready не
+может обозначать лишь открытый handle с незагруженным модулем. Никакие guards
+не обходятся. Отсутствующему native result не приписывается выдуманный HRESULT.
+
+Общий RAM Fan1.5 factory export
+--------------------------------
+Новая общая механика:
+src/protocols/uniwill/RamFanFactory.h/.cpp.
+Один алгоритм обслуживает оба независимо исследованных OEM: GM6 project25 и
+HYDROC project26. Буквальная копия контроллера/GUI для новой модели не создана.
+
+Источники:
+GM6 build/research-gm6ir0c/all-active/
+02000410-MyControlCenter.MyFan.FanTable.FanTable_Manager1p5.cs:859–918;
+HYDROC research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019/
+readable-csharp/0200044A-MyControlCenter.MyFan.FanTable.FanTable_Manager1p5.cs:
+2446–2505. Активный mailbox: Gaming2,Office3,Turbo1; APP741.0 off;
+F5F=mode,F5D=FD,F5E=C9;500мс/до10ожиданий пока ОБА маркера изменятся.
+
+API требует явный explicitWithFanProbes=true; false делает0I/O. Это только
+активная диагностическая процедура ПОСЛЕ Default и исходного EC snapshot.
+Не вызывать из startup/poll/ReadOnly. Caller держит DeviceOperation; typed
+adapter держит controller gate и полный cross-process EC transaction.
+
+Перед входом и каждым ожиданием проверяются exact profile/Project/RAM1.5,
+OEM owner, четыре Default masks=0, отсутствие обнаруженной LC connection.
+Прежний незавершённый mailbox/активнаяRAM/custom/boost/online → отказ.
+Payload F00–F5C никогда не записывается и не проигрывается обратно.
+
+APP ownership: сохраняется только исходный741.0, clear/readback; cleanup
+игнорирует cancellation, но повторно проверяет identity/owner/default/LC.
+Возвращает только собственный бит свежим RMW, если он всё ещё наш; внешняя
+смена не затирается. Соседние биты сохраняются. Mirror от firmware остаётся
+НЕАКТИВНЫМ, старый inactive RAM snapshot не replay-ится. Если cleanup не
+подтверждён, restored=false и причина остаётся в результате.
+
+Result: attempted/complete/restored/cancelled/status/json; Gaming/Office/Turbo
+samples с ready/valid/waits/status; rawBefore/rawAfter и sample raw96bytes с
+valid mask; ошибочные/непрочитанные bytes сериализуются null, не нулями.
+raw_changed=null при неполных снимках. ACK без двух одинаковых raw snapshots
+и консервативной plausibility проверки не выдаётся за valid factory table.
+Up shift, reserved Down0 и пересечение GPU terminal duty с F5D–F5F явно
+описаны в JSON. Никакой flash image/VBIOS/полной firmware не заявляется.
+
+Windows adapters
+----------------
+src/platform/windows/RamFanFactoryWindows.h/.cpp:
+prepareHydrocDiagnosticDefault(bool explicitWithFanProbes,stop_token={})
+  -> HydrocDiagnosticDefaultResult{attempted,confirmed,status}.
+exportHydrocFactoryTables(bool explicitWithFanProbes,stop_token={})
+  -> uniwill::RamFanFactoryResult.
+
+Exact SMBIOS/PnP/service/pinned SYS проверяется перед open/этапами/cleanup.
+Новый factory-only backend разрешает только741.0, F5D/F5E/F5F и СБРОС масок
+7C6.2/726.7/727.6/751.6. Он НЕ может активировать RAM/boost, переписать
+payload, батарею, CPU PL, respective, весьmode751 или RGB. Default никогда
+не меняетAPP presence и не читает/не пишет пользовательскиеFANтаблицы.
+
+Gm6Controller::exportFactoryTables(bool,stop_token={}) — только typed bridge
+к тому же общему алгоритму, под существующим gate/guard. Использует command
+write с последующим ACK, не повторяет self-clearing mailbox как persistent
+writeVerified. CPU-only presets/persistence предыдущего агента сохранены.
+
+LC admission основан на настоящем connected field
+------------------------------------------------
+HYDROC OEM LiquidCooling.cs:2591/2618 передаёт _Connected в SetECSupport,
+:2704–2711 пишет7C7.1. При7C8.5 и7C7.1 процедура отказывает.
+7C8.5 — capability, НЕ connected. 7C7.2–4 — HWOC level,7E6/7E7.bit7 —
+валидность сохранённой pump/fan duty, не доказательство подключённойLC.
+В пользовательском dump:7C7=0C,7E6=A8,7E7=87. Они не приписываются
+connection state. OEM owner и изменения Default/APP проверяются дополнительно.
+Это snapshot admission, не полная эксклюзивная аренда сторонней прошивки/OEM.
+
+Не подключалось
+---------------
+HYDROC general FANs/Max/RGB capabilities, ITE HID writer, АвтоВыкл seconds,
+новые вкладки/карточки/renderer, Linux EC/HID, драйверная установка.
+Без точного instance HIDtype/FW перенос RGB всё ещё недопустим.
+Физический эффект батареи/factory mailbox ещё не проверялся на устройстве.
+Изменённые файлы вычитаны статически; тесты/сборки агент не запускал.

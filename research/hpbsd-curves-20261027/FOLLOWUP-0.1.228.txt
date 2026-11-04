@@ -1,0 +1,20 @@
+MagicControl0.1.228 — deployment/settings follow-up for HPBSD curves
+27.10.2026
+
+227is committed and built, but its first mini-PC update failed replacing MagicControl.exe withWin32=5; next/restore contain the new/original EXE, and the old225was restarted. Existing4settings files remained identical. Failed staging/backup retained under .magiccontrol-update/18968-47273f49d5d44afa96b7d1879fd87d0e.
+
+Registerhpbsd-fan-ownership.txt,hpbsd-fan-targets.txt,hpbsd-fan-curves.txt in the common settings path list. Existing checked migration imports root files into settings and retains legacy-backup; nothing is decoded as another model settings. Curves/PWM/hardware logic is unchanged from227.
+
+Windows update replace/rollback now retries onlyAccessDenied/SharingViolation/LockViolation for at most3seconds and reports the target path on failure. No ACL edit, force kill, or permission bypass. File-only tests linked the real Windows updater object: a220ms sharing lock clears and installs correctly; a persistent lock fails within3seconds and leaves old/source bytes intact. No hardware, app launch or network in this test.
+
+Operator launching the original old updater now disposes cachedProcess handles after graceful exit, scopes its Process lookup, waits2seconds and verifies the installed EXE can be opened writable before starting the helper. This avoids starting a replacement while the image is still mapped; the root-lock cause is not uniquely attributed to one handle without an external handle trace.
+
+Build-All completed Windows/Linux GUI+mctl228, both working portable trees verified. New archive deployment and GUI verification follow; no GitHub publication.
+Windows GUI 
+16CC6869EC68FAFF2EAFD0A2AF239DFBAC9110BCD88BD878B2109C52D6E2066C
+Windows CLI 
+80EB85260E3A0CA175173ADE023BFF6FCD924E415F01A3CB74B626786709D99E
+Linux GUI 
+17071D11629F6F1CB42744B1373C96C0C7AC22C8A2EF9AD890A3953571805C68
+Linux CLI 
+557FBA09AE48ADC77EFF32AAD44646C06CC322DC3A423051D4E53A4420777B48

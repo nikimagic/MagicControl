@@ -1,0 +1,75 @@
+Wujie charging-current investigation: native host code and related firmware writer
+2026-10-20. Scope: offline files and static public-source text only. No hardware access, EC/SMU writes, driver/service/OEM execution, tests, builds, GUI or production edits.
+
+CONCLUSION
+No exact X5SP4NAG/H365 EC firmware image or independently verified writer of Wujie EC[0522] was found in this branch. Known host policy candidates did not expose a new charge-current setter. Generic health bits are unchanged between fast/slow snapshots. This does NOT exclude an unknown firmware/BMS policy or an application regression through another path.
+The public related firmware does identify a precise 0522/0523 publication path, but belongs to GXxHXxx_21.200, not Wujie N.1.20MRO15/EC1.18. Its addresses, enums and hidden scratch must not be promoted into Wujie commands.
+
+MODEL VALIDITY / PROVENANCE FIRST
+R = C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Reference_w568w/GCUService.
+C:/Users/admin/Documents/mechrevo/EC-WritePath/Fan-ID0-100-Verified.md:78-83 explicitly attributes this full readable reference to w568w's Wujie14XA, Control Center5.56.51.17. It is not a proven exact active H365/X5SP4NAG service binary. A matching RAM Fan1.5 class establishes a useful protocol lead, not matching charge-health firmware semantics.
+There is a local installed-service decompilation: C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Current/GCUService.decompiled.cs, file/assembly version1.0.2.70 at114/116. Historical installed provenance is recorded in EC-WritePath.md:211. Its BatteryProtection2 health methods at15525-15546 are Runtime exception placeholders. They do NOT provide the executing runtime-recovered implementation of this Wujie. GetTypeCAdaptorPrioritySupport:7287-7289 is a real constant-false body. Presence of method names is not proof that a healthy/performance enum does what the other-board firmware does.
+No new runtime extraction or OEM initialization was performed.
+
+REFERENCE BATTERYPROTECTION2: WHAT IT ACTUALLY WRITES
+R/MySystem/BatteryProtection2.cs:
+- EnableByService111-119 -> Init249-284 -> SetHealthProtectionStatus327-342. Resume122-125 reapplies health; resume callback511-514 runs Init again.
+- Receive172-195 selects saved health status via explicit UI action or recovery. Main service starts it in R/MyControlCenter/App.cs:817-818, dispatches messages at457, and resumes at733. Disable304-308 and Uninstall296-300 select High.
+- High346-354 changes only7A6.5:4 to00; Middle358-366 to10; Low370-378 to20. These are generic host bit values, not proven exact Wujie charge-voltage reductions/current rates.
+- Init defaults CustomizeTarget17 to Balanced, other targets to Performance; target11 sets only a stored priority variable (251-282). Exact Wujie CustomizeTarget admission is not established by this reference.
+- Upper setter391-405 uses7B9.low7,100 encoded0; Lower428-437 writes7D0.low7 for1..95. These are percentages, not mA or watts. Readback is not proof of physical hysteresis.
+- Properties at49-100 persist ChargeMaximumLimit/ChargeMinimumLimit/BatteryLimitation with NvramVariable.SetFwVars. Their presence does not identify the executing EC voltage/current consumer.
+- StatusChange callback458-505 and SOC callback521-546 only collect/send UI status. They do not implement an additional SOC-based current clamp. Resume can reapply health bits, as above.
+- TypeCAdaptorPrioritySupport comes from MyEcCtrl329-331, which always returns false in this reference. Priority registry/notification fields at249-282,312-323,571-600 have no corresponding hardware setter in the inspected BatteryProtection2 class. UI commands enum alone is not an implementation.
+- No literal address520/522/1312/1314 read/write was found in the full reference source tree after excluding metadata-token-only matches. This bounded negative result does not include protected dynamic method bodies or EC firmware.
+
+OLDER BATTERYPROTECTION CLASS
+R/MySystem/BatteryProtection.cs:
+- Same health7A6.5:4 setters388-423.
+- Its calibration/protection workflows at472-620 update stages, notifications and registry/UI values. They do not set a numeric charging-current or charging-voltage target.
+- Threshold constants1272-1281 are7%/100% calibration endpoints, not an87%-charging-taper threshold. Timer callback701-703 is empty in this reference. Notification workflow completion is not a voltage command.
+- This older class is not the service-startup path seen in App817-818; do not silently attribute both implementations to current Wujie.
+
+AC / SMARTAPC / BUDGET DISTINCTIONS
+R/MyControlCenter/PowerModeEvent.cs:27-59 reads Windows Online/Offline and Type-C status, then dispatches fan-manager power change. RAMFan1.5 PowerStatusChange1105-1108 calls Init(false), which selects the coupled CPU/GPU/FAN profile at4574-4589. These handlers do not directly set charge current or0522.
+R/Utility/SMAPCTABLE_STRUCT.cs contains PL1/PL2/PL4, TccOffset, ConfigurableTGP, DynamicBoost, TargetTemperature, DefaultTGP and DynamicBoostCpuTdp. SmartApcTableCtrl.cs:37-129 reads these data;130-185 writes named entries through its driver/DLL transport. No charge-current/voltage field was identified. A reduced shared adapter budget can be an indirect hypothesis, but this table is not evidence for a hidden mA cap.
+Do not confuse 7A6.1 inverted dynamic-temperature Overboost admission with 7A6.5:4 battery health. No new writes to either were performed.
+
+OFFLINE SNAPSHOT CONSTRAINTS (ROOT EVIDENCE REVIEWED)
+Read build/wujie-charge-rate-20261020/REPORT.txt and snapshot-comparison.json. Fast/slow20.10 have520=6300 and522=17000,7A6=00,7D0=80,7C3=4,490=0F; actual current differs markedly. Thus an unchanged numeric520/522 does not by itself explain why one sample charges faster.
+Root additionally identified04.10 full ec-table.csv at C:/Users/admin/Documents/mechrevo/outputs/ec-capture-20261004-120044/:6300/17000 already existed with lower0,platform7,upper95. Therefore17000 cannot be said to have first appeared because of recently added lower80.
+Root's17.10 sample with522=17800 is AC-off,490=06,742=22,platform7/upper100, unlike charging490=0F/742=26. This does not isolate platform7 or upper100 as a voltage-target selector. A retained/requested value or inactive publication path is a confound.
+Root's old records contain BOTH taper near16.912V without lower80 AND fast~34.9W at87-88% near16.795-16.842V without lower80. Hence neither 'lower80 causes current limit' nor 'ordinary SOC taper fully explains all observations' is established. Same displayed SOC is not proof of equal BMS/charger state, but the owner's high-SOC comparison is retained as valid evidence requiring explanation.
+These RAM snapshots are data, not EC executable code. No writer can be proven from byte correlations alone.
+
+PINNED RELATED FIRMWARE: EXACT WRITER EVIDENCE AND LIMITS
+Repository minortex/ec_reverse, commit3a574dafe837571cc3176b4ed452a3fd84b3cd24. Downloaded public tree saved as related-tree.json. It contains docs, metadata and export/patch tools, but no firmware image, .d52/.asm disassembly or generated full pseudo-C at this revision. Therefore this agent verified published instruction excerpts and patch preconditions, not an entire original firmware independently.
+Foreign baseline GXxHXxx_21.200 is256KiB SHA25634c050d30772da07ef262fc7016e0677b9b1b4cdcd90cf43d93f0f15bf6a38c2. This is NOT the missing exact Wujie image.
+- related-docs-charge_voltage_16600_official_bin_audit_20260723.md:7-28 identifies the only executable direct writer class as bank1:D1D1's publication sites: physical1D406/bank1:D406 bytes90 05 23 F0 (target high), physical1D41E/bank1:D41E bytes90 05 22 F0 (target low). The matching byte patterns at physical15C5D/15C65 are in an inactive lower bank window and are not a second executable writer.
+- related-docs-battery_aging.md:124-138 gives gates490.1,497.0,490.2,490.0. Early return preserves the old target; lack of AC need not restore the base value. First reset gate is E705 (490.1), NOT the incorrectly named signed-current helper E6FE.
+- related-docs-battery_aging.md:414-467 presents reviewed focused pseudo-C: base is030E/030F big-endian; selects a per-cell voltage reduction from cycles, high-voltage stress, health-mode floor and shared auxiliary input; publishes the reduced value to522/523 little-endian. A target is not analog charger output.
+- Related functions map at ../.. /wujie-ec-firmware/related-tools-ec_functions.tsv:17,20 assigns8FFB periodic task and D1D1; docs150-167 derive approximately720ms invocation from an assumed timer clock. This timing is foreign implementation evidence, not verified Wujie timing.
+- 3196 compares desired522/523 with queued836/837;31FC copies desired or a separate fallback into the queue;8EFB submits SMBus voltage command15/current14. Queue mirror and transaction return are not measured physical voltage.
+- related-docs-i2ec_battery_investigation.md (root directory):228-237 reports foreign live stress11228 and17600->17000. It does not show17800->17000 on Wujie. Similar17000 result does not identify the same cause or even same base/derating table.
+- 0A54 is SHARED SCRATCH. The latest register map says the aging caller seeds1. It is NOT an established age, temperature or programmable battery lifetime setting. Other docs at the same revision discuss a later observed1B/R7/ISR issue; provenance and revision of each observation must remain distinct. No Wujie0A54 write or interpretation as age is justified.
+- The static downloaded patch_mode_only_voltage.py pins the foreign image SHA and includes expected instruction bytes at physical1D303. It was read as text ONLY and was never executed. It does not establish the Wujie binary's code layout or authorize any patch.
+
+NEXT SOURCE EVIDENCE NEEDED
+An exact original X5SP4NAG EC image with BIOS/EC versions and hash, or a firmware-vendor source/disassembly consumer showing which code publishes522 and obtains its inputs. No patch, register change, inferred health-voltage mode or foreign-image flash is proposed by this report. Current inference ceiling: related foreign writer is documented; exact Wujie writer and cause of current limitation remain unknown.
+
+SHA256 OF PRIMARY LOCAL SOURCE EVIDENCE AND DOWNLOADED TEXT
+R/MySystem/BatteryProtection2.cs FE3443DCB33890FD0487DC372872A06A4F02F9B38611CB3A5224FED2108B81DD
+R/MySystem/BatteryProtection.cs 52E5FD1634846171A7E2995ACBA4F7D7084EDFCDEC40BA973A348106C4A5A05B
+R/MyControlCenter/App.cs 0839ECF93D148F202F43A2AE4872FFDA40DB34B11AB42B4647D009E51AF2AA57
+R/MyControlCenter/PowerModeEvent.cs F7B0CEB4ADBA890A1F7535AE057EA9D5E4DA1E77709E0A14C596D68B55FBC48E
+R/MyECIO/MyEcCtrl.cs F767F85F16199B131F4570A7D05D0D939FC8CC0DFC4A5AE933330FBA953EA847
+R/Utility/SMAPCTABLE_STRUCT.cs C4DD3EFDC9358882E4202E77FCEB8846200DED21B685070E2E2A855F39AC959D
+R/Utility/SmartApcTableCtrl.cs 5290FC5CBC4AEC0D51F7EE7E3DB520AA7BE7008B70D657CBF361EB3AC1684A0E
+related-docs-battery_aging.md 077C478394C8F8BFFC318A5FC6574013FD9C07E1E2E06BCBBACC0BD4E761C451
+related-docs-charge_voltage_16600_official_bin_audit_20260723.md 96E529AC66B8B05303178224A4B770C4CB8E4D33EF72815F639F0F9E075EB8DA
+related-docs-charge_voltage_limit_investigation_20260720-211900.md B630C70402D995F3E7DEC77525BD978B3D430A3FCF59BF7FDDF4F4A9F3B42F01
+related-docs-charging_voltage_reduction_causes.md 2BEFD3EDE57A170C486B97C6D665AF1F1654A33E0BB96928C31DDA73DACB9F52
+related-docs-readable_firmware.md 518FEEB3ADF0B7AA726B5EE3BF3918CF3FC5A76768582B8DC0F69D10001DFFF1
+related-firmware_mods-GXxHXxx_21.200-mode-only-voltage-20260723-patch_mode_only_voltage.py 69BEAF32703A5BADEB19EA68AB525E1635E59148587E0C2A9FB9A9A83FCA0B06
+related-README.md CC2AD391A64FEEF4ABEF107A5AC1A459D527D8DC6F69854457D601C835AB188C
+related-tree.json 5E4C7D0DA4D3E5A6F4691EAE22982FB8F1C741E9533707D956C5D9DAAD3FDD12

@@ -1,0 +1,41 @@
+INFO / report cleanup,20.10.2026
+
+The supplied plain-text report contains5943 lines/279148 characters. Its native
+HID/ACPI/SCM section alone has5788 records plus heading/separation. Those raw
+records accidentally leaked into the ordinary information page and clipboard.
+
+Fix: InventoryPresentation.h is the shared Windows/Linux human view/report.
+It hides the exact raw native-interface and Linux LED metadata sections and,
+per the owner's follow-up, the Network/audio/camera/NPU driver enumeration.
+It also omits battery transport paths/completeness rows; multiple battery groups
+retain their actual model instead of an ACPI path. Existing caches are projected
+without modification. The original cached JSON is not rewritten on delivery.
+
+Ordinary Refresh no longer runs the deep native metadata or full peripheral
+driver scan. Those moved behind collectDiagnosticInventory, called only by the
+explicit diagnostic dump. Full inventory.json in the dump still receives those
+sections. Linux LED metadata follows the same contract. No diagnostic evidence
+is discarded from the explicit dump and no new device write is introduced.
+
+The ordinary Drivers section contains supported NVIDIA/AMD/Intel video-adapter
+driver versions (all matching adapters, including hybrid/integrated devices),
+PawnIO installed/not-installed from the shared read-only SCM inspector, and the
+Intel/AMD chipset package version for the actual CPU vendor. Windows package
+registration is used instead of falsely calling one PCI/I2C component the whole
+chipset version. Unknown package version remains unknown, not 'not installed'.
+Linux identifies actual GPU modules and their version, or explicitly the kernel
+version when the module has no own version; chipset is labelled kernel drivers
+and PawnIO is not applicable. No module is loaded or driver/service started.
+
+Windows/Linux clipboard reports use one formatter and selected UI language.
+Existing INFO renderers, dimensions, font roles, colours and scrollbar stay.
+The supplied cached data projects to123 report lines before a fresh refresh
+adds the new targeted driver summary. This is a static preview, not an executed
+application test. Preview is kept in ignored build/info-report-preview-20261020.txt;
+personal serials/UUIDs/raw reports are not included in the commit.
+
+New driver readings require the existing Refresh information button; launching
+the portable keeps the old snapshot timestamp and does not silently refresh it.
+No GUI, driver, monitor, EC or hardware probe and no tests were run in this task.
+The common Release build and final SHA/version/settings inspection are separate
+evidence. GitHub archives/publication are outside this request.

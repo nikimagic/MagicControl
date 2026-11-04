@@ -1,0 +1,324 @@
+Failed to set InfoROM PTD File data.
+
+InfoROM PTD data updated successfully.
+
+No input file specified.
+
+ with invalid file extension.
+
+Specified file name 
+Input file could not be opened.
+
+Results:
+ Index | Match | Flash | Name 
+Invalid measurement index.
+
+Measurement index: 
+Failed to get measurement data.
+
+Measurement data has been saved to 
+Write zero to holdoff bit.
+VBIOS Verification / Devinit skipped!
+Get measurements data
+No measurement index specified.
+
+    HMMA
+    IMMA
+    SGEMM
+    TRANSFORMER
+  -------------------------------------
+    DMMA_PERF
+    DMMA_HIGH_K
+    DMMA_LOW_K
+    Attributes     Description
+    limitRated  :  Default power capping limit (mW)
+-- Help for --addtgpapp/--delapp app profile commands --
+    <profileId> options
+-- Help for --addpp/--delpp power policies descriptions --
+    Policy         Description
+  ------------------------------
+    TGP            Total GPU Power
+      firstWorkloadParam:  fixed point 20.12 (decimal)
+      secondWorkloadParam: fixed point 20.12 (decimal)
+  --addtgpapp SGEMM 60000 15000 900 500
+  --delapp SGEMM
+    Example commands
+    Notes: for --addtgpapp argument format:
+      fbRailPwrmW:         milliwatts (decimal)
+      otherRailPwrmW:      milliwatts (decimal)
+    CUSTOMER_CUSTOM_3
+    CUSTOMER_CUSTOM_2
+    CUSTOMER_CUSTOM_1
+    CUSTOMER_CUSTOM_0
+    CUSTOMER_CUSTOM_7
+    CUSTOMER_CUSTOM_6
+    CUSTOMER_CUSTOM_5
+    CUSTOMER_CUSTOM_4
+Mismatch found : measurement index 
+  Target: 
+No valid measurement index found in 
+[pp|app]
+Measurement index 
+Failed to parse input file 
+ since it is absent in the input csv file.
+
+Skip comparing measurement index 
+SHA2(HOLR):
+Specified the index of display adapter is out of range ( 
+FindConfiguredDisplayAdapters failed
+Error generating license for this request: 
+SHA2(ECID):
+Device ID:
+hmacAES:
+Remove EEPROM write protect (only on some
+EEPROM's).
+
+Write protect the main firmware segment of the EEPROM.
+Set status register protect and status register lock.
+Display the block protection status.
+Check for supported EEPROM.
+List all NVIDIA display adapters found in
+the system.
+List out OSFP devices connected to all NVSwitches in the system
+Write protect EEPROM (only on some EEPROM's)
+Update OSFP device FW
+Read EEPROM full content and compare with <filename>.
+Verify <filename> matches EEPROM if flashed.
+Display firmware version information
+(if no filename, acts on display adapter).
+Display help screen. pp for additional
+help on power policies descriptions.
+app for additional help on app profile
+descriptions.
+Display license information
+<filename>
+Read EEPROM and save to <filename>.
+[filename] [csv],
+Request FW attestation to CEC 
+and save the response data to [filename],
+and verify the fields in [csv].
+Request FW attestation
+and save the response data to [filename],
+and verify the fields in [csv].
+List all the CEC devices
+Read/Write PCI Config register.
+<    Format is: <REG.WIDTH>[=DATA[:MASK]]
+<    Read  operation: <REG.WIDTH>
+<    Write operation: <REG.WIDTH>=DATA[:MASK]
+
+<type> <filename> [flag1 flag2]
+Flash firmware <filename> over CEC
+<  <type>  : "gmac", "rtu", "bmc" or "gpu"
+<  [flag]  : "reset" or "offpreservecfg"
+<   - reset : Optional flag to request CEC
+<             perform a reset when finished.
+<   - offpreservecfg : No config preservation.
+Display crypto device information
+<file>,<reqType>
+Generate a License Request File by
+specifying <reqType> to submit to Nvidia.
+
+List all the PCI devices in the system.
+<R.W>[=D[:M]]
+<license file>
+Provide a license file for updating VBIOS.
+Display license file content. license file
+is provided by --license option.
+
+Display GPU ECID/PDI.
+Flash GMAC MCU firmware (AI).
+Read GMAC MCU firmware (AI) and
+save to <filename>.
+
+List all the GMAC MCU devices
+[<filename>]
+Query Debug Token information on device/file.
+(if [filename] exists, acts on the file).
+<directory>
+Concatenate token binaries in the directory
+Read MCU Flash ROM and compare with <filename>.
+Initiate Background Copy
+Disable in-band firmware update.
+Download signed transcript for Debug Token request
+[filename]
+<filename>,[slot]
+Download cert chain from ERoT
+Download internal log from ERoT.
+Download firmware log.
+<R1>:<G1>:<B1>:<R2>:<G2>:<B2>
+Write persistent-RGB color in hex to MCU.
+Read CIE data from bridge LED Lighting MCU
+and save to <filename>.
+Write CIE data to bridge LED Lighting MCU.
+Calibrate GPU LED clock tick.
+List all the bridge LED Lighting MCUs.
+Flash bridge LED Lighting MCU firmware (AI).
+Display bridge LED Lighting MCU FW (AI) version
+(if no filename, acts on LED Lighting MCU).
+
+Read GPU LED Lighting MCU firmware (AI)
+and save to <filename>.
+
+Read CIE data from GPU LED Lighting MCUand save to <filename>.
+Write CIE data to GPU LED Lighting MCU.
+[millisecond]
+Display GMAC MCU firmware (AI) version
+(if no filename, acts on GMAC MCU device).
+
+List all the GPU LED Lighting MCUs.
+Flash GPU LED Lighting MCU firmware (AI).
+Display GPU LED Lighting MCU FW (AI) version
+(if no filename, acts on GPU LED Lighting MCU).
+
+[foldername]
+Auto full recovery ROM from the backups.
+Write ROM to file instead of physical ROM.
+Display hardware identifiers
+Display only the ASCII values of the EEPROM
+
+Create the License placeholder.
+Update only the UEFI portion of the ROM 
+image from <filename>.
+
+Update only the XUSB portion of the ROM 
+image from <filename>.
+
+Display 256 the first bytes of the EEPROM
+(default is 256 bytes).
+
+Used to assign start address to offset. Ex- 0x10
+
+Calibrate bridge LED clock tick.
+Read bridge ID ROM data from bridge board
+and save to <filename>.
+Write bridge ID ROM data to bridge board.
+Display tool building information.
+Delete a power policy. See '--help pp' for more details.
+List all current power policies. See '--help pp' for more details.
+<profileId> fbRailPwrmW otherRailPwrmW firstWorkloadParam secondWorkloadParam
+Add a TGP app profile. See '--help app' for more details.
+List the GPU mode of all NVIDIA adapters in the system.
+<policy> attr V
+Add a power policy. See '--help pp' for more details.
+<policy> attr
+Enable or disable MIG mode
+Enable or disable ECC mode
+[mode name]
+Set the GPU mode.< Argument usage:
+<   Mode name : physical_display_enabled_256MB_bar1
+<               physical_display_disabled
+<               physical_display_enabled_8GB_bar1
+
+Reset GPU
+Display RTU information.
+<enable|disable>
+Install unlock license into EEPROM.
+Read OEM object to <filename>.
+Write OEM object from <filename> to Inforom.
+Read uGPU license file object to file.
+Flash sanitized InfoROM filesystem.
+Flash a license file.
+Display help screen for license operations.
+Read HULK license file object to file.
+Flash InfoROM with data from <filename>.
+Backup InfoROM data to the embedded recovery
+image.
+
+Restore InfoROM from embedded recovery image.
+<filename>.rom
+<profileId>
+Delete an app profile. See '--help app' for more details.
+List all current app profiles. See '--help app' for more details.
+Repair broken InfoROM file System.
+Verify device certificate stored in EEPROM.
+Enable or disable Confidential Computing mode
+Enable or disable Confidential Computing Development mode
+Read Confidential Computing mode
+Query erase ledger session
+Clear erase ledger session
+Install device certificate into EEPROM.
+Read device certificate from EEPROM.
+Read OBD object to <filename> with optional csv format.
+Erase contents of the HULK object
+Start an erase ledger session
+Write uGPU license file object from file to Inforom.
+Read uGPU Personality Request object to file.
+Write uGPU Personality Request from file to Inforom.
+<filename> [csv]
+Align InfoROM on a block protection boundary.
+Reboot the PC after other tasks completed.
+<value>[,<mask>]
+Filter device list by device ID and optional
+mask.
+
+Specify the location where the output file
+should be saved. Works only with commands
+'--gpumode' and '--listgpumodes'.
+Merge InfoROM block if required.
+Force preserve InfoROM block from the existing firmware
+Force reallocate InfoROM glob offset according to target image for flashing
+Turn off system bridge device filtering.
+offnvlinkswfilter
+Turn off nvlink switch device filtering
+<output path>
+Allow the addressing ID mismatch
+
+Allow the system ID mismatch
+
+Allow the reference designator mismatch
+
+Allow to skip the IDs mismatch when flash MCU to an non-generic image.
+Silence all audio beeps.
+Beep to signal updating progress.
+Force specific osfp device index(s)
+[<seg#>:]<bus#>:
+Select a specific device by using a specified
+segment# and bus#. The following format
+is allowed, <seg#>:<bus#>:<dev#>.<func#>.
+All numbers are hexadecimal. The segment#
+can be optional, and has a default value(0)
+if no input value.The dev# and the func# 
+can be omitted for the --pcisegbus command.
+When possible, execute the specified command
+without user intervention.
+Permit a downgrade of firmware 
+if it defaults not permit a downgrade of firmware
+Allow firmware and adapter PCI subsystem ID
+mismatch.
+
+Force a specific device index.
+Remove item from the device ID list if
+specified device ID is matched.
+
+Only allow upgrading of firmware based on
+version.
+
+Allow sidegrading and upgrading of firmware version.
+Ignore InfoROM operation.
+Ignore bootblock operation.
+Allow to flash the invalid data to MCU.
+Display Json format data
+Write log file in append mode.
+Check if Build GUID match with VBIOS image
+before proceeding.
+Backup the existing ROM from display
+adapter prior to flash.
+<log file>
+Create a log file in truncat mode ( or add option --append in append mode )
+Skip power level check.
+Turn off automatic switch driver state.
+Do not light keyboard LEDs.
+Override safety check level:
+<   default  unknown EEPROM | NV adapter aborts application.
+<   level=1  unknown EEPROM acceptable for read operations.
+<   level=2  unknown NV adapter acceptable for read operations.
+<   level=3  Combined effect of 1,2 (cannot write to unknown EEPROM or adapter).
+
+Delete a power policy:           
+ [options] --listpp
+List all current power policies: 
+ [options] --addtgpapp SGEMM 60000 15000 900 500
+Read UPR object to file:         
+ [options] --addpp TGP limitRated 250000
+Add a power policy entry:        
+ [options] --delpp TGP limitRated

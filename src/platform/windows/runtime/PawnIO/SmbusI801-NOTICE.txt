@@ -1,0 +1,12 @@
+SmbusI801.bin: official signed PawnIO Modules0.2.11, unmodified.
+SHA256: a0f7d066e7efda28c0e754c1f52dbd8dc280d388ba8575b514a80cb67490530c
+Copyright (C) 2025 Steve-Tech
+License: LGPL-2.1-or-later; see COPYING in this directory.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.11
+Archive: https://github.com/namazso/PawnIO.Modules/releases/download/0.2.11/release_0_2_11.zip
+Archive SHA256: 43608cb89bc84247fef1368a139013f7d043e17db6d6c8dfc9b46bf0905a81f4
+Local corresponding source: build/release-compliance/PawnIO.Modules-0.2.11/SmbusI801.p
+MagicControl calls identity and read-only SMBus ByteData/WordData for SPD5118.
+No SMBus data/page/configuration writes are called by MagicControl.
+The upstream transport initializes/restores PCI decode as implemented in SmbusI801.p.
+Target GM6IR0C hardware readings require validation; SMBIOS-to-address pairing is not assumed.

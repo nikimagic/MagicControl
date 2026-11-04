@@ -1,0 +1,283 @@
+WUJIE_DSDT_ASL line11527 ECRR
+Method (ECRR, 1, NotSerialized)
+            {
+                Local0 = (0xFED50000 + Arg0)
+                Local1 = MMRW (Local0, Zero, Zero, Zero)
+                If ((Local1 == 0xFF))
+                {
+                    Local2 = ((Arg0 & 0xFF00) >> 0x08)
+                    Local3 = (Arg0 & 0xFF)
+                    Local1 = ^^PCI0.SBRG.EC0.RECM (Local3, Local2)
+                }
+
+                Return (Local1)
+            }
+
+WUJIE_DSDT_ASL line11505 MMRB
+Method (MMRB, 1, NotSerialized)
+            {
+                Local1 = MMRW (Arg0, Zero, Zero, Zero)
+                Return (Local1)
+            }
+
+WUJIE_DSDT_ASL line11450 MMRW
+Method (MMRW, 4, NotSerialized)
+            {
+                Acquire (UWOL, 0xFFFF)
+                OperationRegion (MMNM, SystemMemory, Arg0, 0x04)
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM08,   8
+                }
+
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM16,   16
+                }
+
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM32,   32
+                }
+
+                Local0 = 0xFFFFFFFE
+                If ((Arg1 == Zero))
+                {
+                    If ((Arg2 == Zero))
+                    {
+                        Local0 = MM08 /* \_SB_.INOU.MMRW.MM08 */
+                    }
+                    ElseIf ((Arg2 == One))
+                    {
+                        Local0 = MM16 /* \_SB_.INOU.MMRW.MM16 */
+                    }
+                    ElseIf ((Arg2 == 0x02))
+                    {
+                        Local0 = MM32 /* \_SB_.INOU.MMRW.MM32 */
+                    }
+                }
+                ElseIf ((Arg1 == One))
+                {
+                    If ((Arg2 == Zero))
+                    {
+                        MM08 = (Arg3 & 0xFF)
+                    }
+                    ElseIf ((Arg2 == One))
+                    {
+                        MM16 = (Arg3 & 0xFFFF)
+                    }
+                    ElseIf ((Arg2 == 0x02))
+                    {
+                        MM32 = (Arg3 & 0xFFFFFFFF)
+                    }
+                }
+
+                Release (UWOL)
+                Return (Local0)
+            }
+
+WUJIE_DSDT_ASL line8971 RECM
+Method (RECM, 2, Serialized)
+            {
+                If (!BFLG)
+                {
+                    BFLG = One
+                    If (ECOK)
+                    {
+                        ECOK = Zero
+                        If (ECON)
+                        {
+                            Acquire (ECMX, 0xFFFF)
+                            DRDY = Zero
+                            LDAT = Arg0
+                            HDAT = Arg1
+                            RFLG = One
+                            FFNT = 0x14
+                            DTRD = Zero
+                            While (!DTRD)
+                            {
+                                FFNT -= One
+                                If ((FFNT == Zero))
+                                {
+                                    Local0 = 0xE5
+                                    Break
+                                }
+
+                                Sleep (0x32)
+                                DTRD = DRDY /* \_SB_.PCI0.SBRG.EC0_.DRDY */
+                            }
+
+                            If (~(FFNT == Zero))
+                            {
+                                Local0 = CMDL /* \_SB_.PCI0.SBRG.EC0_.CMDL */
+                            }
+
+                            DRDY = Zero
+                            Release (ECMX)
+                        }
+                        Else
+                        {
+                            Local0 = 0xE5
+                        }
+
+                        ECOK = One
+                    }
+                    Else
+                    {
+                        Local0 = 0xE5
+                    }
+                }
+                Else
+                {
+                    Local0 = 0xE5
+                }
+
+                If (ECOK)
+                {
+                    BFLG = Zero
+                }
+
+                Return (Local0)
+            }
+
+GM6_saved_DSDT_ASL line131955 ECRR
+Method (ECRR, 1, NotSerialized)
+            {
+                Local0 = (0xFE410000 + Arg0)
+                Local1 = MMRW (Local0, Zero, Zero, Zero)
+                Return (Local1)
+            }
+
+GM6_saved_DSDT_ASL line131933 MMRB
+Method (MMRB, 1, NotSerialized)
+            {
+                Local1 = MMRW (Arg0, Zero, Zero, Zero)
+                Return (Local1)
+            }
+
+GM6_saved_DSDT_ASL line131878 MMRW
+Method (MMRW, 4, NotSerialized)
+            {
+                Acquire (UWOL, 0xFFFF)
+                OperationRegion (MMNM, SystemMemory, Arg0, 0x04)
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM08,   8
+                }
+
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM16,   16
+                }
+
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM32,   32
+                }
+
+                Local0 = 0xFFFFFFFE
+                If ((Arg1 == Zero))
+                {
+                    If ((Arg2 == Zero))
+                    {
+                        Local0 = MM08 /* \_SB_.INOU.MMRW.MM08 */
+                    }
+                    ElseIf ((Arg2 == One))
+                    {
+                        Local0 = MM16 /* \_SB_.INOU.MMRW.MM16 */
+                    }
+                    ElseIf ((Arg2 == 0x02))
+                    {
+                        Local0 = MM32 /* \_SB_.INOU.MMRW.MM32 */
+                    }
+                }
+                ElseIf ((Arg1 == One))
+                {
+                    If ((Arg2 == Zero))
+                    {
+                        MM08 = (Arg3 & 0xFF)
+                    }
+                    ElseIf ((Arg2 == One))
+                    {
+                        MM16 = (Arg3 & 0xFFFF)
+                    }
+                    ElseIf ((Arg2 == 0x02))
+                    {
+                        MM32 = (Arg3 & 0xFFFFFFFF)
+                    }
+                }
+
+                Release (UWOL)
+                Return (Local0)
+            }
+
+GM6_audited_DSDT_ASL line132329 ECRR
+Method (ECRR, 1, NotSerialized)
+            {
+                Add (0xFE410000, Arg0, Local0)
+                Store (MMRW (Local0, Zero, Zero, Zero), Local1)
+                Return (Local1)
+            }
+
+GM6_audited_DSDT_ASL line132307 MMRB
+Method (MMRB, 1, NotSerialized)
+            {
+                Store (MMRW (Arg0, Zero, Zero, Zero), Local1)
+                Return (Local1)
+            }
+
+GM6_audited_DSDT_ASL line132252 MMRW
+Method (MMRW, 4, NotSerialized)
+            {
+                Acquire (UWOL, 0xFFFF)
+                OperationRegion (MMNM, SystemMemory, Arg0, 0x04)
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM08,   8
+                }
+
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM16,   16
+                }
+
+                Field (MMNM, ByteAcc, NoLock, Preserve)
+                {
+                    MM32,   32
+                }
+
+                Store (0xFFFFFFFE, Local0)
+                If (LEqual (Arg1, Zero))
+                {
+                    If (LEqual (Arg2, Zero))
+                    {
+                        Store (MM08, Local0)
+                    }
+                    ElseIf (LEqual (Arg2, One))
+                    {
+                        Store (MM16, Local0)
+                    }
+                    ElseIf (LEqual (Arg2, 0x02))
+                    {
+                        Store (MM32, Local0)
+                    }
+                }
+                ElseIf (LEqual (Arg1, One))
+                {
+                    If (LEqual (Arg2, Zero))
+                    {
+                        Store (And (Arg3, 0xFF), MM08) /* \_SB_.INOU.MMRW.MM08 */
+                    }
+                    ElseIf (LEqual (Arg2, One))
+                    {
+                        Store (And (Arg3, 0xFFFF), MM16) /* \_SB_.INOU.MMRW.MM16 */
+                    }
+                    ElseIf (LEqual (Arg2, 0x02))
+                    {
+                        Store (And (Arg3, 0xFFFFFFFF), MM32) /* \_SB_.INOU.MMRW.MM32 */
+                    }
+                }
+
+                Release (UWOL)
+                Return (Local0)
+            }

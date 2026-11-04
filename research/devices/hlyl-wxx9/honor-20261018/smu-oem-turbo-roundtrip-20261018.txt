@@ -1,0 +1,4 @@
+OEM TURBO ON status=0
+OEM TURBO RESTORE0 status=0
+FINAL TURBO 0
+stapm=31.500000 slow=37.800003 fast=54.000004 pm=3604483 stale=0 status=PawnIO / SMU

@@ -1,0 +1,7 @@
+MagicControl 0.1.30
+built for windows (, MSVC 1951)
+flags=0 period=200 duty0=0 duty1=0 candidate_target0=0 candidate_target1=0 writes=0
+stapm=31.500000 slow=37.800003 fast=54.000004 pm=3604483 stale=0 status=PawnIO / SMU
+charge_start=70 charge_end=90 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+{"PowerOnline":true,"Charging":true,"ChargeRate":0,"DischargeRate":0}
+91561A0F650239173DD81E9A3E7933C56A0C4A8D42F5CF0ED55CA6215F62E470

@@ -1,0 +1,4 @@
+# Signed OEM payload must remain byte-identical across checkouts.
+UWACPIDriver.inf binary
+UWACPIDriver.sys binary
+UWACPIDriver.cat binary

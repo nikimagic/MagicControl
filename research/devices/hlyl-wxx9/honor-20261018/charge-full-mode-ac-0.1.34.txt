@@ -1,0 +1,8 @@
+FULL CHARGE 95/100 ON AC
+charge_start=95 charge_end=100 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+{"Time":"2026-10-18T14:10:08.5244666+03:00","PowerOnline":true,"Charging":true,"Discharging":false,"ChargeRate":4306,"DischargeRate":0,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:10:13.5897349+03:00","PowerOnline":true,"Charging":true,"Discharging":false,"ChargeRate":4314,"DischargeRate":0,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:10:18.5929018+03:00","PowerOnline":true,"Charging":true,"Discharging":false,"ChargeRate":4315,"DischargeRate":0,"RemainingCapacity":34265}
+{"Time":"2026-10-18T14:10:23.5944810+03:00","PowerOnline":true,"Charging":true,"Discharging":false,"ChargeRate":4315,"DischargeRate":0,"RemainingCapacity":34273}
+RESTORE 70/90
+charge_start=70 charge_end=90 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL

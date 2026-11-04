@@ -1,0 +1,49 @@
+Windows + common display formatting, 20.10.2026
+
+Scope completed for the common font/language audit fix, pending root's common
+Windows/Linux build. No GUI, EC, tests or builds were run by this agent.
+
+1. src/gui/common/DisplayFormat.h adds ui::displayNumber(double, precision):
+   UI RU uses decimal comma; EN/zh-CN/zh-TW use decimal dot. The formatter has
+   classic/invariant stream parsing internally and changes only the output text.
+   No setting, protocol, diagnostic JSON/CSV, raw device value or command changes.
+2. MonitoringCards.h uses that formatter; trimZero accepts either decimal mark.
+   DiscreteGpuCard.h uses it for W/GiB/Hotspot/Junction/memory temperatures.
+   Both operating systems consume these common display models.
+3. Windows SettingsPage watts/battery-health and FansPage power/fan-temperature
+   legend use the same formatter. The fan temperature legend preserves the
+   former shortest general representation via displayCompactNumber/to_chars,
+   changing only the decimal mark; duty remains rounded to integer percent
+   as before. Layout is unchanged.
+4. UpdateWindow uses createUiFont(Body), fonts refresh on WM_DPICHANGED, and its
+   existing 520x222 DIP content bounds use AdjustWindowRectExForDpi. The shared
+   language adapter covers initial/dynamic STATIC/BUTTON captions; the OS title
+   is localized explicitly. Version messages use formatMessage named arguments
+   so the version/channel bytes are not translated as arbitrary text.
+5. Windows startup reads existing app-settings.ini before early MessageBox
+   errors to honor the saved language. It neither creates nor saves settings.
+   Single-instance and window-creation text pass through localized(); raw WinRT
+   error detail remains the operating system's text.
+6. Fans/Settings/Keys/Bios/DiscreteGpu font caches track UI language in addition
+   to DPI, including the hidden-page early return. Their createUiFont calls
+   consume the root-owned SC/TC family selection. MainWindow/root owns dispatch
+   to active/cached page banks; this agent did not modify MainWindow/Layout.
+7. OSD title/detail use common OsdTitle/OsdDetail roles, with the existing
+   sizes/weights. The 35-DIP Segoe MDL2 icon is preserved. Language/font-family
+   changes refresh its text fonts even on the same monitor and DPI and request
+   a repaint; no geometry/timers/animation/EC mechanisms changed.
+8. Lighting action caption/OSD now says «Предустановка подсветки» and progress
+   «Применяю предустановку подсветки…». writeNative still issues the exact same
+   command, level/effect/color/factory-color logic. No native-control promise.
+9. BIOS context menu localizes full Copy value/row/report captions and appends
+   the Ctrl+C accelerator independently, preserving the clipboard payload.
+10. LocalizationWindows has no RU bypass: known exact English aliases can now
+    localize to Russian. Draw/measure use the same translated text and preserve
+    null handling. Unknown/OEM strings remain under the catalog engine's policy.
+
+Catalog ownership is with wujie agent; all new literals/templates were sent
+there directly. Linux adapter files, hardware/profile sources, cards' geometry,
+palette, scrollbar and machine formats were not modified by this agent.
+Static diff inspection and git diff --check of owned tracked files found no
+whitespace errors; Git only warns about existing LF->CRLF checkout policy.
+No runtime/visual correctness is claimed before root's build and later review.

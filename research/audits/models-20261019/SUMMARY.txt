@@ -1,0 +1,98 @@
+MagicControl — полная статическая ревизия пяти моделей, 19.10.2026
+База ревизии: рабочие Windows/Linux portable0.1.75, исходное дерево с локальными
+изменениями. Номеркоммита/версии/UI baseline — baseline.json.
+
+Выполнено пятью профильными агентами: Wujie, Honor, GM6IR0C, HYDROC, Unknown.
+Каждый отчёт содержит identity/guards, точные OEM-источники, матрицу драйверов,
+датчиков, FANs, батареи и подсветки; реальные дефекты с path:line, отдельно
+гипотезы, пробелы поддержки и необходимые физические подтверждения.
+Ни новых аппаратных проб, ни запуска OEM, ни установки драйверов, ни тестов нет.
+Во время ревизии проверены145 GUI файлов:0 изменений (revision-completed.json).
+
+Модельные отчёты:
+- wujie.txt: точная WUJIE Series-X5SP4NAG, EC82/72/26.
+- honor.txt: HLYL-WXX9/HLYL-WXX9-PCB, BIOS1.09, HWMI/IT8987/I2EC/sysfs.
+- gm6ir0c.txt: MECHREVO GM6IR0C, Project25/RAM1.5, exact active OEM.
+- hydroc.txt: Eluktronics HYDROC-16 G2, Project26, восстановленный точный OEM.
+- unknown.txt: generic fallback, системные источники, явные границы без OEM карты.
+- common.txt: независимая перекрёстная проверка родительским агентом.
+
+Приоритетный порядок будущих исправлений (в этой ревизии код не исправлялся):
+
+1. Wujie, P1: обычный Manual online пропускает проверку смены владения; автономный
+   Manual на обычном5с опросе восстанавливает сброшенные флаги без sleep.
+   FanControlWindows.cpp:585–609,1056; C# эталон CheckOwned каждый цикл.
+   Разрешённый wake-rearm отдельно; не путать его с внешним владельцем.
+
+2. GM6, P2: CPU пресеты SETs вызывают комплексный OEM setMode, останавливают
+   online и переписывают FAN RAM (SettingsPage.cpp:1358, ControlWindows.cpp:283–289).
+   Это действительно родной комплексный профиль, но противоречит общему правилу
+   независимости SETs/FANs. README и общий контракт сейчас расходятся.
+   Нужен отдельный CPU-only путь без переноса регистров Wujie на Intel.
+
+3. Honor, P2: штатное disable0/0 блокирует battery controls; Linux rollback
+   не подтверждается; watcher может сообщить Auto после отказа от чужих targets;
+   FAN apply обходит общий DeviceOperation gate. H1–H4 вhonor.txt.
+
+4. Достоверность исполнения/сохранения, P2:
+   GM6 settled RPM ошибочно превращается в fanResponseConfirmed;
+   gm6ir0c-power.txt записывается неатомарно и без проверки ошибки;
+   Wujie battery rollback ошибка не доходит до UI, actual не перечитывается;
+   ошибка APU restore блокирует независимый FAN restore.
+
+5. Полнота диагностики, P2:
+   HYDROC settings export не копирует hydroc16g2-device-settings.ini;
+   HYDROC общие EC write counts0→0 — константы, не измерение всех writers;
+   частичный успех Radeon скрывает второй OS-visible адаптер в vendor rows;
+   Windows battery enumeration прекращается после первой system battery;
+   Unknown не получает необходимую полную native EC/HID driver inventory.
+
+6. Данные/сообщения:
+   unknown AC source отображается/сохраняется какfalse=батарея;
+   устаревшие Wujie power/battery samples могут выглядеть текущими;
+   диагностический SSD primary получает SMART source при прежнем Storage value;
+   часть ошибок HWMI/PawnIO теряет точный status/HRESULT;
+   Intel HYDROC остаются ошибочные APU/SMU подписи.
+   Исправления должны менять достоверность данных, сохраняя карточки Wujie.
+
+Функциональные пробелы, не выдаваемые за ошибки hardware map:
+- Свежая выгрузка внутренних заводских FAN tables GM6/HYDROC не подключена,
+  хотя exact OEM mailbox F5F/F5D/F5E восстановлен. Текущий JSON честно отличает
+  RAM/OEM reference от внутренней firmware таблицы.
+- HYDROC FANs и ITE HID RGB пока не подключены. Батарейный policy writer есть,
+  его физический зарядный эффект в новой сборке не измерен.
+- Honor Max30с в общей дампилке не подключён при существующем GUI fixed100.
+- Unknown без exact OEM identity не получает чужие EC/HID writers.
+- Новая физическая проверка online/charge/RGB не заменяется статическим readback.
+
+Драйверы и дополнительное поручение после ревизии:
+- 10.48.11.331 от28.10.2025: SYS46352, SHA6e360...; полный пакет совпадает
+  с Wujie DriverStore и точным GM6 OEM ZIP; snapshot GM6 oem179.inf этой версии.
+- 11.2.18.347 от27.08.2024: SYS49096, SHAe984...; полный пакет одинаков
+  в HYDROC ControlCenter5.23.51.56 и MECHREVO GX ControlCenter5.57.1.2/XY14PTL.
+- Старый GM6 17.53.43.609 от13.09.2022 — отдельная историческая тройка.
+- Размеры, полные хэши/подписи — driver-comparison.json и профильные отчёты;
+  наличие пакета в одном OEM не доказывает карту EC другого ноутбука.
+- wujie-driver-5.57.1.2.txt — отдельный разбор нового пользовательского пути.
+
+После фиксации ревизии пользователь отдельно поручил ДОБАВИТЬ ДРАЙВЕРЫ В СБОРКУ.
+В следующей общей сборке добавляется только поставка двух проверенных комплектов:
+EXE RCDATA и Windows portable drivers/Uniwill с PACKAGES/PROVENANCE/README.
+Внешний вид карточек и аппаратные команды этим не меняются; выявленные выше
+функциональные дефекты не объявляются исправленными добавлением driver payload.
+Релизные GitHub архивы в этом поручении не создаются и не публикуются.
+
+ЗАВЕРШЕНИЕ ДОПОЛНИТЕЛЬНОГО ПОРУЧЕНИЯ
+Рабочие Windows/Linux portable обновлены до0.1.76; общий билд complete.
+Windows:3b251349327c84f0707850e58a015faaf551dbec9d9687827a4a12c3e5832c0c
+Linux:d21f11e272d0509af7039803bb5661ebc1107f9771753e24fdda160489eb234c
+Хэши build=portable, все6 пользовательских INI/CSV сохранены.
+Оба полных driver packages поставлены в EXE и drivers/Uniwill.
+11.2.18.347 лежит в подпапке11.2.18.347 (общая точная копия двух OEM-источников).
+Байты6 SYS/INF/CAT и7 основных RCDATA ресурсов проверены сравнением с исходными.
+Driver-build-verification.json фиксирует0 изменений renderer/card sources:
+от baseline отличаются только Windows CMakeLists/IconResource/MagicControl.rc.in.
+Windows driver installation/service state не менялись. Тесты/GUI/аппаратные
+пробы не запускались. GitHub архивы не создавались.
+Статический read-only review упаковки отдельным агентом ошибок не выявил.
+Изменение поставки не является исправлением остальных замечаний аудита.

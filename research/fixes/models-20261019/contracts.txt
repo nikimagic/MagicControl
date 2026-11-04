@@ -1,0 +1,49 @@
+Общие контракты после исправлений статической ревизии
+19.10.2026. Поручение родительского агента.
+
+Обновлены небольшими уточнениями:
+- src/platform/windows/FAN_MODES.md: Wujie own masks, stable/unknown/external
+  ownership, отсутствие rearm из обычногоpoll; Honor typedAuto/fixedMax;
+  commandApplied/responseObserved/settled/restored отдельно; GM6CPU-only
+  presets и рамки общего GM6/HYDROC factory export.
+- src/platform/windows/BATTERY.md: Wujie rollback по собственным masks,
+  WMI rollback0x7F вместо полного0xFF, ошибки/pin; Honor stable0/0 и проверенный
+  rollback Win/Linux; GM6/HYDROC bounded restore5attempts/30s и explicitcancel;
+  отдельный factory-only transport не расширяет battery/generalFAN capabilities.
+- docs/CONFIGURATION-RESTORE-2026-10-14.md: независимые APU/battery/FAN steps,
+  общий incomplete результат; отдельные рамкиWujie/Honor/GM6/HYDROC; исторический
+  аппаратный сеанс14.10 оставлен историческим и не переписан под новую версию.
+- docs/DEVICE-ARCHITECTURE.md: Wujie визуальный эталон; typedCPU/huawei battery
+  и pureHWMI telemetry; GlobalHWMI не блокирует PCManager; узкийfactoryadapter.
+- src/core/src/POWER_MODES.md: уточнена вводная GM6 — SETs CPU-only overrides,
+  отдельно от комплексного OEMmode; readback/черновик/Auto не физические ватты.
+
+Дополнительная разрешённая правка NativeBatteryWindows.cpp
+В apply() раньше rollback skipped/failed писал только log, после чего исходная
+ошибка уходила caller без статуса восстановления. Теперь:
+- До любой attempted write исходный exception_type сохраняется, чтобы bounded
+  retry продолжал различать только разрешённые pre-write transient failures.
+- После attempted write исходная причина объединяется с результатомrollback:
+  verified restore, already original/no-op либо unconfirmed/actualunknown.
+- Третья policy value/OEM arrival/ошибкачтения не провоцируют переписывание
+  чужого policy. При skipped/failed rollback exception явно несётunknown;
+  журнал сохранён. Сам maskedwrite/readbackallowlist не расширен.
+- restore5attempts/30s, backoff, OEMadmission, restoreCanRetry=false послезаписи,
+  explicitcancel, settingsfiles и noexitreset не менялись.
+Новый API для UI не нужен: setter по-прежнему throws, но причина полнее;
+caller должен показать ошибку и выполнить существующее freshactualread.
+
+Повторная статическая проверка Honor ownership
+- automatic(false) возвращает AlreadyAuto безwrites при снятомmanual;
+  при чужихtargets/отсутствииowned возвращаетOwnershipLost доwrite.
+- watchdog/destructor/Maxcleanup используют false. Только явнаяDefault
+  вызывает explicittrue; это намеренное переключение пользователя, неcleanup.
+- Fixedrollback отвергаетtargets с третьими значениями; неудачная попытка
+  не превращается в успех. Battery Win/Linux и backlight тоже проверяют
+  attempted/original значения. Нового наблюдаемогоforeigncleanup дефекта
+  в этих ветках не найдено. Mutex не объявляется firmware compare-and-swap.
+
+Frozen audits и источникиOEM/BIOS не изменялись. Не выполнялись сборки, тесты,
+GUI, hardware/EC/HID/SMU, SSH, драйверы, OEMexecution или commits. Геометрия,
+renderer, скролл, настройки и portable не менялись. Эти изменения фиксируют
+контракт исходников и не означают аппаратное или releaseподтверждение.

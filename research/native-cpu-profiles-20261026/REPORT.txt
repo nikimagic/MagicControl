@@ -1,0 +1,62 @@
+Native CPU profiles,26October2026
+
+Scope
+User requested all existing AMD/Intel backends, native stock power limits,
+preserve FAN selection, keep Minimal. Custom and slots are retained, not
+replaced by OEM multi-component Custom JSON profiles.
+All analysis used saved files. No hardware, GUI, driver or vendor tools run.
+
+Implementation
+StockCpuProfiles.h describes admitted backends and names, not capabilities.
+WUJIE uses existing selectEcPerformance and FanController.performance:
+exact82/72/26 admission, clear783/784/785, select751.maskB0 A0/00/10,
+preserveBoost40, FAN gates/tables and lease. GUI, CLI and explicit new saved
+native choice use this same path. Old settings without NativeCpuPresets=1
+are not reinterpreted. Minimal remains15/10/10 in displayFast/Slow/STAPM.
+
+RAM backends use their own fresh734..736/730..732/7A7..7A9 limit tables,
+existing model codec, bounds, AC checks and rollback. No archived watts
+fallback, no WUJIE mapping on Intel. ExactGM6 setCpuPreset no longer calls
+whole applyNativeProfile. Requires already-active741.0/727.6; refusing when
+inactive is necessary to preserve the user's selected FAN policy.
+This is stock-limit reproduction, not an emulation of the complete CC
+system mode. OEM physical button still invokes the whole-profile path.
+GM6 configurationv2 stores independent stockCpu selection and retainsv1
+loading. Previous implicit FAN intent is separated before new CPU intent
+is saved; restoration reads stock limits again rather than replaying old
+watts or invoking full native profile.
+
+Honor typedHWMI uses its actual two native modes Balanced/Performance,
+one0F04 command, fresh0E04 flag readback, AC guard, existing exact-board
+admission and audit wrapper. Repeating desired native selection is explicit;
+no intermediate opposite mode and no FAN writes. Actual restoration of SMU
+policy after Custom remains unmeasured. Minimal/Custom SMU setters unchanged.
+Linux writers and inventory-only controls are not enabled by UI metadata.
+Honor row uses three buttons Minimal/Balanced/Performance in existing shared
+row geometry; no changes to card edges, scrollbar, margins or header.
+
+Evidence
+1. Exact WUJIE embedded EC:
+research/wujie-full-bios-20261024/wujie-embedded-ec-core-candidate-128KiB.bin
+SHA256 5d4ec03a4ec9b36938d907fd6fcb51109b445b4a43c5498f018d022d4e6ac7a8
+Bank2 9E99/9EAB/9EBD, D74E: nonzero CPU overrides copied into policy.
+research/wujie-apu-compare-20261026/EVIDENCE.json and FIRMWARE-WINDOWS.asm.
+2. Historical owner-authorized measured native WUJIE SMU limits:
+tests/test_util/analysis/charger-rating-smu-20261016/REPORT.md.
+Platform7 Office Fast/Slow/STAPM30/25/25; Gaming/Turbo depend on supply.
+AC65 Gaming35/30/30, Turbo40/35/35; AC10050/45/45 and70/65/65;
+DC40/35/35 and60/54/54. Not a new physical validation or global table.
+3. GCUService_Reference_w568w MyFanManager_RamFan1p5.cs has actual bodies:
+standard AMD/Intel profiles clear overrides; full SetUserProfile also sets
+FANs, thus cannot be called unchanged for this user's CPU-only requirement.
+Exact5.57 decompile bodies are Runtime exception stubs; saved5.57 UserPofiles
+show zero stock overrides and five Custom files but are user backup data,
+not factory provenance. HYDROC5.23.51.56 has recovered actual RamFan1p5
+methods; L16 5.60.60.17 protected bodies do not establish full-mode support.
+4. GM6 EC1.12 prior investigation in POWER_MODES.md: consumption gated by
+741.0 and727.6, not merely presence of783/784/785 values.
+
+Verification
+Static source review and diff whitespace review. No new tests perAGENTS.md.
+Common Windows/Linux GUI+CLI Release build and portable hash verification
+recorded separately after compilation. Hardware behavior remains untested.

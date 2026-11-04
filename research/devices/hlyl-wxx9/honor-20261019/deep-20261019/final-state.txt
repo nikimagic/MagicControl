@@ -1,0 +1,4 @@
+﻿oem-fans: flags=0 period=200 duty0=0 duty1=0 candidate_target0=0 candidate_target1=0 writes=0
+oem-apu: stapm=31.500000 slow=31.500000 fast=31.500000 pm=3604483 stale=0 status=PawnIO / SMU
+oem-charge: charge_start=70 charge_end=90 writable=1 status=Honor · HWMI/I2EC · фактические показания
+oem-keyboard: keyboard_level=2 writable=1 source=Huawei HWMI status=Honor · HWMI/I2EC · фактические показания

@@ -1,0 +1,6 @@
+Intel Graphics Control Library SDK interface header
+Revision: b6c462933502e13d1537dd5024949a51be30e63d
+Source: https://github.com/intel/drivers.gpu.control-library
+Header is unmodified; used only for Intel graphics telemetry.
+Driver binaries are loaded from Windows System32 and are not redistributed.
+See LICENSE.txt.

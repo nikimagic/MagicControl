@@ -1,0 +1,26 @@
+Authorized deployment,01.11.2026
+
+Honor and HPBSD mini-PC updated from0.1.431 to0.1.432 through SSH using the
+installed updater and registered graceful-exit protocol. No forced exit.
+Both new GUI processes run in their existing interactive user sessions.
+
+Installed GUI SHA256 on both devices:
+65224177880652202258726806cd1a2766832c623dfd276e716cc4d9c2386be8
+Matches the completed common0.1.432 build/source commit1473162e.
+
+Honor:16 settings files checked,0 changes; update-cache entries0.
+Mini-PC:18 settings files checked,0 changes; update-cache entries0.
+Both update-result.txt files explicitly confirm successful cache cleanup.
+Owned one-shot scheduled tasks removed without Stop; baseline receipts saved
+locally before their temporary remote copies were removed.
+
+Validation boundary: this was the first431-to432 transition. The installed431
+file-apply engine performed installation; NEW432 startup performed the actual
+legacy-success cleanup. The future432 PowerShell apply path was not executed
+in this deployment. No separate firmware/EC/SMU probe or control action ran.
+
+Deployment ZIP was prepared with the canonical package function in build/,
+verified against its per-file manifest and transferred with SHA256 readback:
+4af353a6666b4593d5755b1d7bda3f59c001292a89775d112262ca7751bb967d
+GitHub_Releases, remote hardware modes and personal data outside the updater
+cache were not manually altered. No GitHub publication/push/tag performed.

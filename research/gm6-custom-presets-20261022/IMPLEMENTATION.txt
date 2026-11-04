@@ -1,0 +1,15 @@
+GM6 Custom presets1/2/3 and software command latency,22.10.2026
+
+Owner choices: save full Custom power/FAN profile; first click fills an empty slot, subsequent clicks apply it. Shared Windows/Linux row [Custom] [1] [2] [3], square30DIP digit buttons,6DIP spacing, existing embedded-font buttons; measured numeric captions remain. At100/200% the action squares/gaps are30/60 and6/12physical pixels respectively. This is geometry/source inspection, not a runtime visual test.
+
+Functional admission is exact GM6 Windows, matching the current native Custom work. Linux controls retain disabled writer state. GM5/L16/Wujie/Honor/HYDROC setters are not expanded.
+
+Model-bound file gm6ir0c-custom-presets.txt: version1,exact profile,3 optional slots. Each stores canonicalPL1/PL2/PL4, both16-point Up/Down/PWM arrays and Respective. Bounded16KiB read; strict header/version/profile/index/presence, full point count, trailing-data rejection, existing range/monotonic validators. Checked atomic savePortableText writer. Corrupt files do not silently reset or apply partially. Populated click never overwrites stored preset data.
+
+Empty-slot capture: edited Custom fields if editing; otherwise own session Custom limits or existing power draft, with the previous fresh-Gaming Custom fallback when neither exists. Curves come from the existing own Custom intent/CSV helper. Save has no EC setters. A populated slot calls the existing applyNativeProfile(Custom) with explicit curve/limits/split data, full readback and existing rollback. No duplicate FAN controller. Successful apply updates the ordinary manual power draft and session Custom intent; the complete preset remains stored for re-use after restart. Applying a slot exits transient Economy through the same native path. Physical profile cycle is unchanged.
+
+New small controls use standard makeButton/actionButton/place/setsGeometry, no system-font or separate renderer. RU/EN/SC/TC save/apply UI strings added. Current preset file is collected by INFO only for actual GM6 and stays excluded from clean release templates.
+
+Latency finding: software profile commands previously waited for fresh Battery Class / native battery / EC battery diagnostics / power policy / RAPL after native setter readback, unlike the physical callback. Exact GM6 profile/Custom/slot completion now refreshes its typed EC state and retains unrelated telemetry with original timestamps until normal polling. Interactive pending marker lets an ongoing passive GM6 read skip remaining providers between calls. In-flight driver calls are not cancelled. No readback, ownership, rollback, table or PL checks were removed. software_command_timing records apply_ms and profile_refresh_ms with monitoring=deferred; actual timing on owner's GM6 remains to be measured.
+
+Static review only, no tests, GUI, OEM or hardware commands executed. Both common builds and archive integrity verification are separate evidence files. Personal settings/logs excluded from commits and release archives.

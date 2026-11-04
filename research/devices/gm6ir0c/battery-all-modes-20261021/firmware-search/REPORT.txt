@@ -1,0 +1,134 @@
+GM6IR0C: найден CAP-файл заявленной N.1.05MRO09
+21.10.2026. Агент «Поиск». Только read-only источники и статический разбор.
+
+ГЛАВНЫЙ НОВЫЙ РЕЗУЛЬТАТ
+Получен реальный MZ/PE32+ файл GMxIR7xN105MRO09_CAP.exe из опубликованного
+архива владельца2024极光X14650HX+4060. Это уже не CAPTCHA/HTML и не только
+metadata. Но совпадение имени/версии пока не доказывает exactGM6IR0C/EC1.12:
+root проверяет target и статически извлекает payload. Сам EXE не выполнялся.
+
+Файл:
+C:/Users/admin/Documents/mechrevo_dsh/MagicControl/build/gm6-battery-firmware-20261021/GMxIR7xN105MRO09_CAP.exe
+10864960байт, SHA256
+927efdc56ed3b1b434be86ef3d8d6c40318695817b89ca455a0230a7e264dc1a
+
+Manifest сURL/size/SHA/targetstrings/границей применимости:
+build/gm6-battery-firmware-20261021/manifest.json
+Его сохранённая копия рядом с этим отчётом: owner-mro09-manifest.json.
+Бинарник оставлен в ignored build; в research — metadata и доказательства.
+Не скачивались соседниеMRO10/MRO04, не скачивалась Driver.7z2.58GB.
+Production/EC/настройки/portable/тесты/сборки не менялись.
+
+1. Проверенная цепочка публичного источника
+
+Первоначальный lead:
+https://blog.51cto.com/u_16099179/14465079
+Это repost рассказа владельца2024极光X,14650HX+4060 и его заводскойMRO10.
+Он опубликовал ссылку на архивBIOS/driver, обещая отдельно оригинал и
+microcode-mod вариант. Слова автора не являются нашей верификацией image.
+
+Исходная ссылка:
+https://hkfile.20040313.xyz/博客文件存档/极光X
+Публичная OpenList frontend отвечает200, старыйrootpath — storage-not-found.
+Штатный JS прочитан как текст, не запускался; по нему подтверждены read-only
+POST/api/fs/list и POST/api/fs/get. Admin/write endpoints не использовались.
+
+Обычная публичная навигация привела к действующему пути:
+/阿里/博客文件存档/极光X
+Открытый list ответил200 и содержит:
+- GMxIR7xN105MRO09_CAP.exe,10864960байт,modified2025-08-03T11:29:33.742Z;
+- GMxIR7xN104MRO04_CAP.EXE,10922880байт;
+- AR IR主板25年出厂bios AC锁170 -1.05mro10.7z,23237559байт;
+- AR IR主板第一版bios AC锁110 -1.04mro04.7z,21625546байт;
+- Driver.7z2586116686байт и другие не относящиеся к прошивке файлы.
+Последние перечислены лишь для отделения scope; они не скачивались.
+
+APIget вызван только дляMRO09, сpassword='', безcookie/login/refresh.
+Ответ200, size совпадает с листингом. Штатный raw_url направлял на
+signed download dl1-v6.aliyundrive.cloud. Значения подписи/credential/token
+не печатались и не сохранялись; сохранены толькоhostname/path/query-keynames.
+Публичная воспроизводимая ссылка — сама страница и public_path изmetadata.
+
+Скачано10864960байт application/octet-stream; перед сохранением был предел
+256MiB, провереныpublished size/Content-Length и реальныйstream count.
+Файл не загружался как код, не запускался, не передавался драйверу.
+Новая ссылка получена обычной публичной навигацией. CAPTCHA/авторизация
+не обходились. OneDrive branch вернул403 — на этом она остановлена.
+
+2. Первичная статическая проверка полученногоMRO09
+
+MZ иPE32+ корректны. Строки соответствуют AMI AFU5.15.03 updater.
+КонецrawPE sections=0x110000(1114112), хвост9750848байт.
+PEsecurity directory=(0,0): этот большой хвост не объясняется сертификатом.
+Он передан root как candidate payload overlay для статического извлечения.
+
+Сигнатур ZIP/7z/CAB нет. _FVH найден поoffset944112 внутриPEstub;
+само это совпадение не объявляется полнымBIOSFV. В плоских строках updater
+есть ECVersionOffset/ECVersionMask, но это genericAFU сообщения, не доказанная
+EC1.12 target карта. Наличиеfirmware/EC образа иboardstrings проверяет root.
+
+Применимость пока такова:
+- filename/version совпадают сN.1.05MRO09;
+- источник описывает14650HX/4060 того же поколения;
+- packagefamily GMxIR7x;
+- exactboardGM6IR0C, Project25 иEC1.12 ещё требуют payload evidence;
+- original/unmodified status нельзя вывести из подписи файла или имени.
+Ни один новый EC адрес/gate/write не разрешён одним фактом скачивания.
+
+3. Дополнительный новый результат: exact OEM updater0.1.5 без найденногоimage
+
+Проверен существующий nested OEM archive:
+ControlCenterX-Logs-20261017-215646.zip
+research/Mechrevo-Research-GM6IR0C-20261017-215647.zip.
+Inventory сentry/SHA в archive-payload-inventory.json. Найденные BIOS/firmware
+кандидаты — hostEXE/helpers и небольшиеACPI таблицы, не выделенный EC image.
+
+BIOS_OTA-active.exe10071288байт,
+SHA0e6133d309836fcfe575ecc7588dcaad1e6fab66d40f8a9e9b6302d22e20d3be,
+version resource0.1.5. Это неWujie0.3.13/0.3.11.
+Ресурсыicon33619/group20/version400/manifest334, compressedgzip/zlib0.
+Tail10488байт целиком совпадает сcertificate/security directory.
+ЧетыреPK0304 в машинном коде не дают валидныхZIPheaders.7z/CAB/FVH/UUITE
+или именованныйGM6EC image в проверенныхконтейнерахневыделены.
+
+Триdistinct UEFI_Firmware.dll:
+193760байт SHA4cfe064827dad6da7bf6fb9fc07dc00b4032f1881331d59bfa8d5937a6d534be
+131080байт SHAded0f6263b87e48d75a8806452d412b20ef59c4fbdec6d94ae75f06f01b95931
+131080байт SHA4b61b3aaeba7dcb9d713799047dda245029b2ee77bb4ebac46dce7cf0052e56c
+У каждого толькоversion524/manifest381 иcompressed0.
+Exports ReadUefi/WriteUefi, местамиExt/GPU/IsHighSpeedSSD — host helperAPI.
+НазваниеFirmware.dll не делает его исполняемой EC прошивкой.
+
+4. Другие проверенные ветки
+
+YYplus/Mechrevo-BIOS publictree
+fdf8258babda84cb7a54821fea1e3d05a5f26750,truncated=false.
+XxRPxxxx manifest относитсяX6xx55xW-B2/极光X Pro,N.1.35MRO58,ECunknown;
+это неGM6IR0C. Вtree нетGMxIR7x/MRO09. Чужиеfirmwarebinariesнекачались.
+
+Сторонний originalD:Driver3.35GB lead https://ycoemxt.cn/27437.html
+не развивался в большойdownload; это не доказанный BIOS пакет.
+Старые NUC/Hydro snippets не выдаются за новый потребительexactGM6.
+
+5. Auto-review отказ — отдельная metadata ветка не выполнялась
+
+Автоматическая проверка отклонила GETcandidateGM6OTAmetadata на старом
+OEM backupHTTPserver и GETWaybackCDX сfirmwarefamilyprefix. Причина:
+передача аппаратногоidentifier этимадресатам без отдельногоявногосогласия.
+Команда не запущена, ответов/404/отсутствияархивовизнеёнезаявляем.
+Не делалось повторов через браузер/инойинструмент. Rootполучилточныеаргументы
+и запросил согласие. До ответа зависимая ветка остаётся не выполненной.
+Успешнаяownerархивнаяветка не отправляетGUID/serial/MAC и независима ототказа.
+
+6. Воспроизведение и границы следующего шага
+
+collect_offline.py анализирует только сохранённыебайты, импортируя существующий
+локальныйPEparserкак инструментданных. Он ничего не вызываету исследуемых
+EXE/DLL и не обращается коборудованию/сети. СоздаётSHA,inventory,resources,
+marker checks,helperdedup и копиюcandidate manifest. evidence.json перечисляет
+все сохранённыеартефакты/хэши.
+
+Следующий этап — статическийextractCAPpayload уroot, проверкаtarget/version
+и выделениеECcode. Только послеэтого возможно искатьисполняемыйconsumer
+7A6.B4/B5,7B9/7D0 и путькchargerstop/restart. Этаветкадалафайлдлятакогоразбора,
+но ещёне завершённыйалгоритмпроцентногоограничения.

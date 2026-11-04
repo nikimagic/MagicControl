@@ -1,0 +1,76 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\NvFlash-driver-2.reference.sys
+
+
+Signature Index: 1
+Hash of file (sha256): AB9154072C89993A5421518FF91CAB62996CF546FB7D33BEB118147E6285E6A2
+
+Signing Certificate Chain:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Windows Third Party Component CA 2014
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Oct 15 23:41:27 2029
+
+        SHA1 hash: 1906DCF62629B563252C826FDD874EFCEB6856C6
+
+
+            Issued to: Microsoft Windows Hardware Compatibility Publisher
+
+            Issued by: Microsoft Windows Third Party Component CA 2014
+
+            Expires:   Fri Jan 10 23:09:15 2025
+
+            SHA1 hash: 6C582870828074ABF44AA0D61070E04036D9115B
+
+
+The signature is timestamped: Thu Oct 17 05:38:58 2024
+
+Timestamp Verified by:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Time-Stamp PCA 2010
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Sep 30 21:32:25 2030
+
+        SHA1 hash: 36056A5662DCADECF82CC14C8B80EC5E0BCC59A6
+
+
+            Issued to: Microsoft Time-Stamp Service
+
+            Issued by: Microsoft Time-Stamp PCA 2010
+
+            Expires:   Wed Mar 05 21:46:02 2025
+
+            SHA1 hash: 6EFA062CD8B4616B9A453BBF60DCB91FC0A46728
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\research\reader-signatures-20261027\driver-images\NvFlash-driver-2.reference.sys
+
+
+Number of files successfully Verified: 1
+
+Number of warnings: 0
+
+Number of errors: 0
+

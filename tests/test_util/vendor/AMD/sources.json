@@ -1,0 +1,304 @@
+{
+  "format_version": 1,
+  "note": "Upstream headers and PDF license files are unmodified; ADL/LICENSE.MIT is extracted from the ADL header notice.",
+  "sources": [
+    {
+      "sdk": "ADL",
+      "version": "18.0",
+      "repository": "https://github.com/GPUOpen-LibrariesAndSDKs/display-library",
+      "commit": "84c881cb2136f04287eb3af12de00a9e2867aa9e",
+      "files": [
+        {
+          "file": "ADL/include/adl_defines.h",
+          "upstream": "include/adl_defines.h",
+          "bytes": 117950,
+          "sha256": "d1c39f8523ecb224160c99ee3b043219bc8e2265c5993ec57548e382c22bd10b"
+        },
+        {
+          "file": "ADL/include/adl_sdk.h",
+          "upstream": "include/adl_sdk.h",
+          "bytes": 1843,
+          "sha256": "1d0141f0ff0d8ce11c40b1e37174827f6e0536620365b20d24b55f19adf97d63"
+        },
+        {
+          "file": "ADL/include/adl_structures.h",
+          "upstream": "include/adl_structures.h",
+          "bytes": 177742,
+          "sha256": "58843d1fdd39f8003a7ab6dfa424a2a3f12d8ba01568b70a1976db528b9db336"
+        },
+        {
+          "file": "ADL/ADL SDK EULA.pdf",
+          "upstream": "Public-Documents/ADL SDK EULA.pdf",
+          "bytes": 118745,
+          "sha256": "b613c2da8d0444ced176c05a4f02537dc091e5a16a1e0b06d1bd1817f2fac997"
+        }
+      ]
+    },
+    {
+      "sdk": "ADLX",
+      "version": "1.5.0.124",
+      "repository": "https://github.com/GPUOpen-LibrariesAndSDKs/ADLX",
+      "commit": "d9f04a9bba022d6cf6333f005dd540b4ad19fb63",
+      "files": [
+        {
+          "file": "ADLX/include/ADLX.h",
+          "upstream": "SDK/Include/ADLX.h",
+          "bytes": 17156,
+          "sha256": "a7fd218b772f7955d5e88fbb14ceae5f3a281be5bdc7bdb6ae0372fc36dbbd36"
+        },
+        {
+          "file": "ADLX/include/ADLXDefines.h",
+          "upstream": "SDK/Include/ADLXDefines.h",
+          "bytes": 61167,
+          "sha256": "ceddbbf3b1a2fe92c1614cc1fcef4d37a2d9d02668bfcef07f3596dde8e3b17f"
+        },
+        {
+          "file": "ADLX/include/ADLXStructures.h",
+          "upstream": "SDK/Include/ADLXStructures.h",
+          "bytes": 8877,
+          "sha256": "e19a1384ed226b9da29848e625dd122fb3cf29bbc208df62dd244947087ef63e"
+        },
+        {
+          "file": "ADLX/include/ADLXVersion.h",
+          "upstream": "SDK/Include/ADLXVersion.h",
+          "bytes": 438,
+          "sha256": "eff66d661b41a65c997362d3e9f8aa7b029d9f4bd87ede94f026d183c6adcb51"
+        },
+        {
+          "file": "ADLX/include/I3DSettings.h",
+          "upstream": "SDK/Include/I3DSettings.h",
+          "bytes": 172824,
+          "sha256": "d8e76c9f2bfd044baf3c9a9b0d9bf3772834717d823552ab5cb6bbaf20d45fd4"
+        },
+        {
+          "file": "ADLX/include/I3DSettings1.h",
+          "upstream": "SDK/Include/I3DSettings1.h",
+          "bytes": 15251,
+          "sha256": "96cafb020425c80359c510c9621d37f4e9ab7771abc38080d78a411be2129694"
+        },
+        {
+          "file": "ADLX/include/I3DSettings2.h",
+          "upstream": "SDK/Include/I3DSettings2.h",
+          "bytes": 17306,
+          "sha256": "24b654e6d5cc90df39562d34dc4ba282943d7a0362a15cbb12f9eae255fb1d2d"
+        },
+        {
+          "file": "ADLX/include/I3DSettings3.h",
+          "upstream": "SDK/Include/I3DSettings3.h",
+          "bytes": 49264,
+          "sha256": "982e1724a1bd5bbbca5101faa3185c4776899b2f44020ae53a78b4e7fdf394fa"
+        },
+        {
+          "file": "ADLX/include/IApplications.h",
+          "upstream": "SDK/Include/IApplications.h",
+          "bytes": 18884,
+          "sha256": "7b7832168ebd701f10e9ae0150d94c18355e4f2f50f05752e78151b54b50c747"
+        },
+        {
+          "file": "ADLX/include/IChangedEvent.h",
+          "upstream": "SDK/Include/IChangedEvent.h",
+          "bytes": 2276,
+          "sha256": "cca43de0a038a381cb937944441a7de7809d14fe5c935353b2623330a26527d2"
+        },
+        {
+          "file": "ADLX/include/ICollections.h",
+          "upstream": "SDK/Include/ICollections.h",
+          "bytes": 10922,
+          "sha256": "2f38e038a12b000955d47345cbf33f5155eef874e7bdfe7431a1408080cde1f9"
+        },
+        {
+          "file": "ADLX/include/IDesktops.h",
+          "upstream": "SDK/Include/IDesktops.h",
+          "bytes": 48329,
+          "sha256": "54add3b0d4e6abc71d47b0fd2709c7a235e9b8d476a1d65c3df7e7f602c6c07a"
+        },
+        {
+          "file": "ADLX/include/IDisplay3DLUT.h",
+          "upstream": "SDK/Include/IDisplay3DLUT.h",
+          "bytes": 39572,
+          "sha256": "3059891a0281688ca19e0e7d11c4085908db2a802f50950e574ed7b425fba6b4"
+        },
+        {
+          "file": "ADLX/include/IDisplayGamma.h",
+          "upstream": "SDK/Include/IDisplayGamma.h",
+          "bytes": 32465,
+          "sha256": "dc885d17f88952f5989894fdc52eb75749165fe585d2d3d77fddcf259c6e667e"
+        },
+        {
+          "file": "ADLX/include/IDisplayGamut.h",
+          "upstream": "SDK/Include/IDisplayGamut.h",
+          "bytes": 40589,
+          "sha256": "ddc1ed395f713597476e598e118e826ad6777aa30b375f3f01d6b76c41f3ea63"
+        },
+        {
+          "file": "ADLX/include/IDisplays.h",
+          "upstream": "SDK/Include/IDisplays.h",
+          "bytes": 128648,
+          "sha256": "1274611f50ea00bde572332bc9e91b8e0a23e09d9f3644497bfa19913b86bd2b"
+        },
+        {
+          "file": "ADLX/include/IDisplays1.h",
+          "upstream": "SDK/Include/IDisplays1.h",
+          "bytes": 10755,
+          "sha256": "3626ec765023e71019dfaf0e72d6eca4566068e84bc46421740e15cd20ec967d"
+        },
+        {
+          "file": "ADLX/include/IDisplays2.h",
+          "upstream": "SDK/Include/IDisplays2.h",
+          "bytes": 10687,
+          "sha256": "2fae5a646c154559a955e3c64deb753d2e41d97c5544b183d66e633d5c7ac2f9"
+        },
+        {
+          "file": "ADLX/include/IDisplays3.h",
+          "upstream": "SDK/Include/IDisplays3.h",
+          "bytes": 14325,
+          "sha256": "21f92e9da6d90a05d00edbfdc03b0174816ab7e84a6f0829648c8d3e3a98477e"
+        },
+        {
+          "file": "ADLX/include/IDisplaySettings.h",
+          "upstream": "SDK/Include/IDisplaySettings.h",
+          "bytes": 174090,
+          "sha256": "6a438bc174359d60cad21ec01ce2b5d7b81c5649ab4c8f5d128cd526e00c0a65"
+        },
+        {
+          "file": "ADLX/include/IGPUAutoTuning.h",
+          "upstream": "SDK/Include/IGPUAutoTuning.h",
+          "bytes": 23605,
+          "sha256": "a5cda3a440a7cf48e4aeb7fb1c21f468b26e9f10efeacf43a2f0418aabbd4f7d"
+        },
+        {
+          "file": "ADLX/include/IGPUManualFanTuning.h",
+          "upstream": "SDK/Include/IGPUManualFanTuning.h",
+          "bytes": 51067,
+          "sha256": "018ffded29423302e5f489b8c8df62481c7c278bfbbfc87c8329d8513e80b740"
+        },
+        {
+          "file": "ADLX/include/IGPUManualGFXTuning.h",
+          "upstream": "SDK/Include/IGPUManualGFXTuning.h",
+          "bytes": 30808,
+          "sha256": "67640c1d2c559e1444600bdeacd4cce9204675a84a129f16f4ee39469ba74cc1"
+        },
+        {
+          "file": "ADLX/include/IGPUManualPowerTuning.h",
+          "upstream": "SDK/Include/IGPUManualPowerTuning.h",
+          "bytes": 15688,
+          "sha256": "081d81e629134d553f2c748152ee3f9ef107370d5eb615f4e5b006bd5d137597"
+        },
+        {
+          "file": "ADLX/include/IGPUManualVRAMTuning.h",
+          "upstream": "SDK/Include/IGPUManualVRAMTuning.h",
+          "bytes": 31082,
+          "sha256": "8661a47eb9f37610d0c69ef22d2291c86a31fc5f6420f7156b775fac2becc290"
+        },
+        {
+          "file": "ADLX/include/IGPUPresetTuning.h",
+          "upstream": "SDK/Include/IGPUPresetTuning.h",
+          "bytes": 21576,
+          "sha256": "77b4860d01ed37b505b99d968710aed3f68e795491bb1a096f530274946b028f"
+        },
+        {
+          "file": "ADLX/include/IGPUTuning.h",
+          "upstream": "SDK/Include/IGPUTuning.h",
+          "bytes": 64305,
+          "sha256": "be772160c1d20586272a043eb7add050253c4e59c0ac96c0961fd74466d8270c"
+        },
+        {
+          "file": "ADLX/include/IGPUTuning1.h",
+          "upstream": "SDK/Include/IGPUTuning1.h",
+          "bytes": 10465,
+          "sha256": "237dbb0f0bcbc4b11a326581d40d25b7ff643d94eeee218a9adf894afa731d37"
+        },
+        {
+          "file": "ADLX/include/II2C.h",
+          "upstream": "SDK/Include/II2C.h",
+          "bytes": 10419,
+          "sha256": "4514e6eda785fbe7b595d307ac73722ec204970171d8e0ea2f35ff9dd69d94d9"
+        },
+        {
+          "file": "ADLX/include/ILog.h",
+          "upstream": "SDK/Include/ILog.h",
+          "bytes": 2273,
+          "sha256": "eb9a2c3b7b6224b74108400415a7059310172023e936f40fed2038362ecda6bb"
+        },
+        {
+          "file": "ADLX/include/IMultiMedia.h",
+          "upstream": "SDK/Include/IMultiMedia.h",
+          "bytes": 36048,
+          "sha256": "9c28bf11d2ea05acbbd34ea205233e91162d067794ea2c5b4c4a184d3a68475f"
+        },
+        {
+          "file": "ADLX/include/IPerformanceMonitoring.h",
+          "upstream": "SDK/Include/IPerformanceMonitoring.h",
+          "bytes": 132976,
+          "sha256": "250e86ab3bd655fee20c79166c160d59846e319f5a72b6c52bf012d26086053d"
+        },
+        {
+          "file": "ADLX/include/IPerformanceMonitoring1.h",
+          "upstream": "SDK/Include/IPerformanceMonitoring1.h",
+          "bytes": 7238,
+          "sha256": "981bbd7f7507e5a015d0f547ef2e2e53c50a3177fdf9a84130148ed6ecfe2e1f"
+        },
+        {
+          "file": "ADLX/include/IPerformanceMonitoring2.h",
+          "upstream": "SDK/Include/IPerformanceMonitoring2.h",
+          "bytes": 18367,
+          "sha256": "a3d7f6f4bf639aa434c049590e2a194e03681a33f040cad0db68c243178e9e07"
+        },
+        {
+          "file": "ADLX/include/IPerformanceMonitoring3.h",
+          "upstream": "SDK/Include/IPerformanceMonitoring3.h",
+          "bytes": 22529,
+          "sha256": "08ffbbfa5828167750ca16705dcbf318027fbb4d4186c3cfbea02bb7fefa02a1"
+        },
+        {
+          "file": "ADLX/include/IPowerTuning.h",
+          "upstream": "SDK/Include/IPowerTuning.h",
+          "bytes": 23609,
+          "sha256": "614cfd7e4eb76755436135ff4afdca134dce3986c600253f895fac07d582ec46"
+        },
+        {
+          "file": "ADLX/include/IPowerTuning1.h",
+          "upstream": "SDK/Include/IPowerTuning1.h",
+          "bytes": 24597,
+          "sha256": "f810d3f9226c8ab22751e2bd263eaba8a7dad3a273f2eac95a1e67113dd54856"
+        },
+        {
+          "file": "ADLX/include/ISmartAccessMemory.h",
+          "upstream": "SDK/Include/ISmartAccessMemory.h",
+          "bytes": 4651,
+          "sha256": "48fc1a0377d420d449af354f1eff7c583885e5f670d8486acc28d8b4c1bafeda"
+        },
+        {
+          "file": "ADLX/include/ISystem.h",
+          "upstream": "SDK/Include/ISystem.h",
+          "bytes": 80987,
+          "sha256": "7fe4d9874b2f0a2c4852b4516d49ef1f2006c0b814b22ee6d2d986ae13c2fbd0"
+        },
+        {
+          "file": "ADLX/include/ISystem1.h",
+          "upstream": "SDK/Include/ISystem1.h",
+          "bytes": 10748,
+          "sha256": "1f8e73c2ec21dc9d66dbd0fcc5ad31ab2b6c5e4212e66e6a67b175c62ebae880"
+        },
+        {
+          "file": "ADLX/include/ISystem2.h",
+          "upstream": "SDK/Include/ISystem2.h",
+          "bytes": 30096,
+          "sha256": "b9bbcf979e2588c06a7e7dac45a416e00ac190df145cb336a5c7f1430a281a82"
+        },
+        {
+          "file": "ADLX/include/ISystem3.h",
+          "upstream": "SDK/Include/ISystem3.h",
+          "bytes": 45105,
+          "sha256": "efe62578d062e6a9ace7f1498c1139579ce659deea3e29ad53e7a14a845b0e3e"
+        },
+        {
+          "file": "ADLX/ADLX SDK License Agreement.pdf",
+          "upstream": "ADLX SDK License Agreement.pdf",
+          "bytes": 126195,
+          "sha256": "c62178b9d30f75450088c5238193644b45ab5a23442f70f5a3f6b09b951180a6"
+        }
+      ]
+    }
+  ]
+}

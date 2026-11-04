@@ -1,0 +1,117 @@
+GM6IR0C — исправление конвертера и typed keyboard lifecycle restore
+20.10.2026. Только разрешённые исходники модели/протокола и настоящий отчёт.
+Аппаратные команды, OEM EXE/DLL, GUI, тесты, сборки и коммиты не запускались.
+Рабочие portable и INI не изменялись. Внешний вид Wujie, карточки и скролл
+этот агент не редактировал; root подключает общую механику/UI lifecycle.
+
+ИЗМЕНЁННЫЕ ФАЙЛЫ
+src/protocols/uniwill/gm6ir0c/KeyboardColorCodec.h — новый pure header;
+src/devices/mechrevo/gm6ir0c/ControlWindows.h/.cpp — typed restore/suspend;
+src/devices/mechrevo/gm6ir0c/README.md — модельный контракт;
+настоящий отчёт. Исследовательские отчёты не переписывались.
+
+1. PURE EXACT NATIVE CONVERTER
+
+API: mc::gm6::KeyboardRgb = std::array<std::uint8_t,3>;
+constexpr mc::gm6::nativeKeyboardColorLevels(const KeyboardRgb&) noexcept.
+UI вход0..255, выход raw EC levels, без EC/драйверов/конфигов.
+
+Источник: active GCUService1.0.2.70,
+SHA2568fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf;
+build/research-gm6ir0c/lighting-active/
+MyControlCenter.MyRgbKeyboard.SingleZone.cs:45–77,154–156,756–824,1072.
+Это та же active DLL/EXE ветвь, не соседний ControlCenter пакет.
+
+Реализованы:
+- exact29 palette UI RGB для recognition, включая чёрный;
+- R divisor5, G/B divisor6 для custom и5 для recognized palette;
+- минимальный уровень1/максимум50 по RGBValueToLevel;
+- все9 special-case branches, включая white50/40/40 и145/60/0=>45/13/0;
+- собственные metadata R_Level/G_Level/B_Level не используются как setter.
+
+Примеры по исходнику:
+255/80/0 ->50/10/0;255/102/0 ->40/10/0 (разные RGB не путать);
+0/255/255 ->1/50/50;180/0/255 ->36/1/50;255/255/255 ->50/40/40.
+Чистый converter — одно место для fixed/custom/Cycle, root подключает потребителей.
+Raw RGB в существующем INI/EC не считается UI RGB и НЕ конвертируется повторно.
+Физическое восприятие цветов этой работой не измерялось.
+
+2. PUBLIC TYPED RESTORE/SUSPEND API
+
+Gm6Controller::restoreKeyboard(const std::string& reason): enqueue-only,
+разрешённые причины startup, power_resume, system_sleep_clock.
+Gm6Controller::suspendKeyboard(): отменяет pending и запрещает model keyboard
+writes до resume request; сам ничего в EC не пишет.
+Gm6State: keyboardRestorePending, keyboardSuspended, keyboardRestoreStatus.
+Эти поля возвращаются даже если основное чтение EC завершилось ошибкой.
+
+Очередь исполняет существующий Impl.worker, новый поток не добавлен.
+Не вызывается из paint/polling/idle/просмотра. При повторном уведомлении,
+пока pending уже есть, retry budget не начинается заново.
+Новый явный setKeyboard без cycle expected отменяет прежнюю очередь;
+powerDisabled-only idle запросы и cycle ticks не считаются таким выбором.
+
+3. ДАННЫЕ И ЗАПИСИ
+
+Читается только gm6ir0c-device-settings.ini через общий loadDevicePreferences.
+Нет файла/нет Keyboard* => fresh guard/read и no-op, а не factory apply.
+Только явные KeyboardLevel, KeyboardEffect0..2, raw RGB и PulseColor:
+- saved RGB должен быть полным и raw0..50, частичный — явная ошибка;
+- для восстановления Mono из другого эффекта нужен явный saved RGB;
+- pulse требует saved index; native rainbow восстанавливается как firmware
+  effect, не как программный цикл;
+- при частичных legacy settings color/pulse применимы лишь если actual mode
+  делает это поле однозначным;
+- неизвестные brightness/pulse/raw RGB/capability или одновременно pulse+
+  rainbow флаги запрещают применение.
+
+Actual сравнивается с target; запись только при отличии. Явные уровни
+клавиатуры не подставляются вместо idle blank и не enforced на каждом опросе.
+Ничего из FANs RAM/751/custom/respective/commit, APU/CPU PL или батареи restore
+не пишет. Общий KeyboardBacklight сохраняет соседние биты своих shared bytes.
+Restore не сохраняет INI заново и не создаёт Cycle6/autoplay.
+
+4. GATES / RETRIES / UNKNOWN
+
+Каждая попытка:
+Background DeviceOperation -> KeyboardLightingPause -> OEM owner admission
+ДО открытия -> exact identity/capability -> EcAccess transaction -> actual
+read/validation -> target -> fresh write admission -> общий apply, если нужен
+-> final exact read/known state/owner check -> pause.complete(actual).
+Даже no-op/нет saved Keyboard* публикует лишь fresh actual под guard.
+
+Owner проверяется shared uniwillControlOwner; службы не останавливаются и
+не ожидаются молча до освобождения. Конфликт OEM — terminal.
+Restore-specific identity admission не инвалидирует навсегда shared EC при
+неопределённом wake чтении; writer всё равно запрещён. В обычном guard только
+на период keyboardSuspended/pending убран permanent invalidate при mismatch;
+вне этой узкой power phase прежняя защита сохранена.
+
+До5 попыток в30с от первой admission: WindowsEcNotReady, EcObservationBusy
+или EcIoError с ERROR_NOT_READY/DEVICE_NOT_CONNECTED/BUSY/SEM_TIMEOUT.
+Нет broad retry для BackendUnavailable, access denied, identity/state/config,
+ошибок enumerate owner и неподтверждённой записи. Между попытками1с.
+После входа в common apply (мог быть write/strobe) автоматические повторы
+запрещены даже при успешном rollback. Unknown не объявляется восстановленным.
+
+Proven pre-write transient retry вызывает pause.defer(): он не публикует
+actual, не снимает resumePending, не останавливает цикл как unknown лишь из-за
+временного busy/not-ready. Terminal/uncertain scope остаётся незавершённым и
+сигналит unknown/stop в общей механике. Истёкший deferred deadline тоже
+получает terminal scope, чтобы не оставить active cycle бесконечно paused.
+Основной Root power gate различает sleeping и resumePending; модель не
+обходим его и не сбрасывает глобальную power epoch сама.
+
+5. ИНТЕГРАЦИЯ ROOT / ОГРАНИЧЕНИЯ
+
+Root должен подключить pure converter ко всем fixed/custom/Cycle UI-RGB входам,
+оставив raw INI/raw EC без преобразования; UI дизайн/скролл не требуется менять.
+MainWindow вызывает suspendKeyboard на sleep и restoreKeyboard с одной из
+трёх причин на соответствующем lifecycle, совместно с общей keyboard epoch.
+Обычный idle timer не ставит restore; его power-disable сохраняет brightness.
+Shared KeyboardLightingPause .complete/.defer и общий rollback реализует root.
+Этот агент использует API из обновлённого общего заголовка, не копирует её.
+
+Ограничения: подтверждены исходники/ownership, не физические цвета/яркость,
+совместимость pulse labels, автономность firmware или runtime resume на машине.
+Новая общая сборка/portable/коммит — ответственность root после интеграции.

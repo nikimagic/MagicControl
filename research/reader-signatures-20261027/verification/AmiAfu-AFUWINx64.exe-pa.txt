@@ -1,0 +1,12 @@
+
+SignTool Error: No signature found.
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\AmiAfu\AFUWINx64.exe
+
+
+Number of signatures successfully Verified: 0
+
+Number of warnings: 0
+
+Number of errors: 1
+

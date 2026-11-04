@@ -1,0 +1,28 @@
+GM6IR0C battery review20.10.2026
+Input: logs_GM6IR0C (2).zip SHA256
+ eba56445074132b9587cdee1c282dc51db27af809af59ea9a1645af25057e7fb
+Primary dump0.1.90;61.03s/61completepasses, Max30.045s with restore.
+
+Battery: AC/100%/0W/0mA/12.408V, Windows health100%, cycles unavailable,
+BatteryTemperature Win32=1. No percentage-button actions in captured session.
+EC before/after7B9/7D0=0/0;7A6=9;7C3=7;Project25/RAM1.5.
+Firmware bank180bytes: battery candidate fieldsFF/FF/FF, not evidence of activation.
+
+Exact OEM BatteryProtection2 private Up/Down codec confirms percentage pair:
+7B9.low7=0/95/85,7D0.low7=80. Preserve both bit7. Active native
+protection mode0/1/2 uses7A6.mask30; no proven mapping to100/95/85.
+NvramVariable switch does not support battery keys; whole-UEFI replay rejected.
+New DSDT differs from reference only checksum and GNVS address relocation:
+relevant method bytecode identical. CGLM=7B9.low7 affects BAT0._BST bit3,
+which is configured indication, not measured physical cutoff.
+
+Owner explicitly requested a new build to verify charging. Narrow experimental
+WindowsGM6 setter is now connected to existing percentage buttons. No Wujie
+activation bits/platform4/7, native-profile or UEFI writes. Restart80 first,
+upper second; typed guards, paired readback and attempted-field owned rollback.
+No persisted experiment or startup/resume percentage replay. Actual charge
+cutoff/restart remains unverified; OWNER-CHECK.txt gives observation steps.
+
+Supplemental cycle/capacity and charger findings: see
+research/analysis-20261020/charger-agents/gm6ir0c.txt.
+UI geometry/theme/fonts/scrollbar preserved; no hardware executed locally.

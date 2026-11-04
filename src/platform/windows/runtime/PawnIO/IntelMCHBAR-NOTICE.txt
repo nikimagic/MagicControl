@@ -1,0 +1,7 @@
+IntelMCHBAR.bin: official unmodified signed PawnIO Modules 0.2.11.
+SHA256: 3f82b832d99b4aac37d2a20fdb7c9baa2a3bc0488612c9019c9484eb0e8a6eae
+Copyright (C) 2026 Gen Li; LGPL-2.1-or-later; see COPYING.
+Source: https://github.com/namazso/PawnIO.Modules/blob/0.2.11/IntelMCHBAR.p
+Archive: https://github.com/namazso/PawnIO.Modules/releases/download/0.2.11/release_0_2_11.zip
+Archive SHA256: 43608cb89bc84247fef1368a139013f7d043e17db6d6c8dfc9b46bf0905a81f4
+The corresponding unmodified source IntelMCHBAR.p is included.

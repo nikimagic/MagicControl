@@ -1,0 +1,79 @@
+GM6IR0C: дополнительные датчики и гибридная графика,19.10.2026
+
+Изменения:
+- Общий GpuReading: memoryCelsius, memoryJunctionCelsius, powerSource,
+  temperatureSource. Все новые значения сериализуются в GPU JSON/датчики дампа.
+- Windows NVAPI64 загружается только из System32. Собственные минимальные ABI
+  объявления; binaries/SDK NVIDIA не распространяются. Только getters.
+- NVAPI и NVML сопоставляются по domain0, PCI bus/slot/device/subsystem,
+  неоднозначное совпадение отклоняется. Не сопоставлять по имени/индексу GPU.
+- GetThermalSettings v2 отдаёт публичные thermal targets. Дополнительный getter
+  0x65FE3AAD ABI v2 отдаёт raw32каналов в1/256 C; экспорт необязательный.
+  Контракт сверен с LibreHardwareMonitor Interop/NvApi.cs и NvidiaGpu.cs.
+  На RTX40: channel1 Hot Spot, channel7 Memory Junction. Для иных поколений
+  каналы сохраняются без присвоения неподтверждённых смыслов.
+  Нулевые/невалидные температуры не считаются измерением0 C.
+- PCH: неизменённый upstream подписанный IntelPCHThermal.bin0.2.11.
+  SHA256478500ae78aebef3ae7a0b5fe4848d2d5737e8f7c5d51200c284a61c21d7865d.
+  Source.p, LGPL COPYING и NOTICE включаются одним списком runtime.
+  Только identity/read_raw; supported PCI allowlist проверяет сам модуль.
+  Consumer contract PR79: BAR0 raw[8:0]*0.5-50; PWRM valid bit9,
+  raw[8:0] integer C. Не путать бит31 lock с valid.
+  PCH показан в существующей нижней строке Intel secondary panel FANs.
+  Размеры, renderer, контролы, прокрутка и TjMax/Package не изменены.
+- Дополнительные температуры GPU показаны в существующей строке VRAM;
+  при узком окне действует прежний clipping/ellipsis, данные полностью в дампе.
+
+Мощность NVIDIA:
+- GetPowerUsage всё ещё проверяется по устройственному power envelope.
+- Независимо читаются NVML поля186 instantaneous/185 average1s.
+  Raw, результаты call/per-field и provider timestamp сохраняются.
+  Валидный instantaneous предпочтителен; average используется при отсутствии
+  валидного основного/instantaneous. Нет преобразования590006 в правдоподобное число.
+- Показание0 W возможно только при успешном числовом ответе провайдера;
+  отсутствующий/аномальный ответ остаётся null.
+- Для Windows фиксируется PnP SPDRP_DEVICE_POWER_DATA до NVML init/query
+  и после основного NVAPI опроса. MostRecentPowerState не доказывает runtime D3,
+  D3cold или текущую конфигурацию MUX. Диагностические fan API идут отдельно.
+  Не форсируется GPU workload и не выполняется смена режима.
+- Пользовательский Runtime-D3 bug report похож по значениям/P0/частотам,
+  но пока не доказывает причину на конкретном RTX4060.
+
+Intel:
+- Добавлен отдельный ctlPowerTelemetryGetV2 с правильным ctl_power_telemetry_v2_t.
+- При совместимых ошибках версии/аргументов/размера выполняются read-only
+  вариантыVersion1/0. LegacyVersion0: full и базовый prefix доgpuVrTemp.
+- Для каждого вызова сохраняются export/Size/Version/result.
+- Сохраняются версия ControlLib.dll и запрошенный/ответный API ctlInit,
+  flags USE_LEVEL_ZERO. Библиотека только изSystem32.
+- Энергетические baseline разделены по ABI; при полном отказе сбрасываются.
+  Работоспособность на GM6 подтверждается только новым реальным дампом.
+
+Батарея:
+- В logs6 BatteryTemperature Win32=1 = ERROR_INVALID_FUNCTION.
+  Перевод 0.1K вC уже правильный; отсутствие ответа не связано с формулой.
+- Теперь источник попытки сохраняется и при отказе, статус явно объясняет
+  отсутствие поддержки miniport. Нет подмены батареи ACPI-зоной/PCH/CPU.
+- Имеющийся OEM Companion BatteryReading содержит толькоAC/flags/percent/time.
+  В доступной DSDT нет доказанного getter температуры активной батареи.
+  Непроверенный адрес EC/SMBus не был добавлен в рабочий мониторинг.
+
+Графические режимы OEM:
+- GCUService1.0.2.70 MyFanManager_RamFan1p5 SetGPUdstate читает0x78B,
+  заменяет только bits2:0. SetGPUdstateByGpuMode: G1/2/4 ->1; G3 ->2.
+- Это request/policy, не значение DEVICE_POWER_STATE Windows.
+  Добавлена аннотация raw/low3bits в fan-tables-default.json из уже снятого
+  снимкаEC; дополнительных EC операций ради поля нет. Setters не подключены.
+
+Основные первичные источники:
+https://github.com/NVIDIA/nvapi
+https://docs.nvidia.com/nvapi/group__gputhermal.html
+https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/master/LibreHardwareMonitorLib/Interop/NvApi.cs
+https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/blob/master/LibreHardwareMonitorLib/Hardware/Gpu/NvidiaGpu.cs
+https://github.com/namazso/PawnIO.Modules/pull/79
+https://github.com/namazso/PawnIO.Modules/releases/tag/0.2.11
+https://github.com/intel/drivers.gpu.control-library/blob/master/Samples/Telemetry_Samples/Sample_TelemetryAPP.cpp
+https://learn.microsoft.com/en-us/windows/win32/power/ioctl-battery-query-information
+https://forums.developer.nvidia.com/t/rtx-5000-ada-laptop-gpu-reports-invalid-588-593-w-power-draw-while-runtime-d3-suspended/378866
+
+Аппаратные команды, запускGUI, тесты и смена GPU/MUX политики не выполнялись.

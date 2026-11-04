@@ -1,0 +1,26 @@
+SETs: APU limits and diagnostics, 16.10.2026.
+
+Implementation contract: src/core/src/POWER_MODES.md.
+Battery policy: src/platform/windows/BATTERY.md.
+Fan independence: src/platform/windows/FAN_MODES.md.
+
+Presets, Fast/Slow/STAPM W:
+Economical 15/10/10; Office 30/25/25; Balanced 45/40/40; Turbo 70/65/65.
+Manual first click opens saved draft (white/editable), no EC writes.
+Second click applies/saves and returns controls to live SMU (muted/read-only).
+Battery: Turbo unavailable, Manual capped at 45/40/40. AC: editors up to 100 W.
+Windows supply state is checked again before application/restoration.
+Writes use UWACPIDriver EC 783/784/785, internal STAPM/Slow/Fast order.
+No fan mode, table, gate or 751 writes from new APU preset buttons.
+
+PawnIO/RyzenSMU.bin reads telemetry only; PM version 0x5D0009:
+float0 STAPM limit, float2 Fast limit, float3 Fast power, float4 Slow limit.
+Unknown PM versions are not decoded. PCI mutex timeout 250 ms; stale telemetry
+and initialization failures are explicit, retry after 30 seconds.
+Requested EC values are not proof of accepted SMU limits or loaded enforcement.
+Power colours: <=20 blue, <=30 green, <=45 yellow, >45 red.
+
+SETs layout uses full page width and a separate opaque scrollbar above the
+right edge, not a reduced content width. APU power, numeric controls and Manual
+share one row. Captions use measured glyph widths and exactly one trailing
+space after W; group gaps are equal. Read comments at each page's arrange().

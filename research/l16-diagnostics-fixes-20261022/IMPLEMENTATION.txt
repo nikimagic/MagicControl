@@ -1,0 +1,33 @@
+Диагностика L16 / GM5 / GM6 —22.10.2026
+
+Причины из2.zip: старые allowlist в batteryPolicyEvidence/keyboardEvidence
+не включали L16 и GM5; копирование настроек знало только прежние фиксированные
+имена; typed polling status signature включала монотонный reads и динамический
+RPM, поэтому любая выборка считалась новым событием.
+
+Исправления:
+1. Общий gmRamFanProfile используется для raw battery/RGB snapshot labels.
+Wujie прежний; Honor typed keyboard context и ограничение raw Uniwill прежние;
+HYDROC остаётся отдельным battery-only профилем. Только сериализация уже
+снятых байтов, без дополнительных EC обращений. DBD1 помеченnot_charge_restart.
+2. Исходный набор settings сохраняется, текущий GM-профиль добавляет имена из
+runtime gmSettings/gmPowerDraftFile/gmFanCurveFile. Для L16 это собственные3
+файла, для GM5 автоматически добавятся егоINI/power; GM6 имена дедуплицированы.
+settings-manifest.json фиксируетcopied/not_present/size_limit/error/cancelled,
+размер и ошибку. Сохраняется ограничение1МиБ; исходные файлы не меняются.
+3. Сигнатура typed state содержит только режим/flags/PL/online/ownership.
+RPM/PWM/I/O counters остаются в подробном payload. Только реальное изменение
+состояния или новая ошибка запускает existing10-sample power burst. На повторных
+опросах detail пишется не чаще1с и только в его окне. Одинаковые read errors и
+native battery threshold/charger observations больше не дублируются.
+UI/button/action errors и dedicated sensors.jsonl дампа сохраняют прежний сбор.
+
+Важные границы: аппаратный опрос и все EC writer/mask/transaction/ownership
+проверки остаются прежними. GCUBridge/GCUService всё ещё блокируют параллельные
+writers. Эти исправления не останавливают OEM-службу и не доказывают выполнение
+FAN/RGB/зарядки на L16. Геометрия/шрифты/OSD/UI карточки не менялись.
+
+Проверка: чтение кода и общий Release Windows/Linux, SHA256/версии portable.
+Тесты и аппаратные пробы не запускались/не добавлялись. Пакеты готовятся общим
+Tools/Package-Releases.py по прямому поручению пользователя, с проверкой
+манифестов/чистых шаблонов/embedded ресурсов. Публикация отдельным поручением.

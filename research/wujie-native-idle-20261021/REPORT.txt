@@ -1,0 +1,74 @@
+Поиск точной EC-прошивки Wujie и native keyboard idle, 21.10.2026
+
+РЕЗУЛЬТАТ: точный исполняемый образ EC1.18 / X5SP4NAG / BIOS N.1.20MRO15
+не получен. Адрес проверки0x741.0 в native idle worker и источник периода
+около30–31с НЕ установлены. Это незавершённый аппаратный вывод, а не подтверждение
+регистра времени. Обращений к EC/HID/SMBus/SPI/WMI не было; OEM/драйверы не
+запускались и не устанавливались. Production-код и portable не менялись.
+
+НОВОЕ
+1. Оба локальных262400-byte кандидата BIOS_OTA/assets/00643994.bin и00927d0e.bin
+окончательно классифицированы как PNG scanlines256x256 RGBA8. PNG в исходном
+BIOS_OTA.exe начинаются64395E и927CD8; их IDAT начинаются643994 и927D0E.
+262400 =256*(1+256*4): один PNG filter byte и1024pixel bytes на строку.
+Все CRC chunks корректны, zlib(IDAT) побайтово совпал с сохранёнными .bin.
+Это не спрятанный EC image. local-assets-png.json содержит SHA/доказательства.
+2. Повторный GET точного OTA-каталога: DNS ota.mechrevo.com не разрешается;
+старый OEM112.80.53.142:3080 вернул404. Наличие/имя/SHA firmware неизвестны.
+3. Новая первая страница официального gwapi каталога: total3673, все500
+объектов точно совпадают со вчерашней первой страницей. Полный старый скан
+3673 находится в предыдущем отчёте. Нового полного скана здесь не заявляем.
+4. Wayback CDX для ota.mechrevo.com:2080/biosUp/D9D24AA7/* вернул200 и[].
+Availability API и DNS-over-HTTPS недоступны по timeout; это не доказательство
+отсутствия архива/имени. GitHub issues index по exact board и exact BIOS дал0;
+это только индекс issues, не полный code search и не доказательство отсутствия.
+5. Публичные страницы XMG показывают E25/AMD EC1.37 и troubleshooting EC1.23;
+прямая загрузка страницы curl вернула403. Обхода не было. MECHREVO-образом
+эти firmware не являются. PCSpecialist/Hyperbook используют название платы
+X5SP4NAG, но совпадение платы не подтверждает EC version/identity/OEM policy.
+6. Снова разобрана сохранённая native серия301кадр (AC/DC), failures0. Отдельный
+keyboard input в sample195:741=84->80; в sample226 через31219ms:80->84.
+Поиск простого byte ramp в DC окне1..29с дал3BD и566 около10Hz. Оба продолжают
+счёт через клавишу:3BD=250,4,14,24,34;566=21,31,41,51,61. Это не подтверждение
+keyboard idle timer. Один цикл, arbitrary phase и ограниченный набор кодировок
+не позволяют исключить все остальные/закрытые таймеры. Полный фильтр и SHA
+старого133MB журнала сохранены в saved-ram-idle-screen.json; журнал не изменён.
+
+ГРАНИЦЫ ПОДТВЕРЖДЕНИЯ
+0x741.0 — общий APP/manual presence. Старый отдельно сохранённый опыт с.0=1
+не дал гашения90с. Нынешний FanControlWindows поддерживает presence, а Default
+подсветки в SettingsPage::writeNative задаёт preset4/mono/cyan. Это сильная
+связь с изменившимся поведением, но не найденный native EC call graph.
+0x741.2 — наблюдаемый коррелят в части DC условий. Его ручная установка ранее
+не погасила свет и не изменила период. На AC этот бит не доказывает погасание.
+0x78C.1 — OEM immediate power-disable SingleZone, не число idle секунд.
+OEM KeyboardCloseTimer seconds*1000 — известный host timer, не доказанное
+объяснение native DC гашения: native series сохраняла767.7 и78C=80, тогда как
+изученный callback останавливает Rainbow и меняет78C.1.
+
+РОДСТВЕННЫЙ КОД
+minortex/ec_reverse pinned3a574dafe837571cc3176b4ed452a3fd84b3cd24:
+таблица называет bank1:DF7F is_ap_present (741.0), E598 keyboard_backlight_bit1.
+Это GXxHXxx_21.200; необязательная RGB-ветка C080 в том исследованном проекте
+обозначена unsupported по766.2. Ни эти адреса, ни содержимое чужого кода не
+переносятся на Wujie. Наличие getter ещё не раскрывает native idle caller.
+Скачаны только документы/индекс, никакие hardware/flash scripts не запускались.
+
+ЧТО НУЖНО ДЛЯ ТОЧНОГО ОТВЕТА
+Нужен сам OEM executable EC image с подтверждёнными target/version/hash:
+сохранённый обновлятор с payload, recovery/OEM архив либо ранее сделанный
+flash dump. RAM дамп4096bytes и BIOS_OTA updater executable его не заменяют.
+После получения: разобрать контейнер/банк, найти все reads741 и маску01;
+проследить callers до keyboard activity и AC/DC, затем tick source, counter,
+reset/saturation и comparison constant (30/31/300/другая кодировка).
+Не подставлять число30 в случайный регистр и не менять общий presence ради UI.
+
+Основные публичные ссылки:
+https://download.schenker-tech.de/package/xmg-evo-14-15-e25-xev14ae25-xev15ae25/
+https://github.com/minortex/ec_reverse/tree/3a574dafe837571cc3176b4ed452a3fd84b3cd24
+https://4pda.to/forum/index.php?showtopic=1098234&st=600
+https://hyperbook.pl/en/laptops/203-hyperbook-a15-aurora-ryzen-ai-9-hx-370-5906508736166.html
+
+Источники ответов/SHA — sources/*request*.json; негативные ответы и HTML403/404
+сохранены именно как ответы, не как firmware. Старые документы не переписаны.
+

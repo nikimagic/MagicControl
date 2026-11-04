@@ -1,0 +1,6 @@
+MagicControl bundles the variable Noto Sans SC and Noto Sans TC fonts for app-private UI use.
+Sources: https://github.com/google/fonts/tree/main/ofl/notosanssc
+         https://github.com/google/fonts/tree/main/ofl/notosanstc
+The matching SIL Open Font Licenses are included beside the fonts.
+The app loads these fonts privately; they are not installed system-wide.
+Traditional Chinese uses Noto Sans TC; Russian, English and Simplified Chinese keep Noto Sans SC.

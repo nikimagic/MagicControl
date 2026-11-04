@@ -1,0 +1,415 @@
+Полный состав регистров батарейного логгера. 26.10.2026
+103 описания: WUJIE62, GM6 основные 27 + CURRENT_CALC14.
+Полный охват полей НЕ означает полную расшифровку прошивок. Неизвестное явно отмечено.
+
+WUJIE 0x400 / 2byte LE / XIF0_capacity_unit
+  Смысл: Единицы XIF0. Основание: Контракт ACPI/декодера.
+  Граница: Определяет допустимость интерпретации ёмкости/показателя тока. Наши exact decoders принимают 1; после сброса 0 не объявляется автоматически подтверждённым mWh. Отсутствие literal DPTR0400 не отменяет документированный XIF0.
+
+WUJIE 0x402 / 2byte LE / design_capacity_mAh
+  Смысл: Проектная ёмкость. Основание: ACPI + единицы XIF0.
+  Граница: Сырые counts. мА·ч только при подтверждённых единицах; это не остаток и не заданный ток.
+
+WUJIE 0x404 / 2byte LE / full_capacity_mAh
+  Смысл: Полная ёмкость. Основание: ACPI + единицы XIF0.
+  Граница: Оценка полного заряда; full/design даёт расчётную оценку здоровья. Не независимое измерение физического износа.
+
+WUJIE 0x436 / 2byte LE / remaining_capacity_mAh
+  Смысл: Остаточная ёмкость XST2. Основание: ACPI + единицы XIF0.
+  Граница: Сырые counts, возможны ограничения/подстановка firmware. Не подменять ею SOC из другого источника/момента.
+
+WUJIE 0x432 / 2byte LE / battery_state
+  Смысл: Состояние XST0. Основание: ACPI + собственные EC пути.
+  Граница: Отдельно от модуля тока: low2=1 разряд,2 заряд,0 idle,3 противоречие. Bit2 критический статус. В GM6 возможен idle без обнуления 434; слово не является прямым CHARGE_EN.
+
+WUJIE 0x434 / 2byte LE / current_magnitude_mA
+  Смысл: Опубликованный модуль present rate XST1. Основание: ACPI + source trace по платам.
+  Граница: При XIF0=1 — модуль тока мА; знак брать из 432, не из unsigned слова. GM6v1.12 публикует abs050A; коэффициент 34 из selected calculation branches не переносить на WUJIE.
+
+WUJIE 0x438 / 2byte LE / voltage_mV
+  Смысл: Напряжение XST3. Основание: ACPI + EC publication.
+  Граница: мВ; V=raw/1000. Это измерительное/опубликованное значение, отлично от 030E/0522 и команды 15.
+
+WUJIE 0x4A2 / 2byte LE / temperature_dK
+  Смысл: Опубликованная температура батареи. Основание: WUJIE own publication.
+  Граница: LE deci-K -> raw/10-273.15. При !BSOK firmware публикует default0B72 (19.85C); готовность обязательна. Полный путь зависит от 497.0; не всегда прямое чтение SBS Temperature.
+
+WUJIE 0x4A4 / 2byte LE / BMS_current_mirror?
+  Смысл: Альтернативная публикация тока. Основание: WUJIE bank1 AE43..AEE1.
+  Граница: abs внутреннего 050E через 0A45/46, со своими guards/clamps; при idle путь может обнулить эту публикацию. Название BMS_current_mirror? не доказано; не смешивать с 434 или OS Rate.
+
+WUJIE 0x4A6 / 2byte LE / cycles
+  Смысл: Счётчик циклов. Основание: DSDT/OEM по платам.
+  Граница: Не SOC, не таймер зарядки. FFFF недостоверно; замена батареи может менять cycles, без вывода о порче EC.
+
+WUJIE 0x4AB / 1byte LE / SOC
+  Смысл: SOC, опубликованный EC. Основание: Собственный WUJIE decoder/firmware compare.
+  Граница: Целое 0..100; процентная ветка сравнивает его с 7B9.low7. Значение не является измерением текущей ёмкости с точностью до процента.
+
+WUJIE 0x490 / 1byte LE / battery_status_bits
+  Смысл: ACIC/BPST/BSOK и внутренние статусы. Основание: DSDT + EC state machine.
+  Граница: Bit0 AC,bit1 основная батарея,bit2 готовность. WUJIE bit3/7 обслуживают выбор/разрешение основной/альтернативной зарядной ветви; это не измеренный поток тока.
+
+WUJIE 0x497 / 1byte LE / ISDB_and_other_bits
+  Смысл: ISDB и другие статусы. Основание: DSDT + разделённые native ветви.
+  Граница: Bit0 выбирает отдельный протокол/расчёт батареи. На поле опирается ACPI подстановка ёмкостей; имя ISDB не доказывает физический тип BMS. Остальные биты отдельно не расшифрованы полностью.
+
+WUJIE 0x49F / 1byte LE / adapter_class
+  Смысл: ADPT: упакованный класс адаптера. Основание: DSDT/OEM.
+  Граница: Не измеренная мощность потребления и не фактический ток на разъёме.
+
+WUJIE 0x74C / 1byte LE / power_input
+  Смысл: BIOS Project selector / status. Основание: Own CC codec + valid dumps.
+  Граница: Low6 при 7CA.0=1 выбирает BIOS_PROJECT_ID. Подпись power_input у WUJIE logger неточна: это не просто байт питания. High bits имеют отдельную роль.
+
+WUJIE 0x7A5 / 1byte LE / HIGH_POWER_OVERBOOST?
+  Смысл: Смешанные служебные флаги. Основание: Own WUJIE EC.
+  Граница: Bit2/4 формируются из 9063 в input-source routine; bit3 — thermal latch CPU43E>=95 или 44F>=85, снимается при обоих<=80. Имена HIGH_POWER/OVERBOOST/LIGHTBAR не являются доказанными универсальными значениями.
+
+WUJIE 0x7A6 / 1byte LE / voltage_policy_DYN_TEMP?
+  Смысл: Режим native защиты + прочие флаги. Основание: Own WUJIE and GM6 EC.
+  Граница: Bits5:4 — поле 00/10/20. Balanced задаёт минимум 100 мВ/элемент,Healthy200; старшие aging guards могут усилить снижение. Это напряжение, не процент SOC. Отсутствие 741.0 снимает mask30. Bit1 DYN_TEMP из чужого OEM на эту плату не доказан.
+
+WUJIE 0x7AB / 1byte LE / BIOS_power_profile?
+  Смысл: Смешанный preset/config context. Основание: WUJIE selected literal consumers.
+  Граница: Есть bit0 predicate и разбор нескольких битов в power logic. Нельзя весь байт называть единственным индексом BIOS-профиля без полного codec.
+
+WUJIE 0x742 / 1byte LE / battery_gate_priority?
+  Смысл: Capabilities + gate процентной ветки. Основание: WUJIE exact EC.
+  Граница: Bit2 выставляется/снимается firmware по platform4 OR ROM770=4. Bit5 устанавливается startup-кодом; одно это не доказывает действующую ChargingPriority. Не писать в status вручную.
+
+WUJIE 0x7B9 / 1byte LE / upper_and_Reached
+  Смысл: Upper low7 + Reached bit7. Основание: Own percent and stop paths.
+  Граница: Предел и статус, не самостоятельный CHARGE_EN. Gate закрыт ->Reached очищается. Разобранная native процентная ветка снимает Reached ниже того же upper; нижний restart95/90 этим не доказан.
+
+WUJIE 0x7D0 / 1byte LE / lower_threshold_role?
+  Смысл: Host/OEM parameter, native роль не установлена. Основание: Own source/census negative scope.
+  Граница: Setter Down существует в OEM. В WUJIE DSDT имя DBD1, direct literal07D0 отсутствует в трёх исследованных EC. Ни имя Down, ни маска 7F не доказывают restart90. DBD1 и направление generic/indirect accesses требуют отдельного разбора.
+
+WUJIE 0x7C3 / 1byte LE / platform
+  Смысл: OEM platform selector. Основание: BIOS writer + EC predicates.
+  Граница: Целый байт, не набор battery flags. Влияет и на другие подсистемы. Наблюдаемые 4/7/13 не равны автоматически заводской конфигурации.
+
+WUJIE 0x7CC / 1byte LE / charger_priority_bits?
+  Смысл: Статус источников питания и TCSA. Основание: DSDT WUJIE + own EC.
+  Граница: Bits0/1/2 DC0C/TC1C/TC2C,4/5 TC1P/TC2P,7 TCSA. Bit7 зеркалируется в 984.7 и участвует в пересчёте input context. Не универсальный прямой запрет зарядки.
+
+WUJIE 0x7CD / 1byte LE / TypeC_rating_A
+  Смысл: Рейтинг/данные Type-C A. Основание: Платозависимый контракт.
+  Граница: Не измеренные W без codec конкретной платы. Для GM6 raw units явно не подтверждены.
+
+WUJIE 0x7CE / 1byte LE / TypeC_rating_B
+  Смысл: Рейтинг/данные Type-C B. Основание: Платозависимый контракт.
+  Граница: Не измеренные W без codec конкретной платы. Для GM6 raw units явно не подтверждены.
+
+WUJIE 0x30E / 2byte BE / base_word?
+  Смысл: Базовое желаемое напряжение BMS. Основание: Own WUJIE and GM6 native path.
+  Граница: BE16 source слова. Профиль здоровья вычисляет target=base-Ncells*delta. Не измеренное напряжение 438 и не проценты.
+
+WUJIE 0x51C / 2byte LE / full_capacity_mirror?
+  Смысл: Внутреннее слово расчёта ёмкости. Основание: Selected WUJIE producers/consumers.
+  Граница: Есть чтение и native обновление; полного доказательства постоянного равенства 404 нет. Полное назначение/масштаб пока не установлены.
+
+WUJIE 0x520 / 2byte LE / charge_current_word?
+  Смысл: Native requested-current candidate / copy031A. Основание: WUJIE DDBE..DDCF.
+  Граница: LE копия BE031A/31B. Не измерительный ток 434. Полная low-level принадлежность/единицы 031A в этом проходе не закрыты; не назначать мА лишь по похожему числу.
+
+WUJIE 0x522 / 2byte LE / charge_voltage_word?
+  Смысл: Подготовленный target зарядного напряжения. Основание: Own EC byte chains.
+  Граница: LE16 мВ для проверенной цепочки: native CV->522/523->836/837->pending832.1->ChargingVoltage15. Не измеренное напряжение, не ток, не гарантия ACK. На DC может быть сохранённым старым target.
+
+WUJIE 0x7D8 / 1byte LE / temperature_current?
+  Смысл: Публикация элемента native power/thermal table. Основание: WUJIE bank2 9788.
+  Граница: Читается из CODE table[offset14h], не физический датчик. Точные engineering units полного table codec не закрыты.
+
+WUJIE 0x7D9 / 1byte LE / temperature_current?
+  Смысл: Публикация элемента native power/thermal table. Основание: WUJIE bank2 9795.
+  Граница: CODE table[offset20h], не текущая температура батареи. Полная семантика/единицы пока не подтверждены.
+
+WUJIE 0x7DA / 1byte LE / temperature_current?
+  Смысл: Публикация элемента native power/thermal table. Основание: WUJIE bank2 97A0.
+  Граница: CODE table[offset08h], не физическое измерение. Полная семантика/единицы пока не подтверждены.
+
+WUJIE 0x753 / 1byte LE / temperature_current?
+  Смысл: Сырой кандидат. Основание: Не расшифровано.
+  Граница: Нет literal DPTR в exact WUJIE core; computed/indirect use не исключён. Дать имя температуре/току пока нельзя.
+
+WUJIE 0x754 / 1byte LE / temperature_current?
+  Смысл: Сырой кандидат. Основание: Не расшифровано.
+  Граница: Нет literal DPTR в exact WUJIE core; computed/indirect use не исключён. Дать имя температуре/току пока нельзя.
+
+WUJIE 0x786 / 1byte LE / TCC_FanSwitchSpeed?
+  Смысл: Host-gated override low7. Основание: WUJIE bank2 98BB.
+  Граница: Проверяются bit7 и 741.0, затем low7 копируется в power calculation context. Это не подтверждённый датчик TCC; полный конечный SMU effect не установлен.
+
+WUJIE 0x787 / 1byte LE / TCC_FanSwitchSpeed?
+  Смысл: Host-gated override low7. Основание: WUJIE bank2 8EEE.
+  Граница: Проверяются bit7/741.0 и границы low7; участвует в FAN path. Не датчик батареи и не универсальный ток.
+
+WUJIE 0x7C8 / 1byte LE / thermal_protection?
+  Смысл: Capabilities/status + thermal notification latch. Основание: WUJIE bank2 837F.
+  Граница: Bit4 — защёлка события при 751.7 и 44F>=70 с APP present. EventC8 ставится в очередь. Не battery charging gate. Остальные биты требуют собственных доказательств.
+
+WUJIE 0x7D2 / 1byte LE / GPU_module?
+  Смысл: GPU/module selector. Основание: Own CC low5 codec + WUJIE firmware.
+  Граница: Low5 используется как код GPU/module; не значение TGP. WUJIE dGPU branches могут существовать даже без физической NVIDIA.
+
+WUJIE 0x721 / 1byte LE / GPU_limit?
+  Смысл: Сырой кандидат GPU-limit. Основание: Не расшифровано.
+  Граница: Нет direct literal DPTR в WUJIE core; чужой NUC/OEM label не подтверждает назначение.
+
+WUJIE 0x72D / 1byte LE / GPU_limit?
+  Смысл: Сырой power context. Основание: WUJIE bank1 E86C.
+  Граница: Есть consumer в native power logic, конечная единица не установлена. Не выдавать за GPU W.
+
+WUJIE 0x72E / 1byte LE / GPU_limit?
+  Смысл: Сырой power context. Основание: WUJIE bank1 E87A.
+  Граница: Есть consumer в native power logic, конечная единица не установлена. Не выдавать за GPU W.
+
+WUJIE 0x44C / 1byte LE / system_power?
+  Смысл: Опубликованный power/context byte. Основание: Selected WUJIE code.
+  Граница: Есть вычисления и specialFF. Не самостоятельный датчик разряда батареи; масштаб всей функции не закрыт.
+
+WUJIE 0x44F / 1byte LE / GPU_temperature?
+  Смысл: Кандидат GPU-related thermal input. Основание: Own WUJIE thermal consumers.
+  Граница: Используется в порогах 70/85/80; физическая привязка к GPU не доказана. Ноль нельзя показывать как надёжную температуру dGPU.
+
+WUJIE 0x751 / 1byte LE / performance_preset
+  Смысл: Native performance preset + flags. Основание: Own WUJIE firmware.
+  Граница: Byte не является целиком одним номером режима:751.7 также участвует в thermal branches. Не зарядный профиль.
+
+WUJIE 0x783 / 1byte LE / requested_STAPM
+  Смысл: Запрос STAPM. Основание: Existing exact-board power contract.
+  Граница: CPU-only запрос, не измеренная мощность/SMU readback. Свойство battery log не превращает его в флаг батареи.
+
+WUJIE 0x784 / 1byte LE / requested_Slow
+  Смысл: Запрос Slow PPT. Основание: Existing exact-board power contract.
+  Граница: CPU-only запрос, не измеренная мощность/SMU readback.
+
+WUJIE 0x785 / 1byte LE / requested_Fast
+  Смысл: Запрос Fast PPT. Основание: Existing exact-board power contract.
+  Граница: CPU-only запрос, не измеренная мощность/SMU readback.
+
+WUJIE 0x730 / 1byte LE / native_power_table
+  Смысл: Публикуемый native power-table byte. Основание: Own WUJIE table publication.
+  Граница: Не измерение батареи. Полный source/table-index/unit codec в этом проходе не закрыт.
+
+WUJIE 0x731 / 1byte LE / native_power_table
+  Смысл: Публикуемый native power-table byte. Основание: Own WUJIE table publication.
+  Граница: Не измерение батареи. Полный source/table-index/unit codec в этом проходе не закрыт.
+
+WUJIE 0x732 / 1byte LE / native_power_table
+  Смысл: Публикуемый native power-table byte. Основание: Own WUJIE table publication.
+  Граница: Не измерение батареи. Полный source/table-index/unit codec в этом проходе не закрыт.
+
+WUJIE 0x734 / 1byte LE / native_power_table
+  Смысл: Публикуемый native power-table byte. Основание: Own WUJIE table publication.
+  Граница: Не измерение батареи. Полный source/table-index/unit codec в этом проходе не закрыт.
+
+WUJIE 0x735 / 1byte LE / native_power_table
+  Смысл: Публикуемый native power-table byte. Основание: Own WUJIE table publication.
+  Граница: Не измерение батареи. Полный source/table-index/unit codec в этом проходе не закрыт.
+
+WUJIE 0x736 / 1byte LE / native_power_table
+  Смысл: Публикуемый native power-table byte. Основание: Own WUJIE table publication.
+  Граница: Не измерение батареи. Полный source/table-index/unit codec в этом проходе не закрыт.
+
+WUJIE 0x7A7 / 1byte LE / thermal_target?
+  Смысл: Публикуемый CODE table byte. Основание: Own WUJIE bank2 9BC6..9BF2.
+  Граница: Получен из выбранной таблицы, не живой термодатчик. Название thermal_target? остаётся гипотезой до полного table codec.
+
+WUJIE 0x7A8 / 1byte LE / thermal_target?
+  Смысл: Публикуемый CODE table byte. Основание: Own WUJIE bank2 9BC6..9BF2.
+  Граница: Получен из выбранной таблицы, не живой термодатчик. Название thermal_target? остаётся гипотезой до полного table codec.
+
+WUJIE 0x7A9 / 1byte LE / thermal_target?
+  Смысл: Публикуемый CODE table byte. Основание: Own WUJIE bank2 9BC6..9BF2.
+  Граница: Получен из выбранной таблицы, не живой термодатчик. Название thermal_target? остаётся гипотезой до полного table codec.
+
+WUJIE 0x741 / 1byte LE / manual_presence_context
+  Смысл: Присутствие приложения и control context. Основание: Own EC741.0 consumer.
+  Граница: Bit0 проверяется firmware. В WUJIEC574 и GM6C118 отсутствие APP очищает 7A6.mask30. Остальные биты не объявляются свободными для записи.
+
+WUJIE 0x726 / 1byte LE / control_context
+  Смысл: Maintenance/control context. Основание: Own native age/power paths.
+  Граница: Есть service/maintenance bits. Нельзя объявлять свободными батарейными переключателями; перепрошивка/сброс возраста не предлагаются.
+
+WUJIE 0x727 / 1byte LE / control_context
+  Смысл: Maintenance/control context. Основание: Own native inhibit/power paths.
+  Граница: Влияет на несколько ветвей. Не самостоятельный процентный порог или разрешение зарядки.
+
+WUJIE 0x7C5 / 1byte LE / control_context
+  Смысл: Смешанный control context, включая подсветку. Основание: Exact-board lighting contract.
+  Граница: Low3 относятся к Pulse selector в рабочем keyboard protocol; в другом контексте могут быть другие биты. Не весь байт battery state.
+
+WUJIE 0x7C6 / 1byte LE / control_context
+  Смысл: RamFan/control mailbox. Основание: DSDT WMS0 + own WUJIE fan code.
+  Граница: Low2=WMS0;bit2 допускает CPU/GPU RAM fan paths8D66/8F66. Другие биты — отдельные strobes/служебные поля. Не батарейный режим.
+
+WUJIE 0x770 / 1byte LE / ROM_context
+  Смысл: Первый байт ROM ID в RAM. Основание: Identity + firmware comparisons.
+  Граница: Не версия BIOS и не UEFI GUID. ROM0=4 открывает конкретный OR-gate. RAM readback не означает запись/сохранение EC flash.
+
+GM6 0x400 / 2byte LE / XIF0_capacity_unit
+  Смысл: Единицы XIF0. Основание: Контракт ACPI/декодера.
+  Граница: Определяет допустимость интерпретации ёмкости/показателя тока. Наши exact decoders принимают 1; после сброса 0 не объявляется автоматически подтверждённым mWh. Отсутствие literal DPTR0400 не отменяет документированный XIF0.
+
+GM6 0x402 / 2byte LE / XIF1_design_capacity
+  Смысл: Проектная ёмкость. Основание: ACPI + единицы XIF0.
+  Граница: Сырые counts. мА·ч только при подтверждённых единицах; это не остаток и не заданный ток.
+
+GM6 0x404 / 2byte LE / XIF2_full_capacity
+  Смысл: Полная ёмкость. Основание: ACPI + единицы XIF0.
+  Граница: Оценка полного заряда; full/design даёт расчётную оценку здоровья. Не независимое измерение физического износа.
+
+GM6 0x406 / 2byte LE / XIF3_technology
+  Смысл: Технология XIF3. Основание: ACPI GM6.
+  Граница: Метаданные, не состояние зарядки и не химия из подписанного ROM.
+
+GM6 0x408 / 2byte LE / XIF4_design_voltage_mV
+  Смысл: Проектное напряжение XIF4. Основание: ACPI GM6.
+  Граница: мВ; не текущее напряжение батареи и не выходной зарядный target.
+
+GM6 0x40A / 2byte LE / XIF5_warning_capacity
+  Смысл: Предупредительная ёмкость XIF5. Основание: ACPI GM6.
+  Граница: Порог предупреждения ОС, не пользовательский процент остановки зарядки.
+
+GM6 0x40C / 2byte LE / XIF6_low_capacity
+  Смысл: Низкая ёмкость XIF6. Основание: ACPI GM6.
+  Граница: Порог предупреждения ОС; не restart-процент нижнего зарядного порога.
+
+GM6 0x432 / 2byte LE / XST0_battery_state
+  Смысл: Состояние XST0. Основание: ACPI + собственные EC пути.
+  Граница: Отдельно от модуля тока: low2=1 разряд,2 заряд,0 idle,3 противоречие. Bit2 критический статус. В GM6 возможен idle без обнуления 434; слово не является прямым CHARGE_EN.
+
+GM6 0x434 / 2byte LE / XST1_present_rate
+  Смысл: Опубликованный модуль present rate XST1. Основание: ACPI + source trace по платам.
+  Граница: При XIF0=1 — модуль тока мА; знак брать из 432, не из unsigned слова. GM6v1.12 публикует abs050A; коэффициент 34 из selected calculation branches не переносить на WUJIE.
+
+GM6 0x436 / 2byte LE / XST2_remaining_capacity
+  Смысл: Остаточная ёмкость XST2. Основание: ACPI + единицы XIF0.
+  Граница: Сырые counts, возможны ограничения/подстановка firmware. Не подменять ею SOC из другого источника/момента.
+
+GM6 0x438 / 2byte LE / XST3_voltage_mV
+  Смысл: Напряжение XST3. Основание: ACPI + EC publication.
+  Граница: мВ; V=raw/1000. Это измерительное/опубликованное значение, отлично от 030E/0522 и команды 15.
+
+GM6 0x43C / 1byte LE / XCIN_XTIN
+  Смысл: XCIN/XTIN. Основание: Собственный DSDT GM6.
+  Граница: Биты внешнего питания. Не переносить на другой адрес WUJIE только по похожему значению.
+
+GM6 0x490 / 1byte LE / ACIC_BPST_BSOK
+  Смысл: ACIC/BPST/BSOK и внутренние статусы. Основание: DSDT + EC state machine.
+  Граница: Bit0 AC,bit1 основная батарея,bit2 готовность. WUJIE bit3/7 обслуживают выбор/разрешение основной/альтернативной зарядной ветви; это не измеренный поток тока.
+
+GM6 0x494 / 1byte LE / OEM_battery_alert
+  Смысл: OEM предупреждения/запреты. Основание: OEM + EC consumer.
+  Граница: Ненулевое значение участвует в stop guards. Конкретный бит должен иметь собственный источник; не считать весь байт одним универсальным fault.
+
+GM6 0x497 / 1byte LE / ISDB_status
+  Смысл: ISDB и другие статусы. Основание: DSDT + разделённые native ветви.
+  Граница: Bit0 выбирает отдельный протокол/расчёт батареи. На поле опирается ACPI подстановка ёмкостей; имя ISDB не доказывает физический тип BMS. Остальные биты отдельно не расшифрованы полностью.
+
+GM6 0x4A6 / 2byte LE / CYCN_cycles
+  Смысл: Счётчик циклов. Основание: DSDT/OEM по платам.
+  Граница: Не SOC, не таймер зарядки. FFFF недостоверно; замена батареи может менять cycles, без вывода о порче EC.
+
+GM6 0x7A6 / 1byte LE / BatteryProtection2_policy_bits
+  Смысл: Режим native защиты + прочие флаги. Основание: Own WUJIE and GM6 EC.
+  Граница: Bits5:4 — поле 00/10/20. Balanced задаёт минимум 100 мВ/элемент,Healthy200; старшие aging guards могут усилить снижение. Это напряжение, не процент SOC. Отсутствие 741.0 снимает mask30. Bit1 DYN_TEMP из чужого OEM на эту плату не доказан.
+
+GM6 0x7B9 / 1byte LE / configured_upper_low7
+  Смысл: Upper low7 + Reached bit7. Основание: Own percent and stop paths.
+  Граница: Предел и статус, не самостоятельный CHARGE_EN. Gate закрыт ->Reached очищается. Разобранная native процентная ветка снимает Reached ниже того же upper; нижний restart95/90 этим не доказан.
+
+GM6 0x7D0 / 1byte LE / configured_lower_low7_role_unverified
+  Смысл: Host/OEM parameter, native роль не установлена. Основание: Own source/census negative scope.
+  Граница: Setter Down существует в OEM. В WUJIE DSDT имя DBD1, direct literal07D0 отсутствует в трёх исследованных EC. Ни имя Down, ни маска 7F не доказывают restart90. DBD1 и направление generic/indirect accesses требуют отдельного разбора.
+
+GM6 0x49F / 1byte LE / ADPT_packed_class
+  Смысл: ADPT: упакованный класс адаптера. Основание: DSDT/OEM.
+  Граница: Не измеренная мощность потребления и не фактический ток на разъёме.
+
+GM6 0x7CC / 1byte LE / OEM_power_input_raw
+  Смысл: Статус источников питания и TCSA. Основание: DSDT WUJIE + own EC.
+  Граница: Bits0/1/2 DC0C/TC1C/TC2C,4/5 TC1P/TC2P,7 TCSA. Bit7 зеркалируется в 984.7 и участвует в пересчёте input context. Не универсальный прямой запрет зарядки.
+
+GM6 0x7CD / 1byte LE / OEM_TypeC_A_raw_units_unverified
+  Смысл: Рейтинг/данные Type-C A. Основание: Платозависимый контракт.
+  Граница: Не измеренные W без codec конкретной платы. Для GM6 raw units явно не подтверждены.
+
+GM6 0x7CE / 1byte LE / OEM_TypeC_B_raw_units_unverified
+  Смысл: Рейтинг/данные Type-C B. Основание: Платозависимый контракт.
+  Граница: Не измеренные W без codec конкретной платы. Для GM6 raw units явно не подтверждены.
+
+GM6 0x7B3 / 2byte LE / PMAX_raw_units_unverified
+  Смысл: PMAX raw. Основание: GM6 DSDT/OEM name.
+  Граница: Пока без подтверждённого firmware consumer/единиц. Название в ACPI не доказывает реальные доступные W.
+
+GM6 0x7B5 / 2byte LE / PBSS_raw_units_unverified
+  Смысл: PBSS raw. Основание: GM6 DSDT/OEM name.
+  Граница: Пока без подтверждённого firmware consumer/единиц. Не SOC или верхний порог.
+
+GM6 0x7B7 / 1byte LE / PSRC_raw
+  Смысл: PSRC raw. Основание: GM6 DSDT/OEM name.
+  Граница: Не перенесён на WUJIE; runtime-codec не установлен.
+
+GM6 0x7B8 / 1byte LE / DTTF_raw
+  Смысл: DTTF raw. Основание: GM6 DSDT/OEM name.
+  Граница: Не перенесён на WUJIE; runtime-codec не установлен.
+
+GM6_CURRENT_CALC 0x50A / 2byte LE / internal_current_050A_raw
+  Смысл: Внутреннее знаковое расчётное слово тока. Основание: GM6 EC1.12 selected raw instructions.
+  Граница: Диагностика, не прямой SBS Current. Не назначать знак 434 из другой по времени публикации. Масштаб/guards зависят от ветви.
+
+GM6_CURRENT_CALC 0x50C / 2byte LE / internal_current_050C_raw
+  Смысл: Внутреннее знаковое расчётное слово тока. Основание: GM6 EC1.12 selected raw instructions.
+  Граница: Диагностика, не прямой SBS Current. Не назначать знак 434 из другой по времени публикации. Масштаб/guards зависят от ветви.
+
+GM6_CURRENT_CALC 0x50E / 2byte LE / internal_current_050E_raw
+  Смысл: Внутреннее знаковое расчётное слово тока. Основание: GM6 EC1.12 selected raw instructions.
+  Граница: Диагностика, не прямой SBS Current. Не назначать знак 434 из другой по времени публикации. Масштаб/guards зависят от ветви.
+
+GM6_CURRENT_CALC 0x510 / 2byte LE / internal_current_0510_raw
+  Смысл: Внутреннее знаковое расчётное слово тока. Основание: GM6 EC1.12 selected raw instructions.
+  Граница: Диагностика, не прямой SBS Current. Не назначать знак 434 из другой по времени публикации. Масштаб/guards зависят от ветви.
+
+GM6_CURRENT_CALC 0x370 / 2byte BE / calculation_sample0_raw
+  Смысл: BE16 внутренний отсчёт. Основание: GM6v1.12 samplerD347.
+  Граница: Один из четырёх входов фильтра. Физический датчик и ADC units не установлены; не амперы.
+
+GM6_CURRENT_CALC 0x372 / 2byte BE / calculation_sample1_raw
+  Смысл: BE16 внутренний отсчёт. Основание: GM6v1.12 samplerD347.
+  Граница: Один из четырёх входов фильтра. Физический датчик и ADC units не установлены; не амперы.
+
+GM6_CURRENT_CALC 0x374 / 2byte BE / calculation_sample2_raw
+  Смысл: BE16 внутренний отсчёт. Основание: GM6v1.12 samplerD347.
+  Граница: Один из четырёх входов фильтра. Физический датчик и ADC units не установлены; не амперы.
+
+GM6_CURRENT_CALC 0x376 / 2byte BE / calculation_sample3_raw
+  Смысл: BE16 внутренний отсчёт. Основание: GM6v1.12 samplerD347.
+  Граница: Один из четырёх входов фильтра. Физический датчик и ADC units не установлены; не амперы.
+
+GM6_CURRENT_CALC 0x399 / 1byte LE / zero_reference_offset_raw
+  Смысл: Поправка нуля. Основание: GM6v1.12 source trace.
+  Граница: Участвует в reference0200+399. Не готовое значение мА.
+
+GM6_CURRENT_CALC 0x382 / 2byte BE / calculation_intermediate_raw
+  Смысл: BE16 промежуточное расчётное слово. Основание: GM6v1.12 EB85 trace.
+  Граница: Сырое signed interpretation; не независимое физическое измерение.
+
+GM6_CURRENT_CALC 0x367 / 1byte LE / calculation_flags_raw
+  Смысл: Флаги внутреннего расчёта тока. Основание: GM6v1.12 selected paths.
+  Граница: Полная расшифровка всех битов не завершена; unsigned/signed сырьё не даёт нового CHARGE_EN.
+
+GM6_CURRENT_CALC 0x3A5 / 1byte LE / calculation_phase_flags_raw
+  Смысл: Флаги внутреннего расчёта тока. Основание: GM6v1.12 selected paths.
+  Граница: Полная расшифровка всех битов не завершена; unsigned/signed сырьё не даёт нового CHARGE_EN.
+
+GM6_CURRENT_CALC 0x522 / 2byte LE / BMS_requested_voltage_mV_not_measured
+  Смысл: Подготовленный target зарядного напряжения. Основание: Own EC byte chains.
+  Граница: LE16 мВ для проверенной цепочки: native CV->522/523->836/837->pending832.1->ChargingVoltage15. Не измеренное напряжение, не ток, не гарантия ACK. На DC может быть сохранённым старым target.
+
+GM6_CURRENT_CALC 0x834 / 2byte LE / prepared_charger_current_raw_not_ACK
+  Смысл: Подготовленный ток зарядного контроллера. Основание: GM6v1.12 own native buffer.
+  Граница: Команда 14 использует подготовленный буфер. Не measured Current и не подтверждённый SMBus ACK.

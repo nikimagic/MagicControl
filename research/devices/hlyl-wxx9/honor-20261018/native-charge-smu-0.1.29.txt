@@ -1,0 +1,4 @@
+MagicControl 0.1.29
+built for windows (, MSVC 1951)
+charge_start=70 charge_end=90 writable=1 status=Huawei HWMI · чтение; ручные FANs/APU не подтверждены для HLYL
+stapm=unknown slow=unknown fast=unknown pm=0 stale=1 status=SMU: ошибка чтения ioctl_update_pm_table

@@ -1,0 +1,14 @@
+Battery header identity, 26.10.2026
+
+Display: Project ID 26 · Platform ID 7 · ROM ID FF
+Project and platform are decimal raw bytes; ROM ID is two-digit HEX, as before.
+Sources: EC RAM740 /7C3 /770. Unknown is —, never a model default. English
+technical names remain invariant in RU/EN/SC/TC via the shared renderer.
+Windows includes740 in existing background state reads; NativeBatteryState
+carries it in visible-state equality. Linux uses only observed byte entries in
+its existing EC snapshot and adds no hardware writer or unsupported transport.
+Honor/preview/unknown paths do not fabricate zero from default-initialized state.
+Header width is measured with the current font/DPI in both adapters. Card
+bounds, rows, scrolling and all control commands remain unchanged. APU policy
+caption is a separate element and unchanged by this battery-header request.
+No hardware or application launch. Existing startup/history logging unchanged.

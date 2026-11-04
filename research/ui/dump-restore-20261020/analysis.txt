@@ -1,0 +1,39 @@
+Fresh Wujie0.1.95 dump / post-dump restore complaint — 2026-10-20
+
+Evidence: windows/logs_WUJIE_Series-X5SP4NAG/MagicControl-1.jsonl and
+its dumps/dump-20261020-113108-0. Read existing files only; no new dump/probe.
+Times below use Moscow UTC+03, matching owner screenshot context.
+
+14:30:29–31 / seq49–55: startup adopted existing autonomous Manual, CPU payload
+and flags checked; no table/fan writes. Live RPM/PWM thereafter recorded.
+14:31:08 / seq173–178: dump started, controller explicitly selected Default.
+Default readback confirmed; current0.1.95 policy explicitly said old Manual/online
+would not return. Thus this was no rejected automatic Manual command: it did not
+exist in the call path.
+14:32:41 / seq258: FAN CONTROL published 'Применяю настройки EC…' for Max probe.
+14:33:11 / seq283: Max held30s, response/settling recorded, original boost restored.
+14:34:45 / seq348: read-only observation confirmed Default=true at revision2.
+14:34:48–49 / seq354–356: dump and its OSD completed successfully. No subsequent
+CONFIG FAN/Manual request is present in the examined session prefix.
+The probe success branch cleared busy/applying without replacing its pending
+message. That explains the stale Applying label independently of the missing
+restore policy. Screenshot0RPM is consistent with observed firmware Default;
+it is not evidence that a requested Manual command failed physically.
+
+Existing full EC snapshots both complete4096/4096,25616-byte attempts,0errors:
+- initial91.688s: byteIO88.472s, localgatewait0.001ms, transportwait2.251ms.
+- after93.029s: byteIO87.783s, localgatewait0ms, transportwait2061.077ms.
+The new timing evidence locates most snapshot delay inside transport byte I/O,
+not application mutex contention; it does not identify the underlying firmware
+or driver cause and no speedup is claimed.
+
+Updated requirement: restore the same owner's confirmed pre-dump FANs after all
+passive data/probes, unless superseded, cancelled, unknown or unsafe. This
+supersedes the older documented leave-Default-after-dump policy for normal
+completion. Battery, power limits and lighting were not reset and are not broadly
+replayed. New common fan session result is saved as fans-restore-state.json;
+completion OSD follows awaited restore readback. Physical execution remains a
+separate observation, not a boolean derived from register/table agreement.
+
+No GUI/hardware/test was run by the assistant. Root compiles/stages/verifies both
+platforms and commits source/evidence after the coordinated source freeze.

@@ -1,0 +1,181 @@
+Unknown — подсветка клавиатуры: discovery/admission
+20.10.2026. Baseline:5b1f092, portable0.1.88.
+Только статическое чтение проекта и официальных документов. Изменены только
+этот TXT и соседний unknown.json. Никаких production/UI/scroll/INI правок,
+сборок/тестов/GUI/CLI/OEM/драйверов/HID feature reports/аппаратных операций.
+
+Главный вывод
+Unknown сейчас правильно не получает writer подсветки другой платы. Обычный
+Windows dump уже собирает HID metadata и драйверы; заново делать этот collector
+не нужно. Эти данные позволяют выбрать кандидата для исследования, но не
+доказывают singleRGB/per-key/white, протокол эффектов или безопасный setter.
+Нативные LampArray/LED interfaces могут стать отдельными typed adapters после
+подтверждения конкретного устройства. Наличие подсветки/драйвера/PawnIO не
+разрешает копировать регистры Wujie. Общая карточка Wujie и скролл сохраняются.
+
+Текущий код и реальные допуски
+  src/devices/unknown/Profile.cpp:4 — backend/protocol/identity/capabilities пустые.
+  src/platform/windows/BackendFactoryWindows.cpp:7–14 — Unknown не открывает
+  OEM EC по фабрике. Выбор preview не меняет реальную identity фабрик.
+  src/gui/windows/SettingsPage.cpp:250–252,291–292 — цикл создаётся лишь при
+  реальном GM6 controller либо проверенном EcAccess Backlight, не в preview.
+  :1179–1185,1219–1234 — без EC disabled эффекты/цвета/яркость/timeout;
+  :1248–1251 — неизвестные эффекты/цвет/уровень не выделяются как применённые.
+  src/core/src/KeyboardBacklight.cpp:15–20 — EC API принимает только Wujie/GM6,
+  требует capability/protocol и повторно проверяет identity. :73–99 — expected
+  RGB/effect/readback, journal rollback лишь для принадлежащих операции полей.
+  На Unknown этот путь не должен вызываться даже для guessed getter адресов.
+  src/platform/linux/huawei-wmi/HuaweiControlLinux.cpp:127 — только HLYL factory.
+  Linux Unknown не получает Huawei white/timeout controller или RGB writer.
+
+Что уже достоверно есть в обычном Unknown dump
+  Windows InventoryDetailsWindows.cpp:241 подключает существующий общий
+  NativeInterfaceInventoryWindows.h; DiagnosticWmiWindows.cpp:31,60 запускает
+  его в fixed read-only helper с deadline и сохранением partial rows.
+  NativeInterfaceInventoryWindows.h:125–148: PnP instance, class, hardware и
+  compatible IDs, service/driver key/enumerator, INF/provider/version/date;
+  SCM state/ImagePath и доступные image hash/offline embedded trust evidence.
+  :150–180: HID interface path, desiredAccess0, HidD_GetAttributes VID/PID/version,
+  GetPreparsedData/GetCaps usage/page и input/output/feature maximum lengths.
+  Здесь НЕТ GetFeature/SetFeature/WriteFile к HID. Это нужно сохранить.
+
+  Что этим не доказано:
+  - HID attributes version — device revision, не доказанный OEM report protocol.
+  - FeatureReportByteLength и VID/PID не расшифровывают effect/mode/RGB payload.
+  - Обычный HID keyboard collection/LED page не доказывает RGB backlight;
+    CapsLock/NumLock/ScrollLock относятся к индикаторам.
+  - Отсутствие читаемого endpoint не доказывает отсутствие физической подсветки.
+    Управлять ею может иной EC/ACPI/HID/LED путь или занятый OEM broker.
+  - Signed driver/current service state не являются writable capability или
+    доказательством исключительного владения клавиатурой.
+
+  dependencies.json отдельно сообщает PawnIO installed/running/runtime files
+  (DiagnosticDumpWindows.cpp:20–24), не Keyboard RGB capability.
+  ACPI/SMBIOS находятся в firmware-before/; Unknown не читает reviewed OEM UEFI
+  banks (FirmwareEvidenceLinux.cpp:354, DiagnosticDump.cpp:599). Таблицы дают
+  офлайн AML/native-code leads, но сбор не выполняет AML и не включает writer.
+
+Условные стандартные пути, без обещания универсальной поддержки
+
+Windows HID LampArray / Dynamic Lighting
+  Microsoft поддерживает устройства, реализующие открытый HID LampArray,
+  непосредственно firmware либо VHF driver. Это условие устройства, не любого
+  Windows ноутбука. HID lighting page0x59 — discovery lead; обычная LED page0x08
+  не эквивалентна ему. Источники S1,S2.
+  LampArray GetDeviceSelector/DeviceWatcher и typed device identity дают путь
+  к capabilities: Kind, LampCount, SupportsVirtualKeys, MinUpdateInterval,
+  GetLampInfo и key mappings. IsAvailable/AvailabilityChanged — отдельное
+  runtime разрешение управления. S3.
+  LampInfo FixedColor и RGB/Gain level counts позволяют описать заявленный
+  fixed-color/RGB диапазон, positions/purposes — логическую топологию. S4.
+  LampCount>1 сам по себе не доказывает per-key keyboard; нужна привязка разных
+  programmable indices к конкретным клавишам, а не к декоративной полосе.
+  Это reported topology, физическое исполнение остаётся отдельной проверкой.
+
+  В рассмотренной public LampArray поверхности нет getter текущего RGB каждого
+  индекса, эквивалентного нашему EC readback. FixedColor — capability, не текущий
+  output. Нельзя показывать собственный cache или saved color как actual RGB.
+  Ownership через OS availability/focus policy нельзя заменить существующим
+  сравнением EC bytes. S3,S4. Setter/FromIdAsync/GetFeature здесь не вызывались;
+  даже high-level device acquisition перед интеграцией требует проверки его
+  I/O/lifecycle, нельзя автоматически добавлять его в passive dump как zero-I/O.
+
+Linux LED class / multicolor
+  Только конкретный native LED, связанный с keyboard parent: brightness,
+  max_brightness, trigger и доступные hardware-change данные. :kbd_backlight
+  относится к единой зоне; :kbd_zoned_backlight-* — к ограниченному числу зон.
+  Per-key keyboard не следует реализовывать через эти sysfs LED nodes. S5.
+  Multicolor multi_index задаёт реальный порядок каналов, multi_intensity —
+  значения; где доступен multi_max_intensity, учитывать ограничения/клампинг.
+  Не считать порядок RGB и max255 универсальными. S6.
+  Отсутствие multicolor атрибутов означает отсутствие такого native RGB API,
+  а не обязательно white hardware. White доказывается фиксированным белым
+  каналом/цветом/точным native driver, иначе 'mono/fixed-color/unknown'.
+  trigger timer/интервалы blink — не inactivity timeout и не OEM rainbow.
+  Чтение configured values не подтверждает физическую яркость. S5,S6.
+
+Конкретные пробелы/замечания
+K1 [P2, support gap] Общий цикл пока не transport-neutral.
+  KeyboardBacklight.h:10–15 кодирует только SingleZoneModel{Wujie,Gm6} и EC bytes;
+  KeyboardBacklight.cpp:114–126 сам вызывает keyboardColorLevels(model, UI RGB).
+  LampArray/LED/white/per-key нельзя подключить, назвав Unknown 'Wujie' или 'GM6'.
+  План: выделить canonical UI RGB/brightness/effect capabilities и typed adapter
+  conversion/ownership policy; использовать одну existing карточку и один scheduler.
+  Сейчас Unknown guard это предотвращает; это не найденный активный unsafe writer.
+
+K2 [P2, diagnostic gap] Нет явной HID→PnP/USB parent binding и report schema.
+  NativeInterfaceInventoryWindows.h:132 исключает произвольные USB-class parents;
+  :168 передаёт nullptr вместо SP_DEVINFO_DATA при получении HID interface detail.
+  Interface/VID/PID/caps записаны, но явного parent/container/location/USB interface
+  relation к driver record нет. Несколько одинаковых VID/PID нельзя выбирать
+  по первому совпадению. :177–178 сохраняет длины, но не ReportIDs/value/button
+  capability arrays и не protocol version.
+  План: расширять ЭТОТ collector явной SetupAPI association и metadata-only
+  разбором preparsed HID capability arrays; не писать дубликат и не запрашивать
+  undocumented reports. Схема сама ещё не доказывает vendor command semantics. S7.
+
+K3 [P2, Linux discovery gap] Generic keyboard LED inventory отсутствует.
+  InventoryLinux.cpp:108–145 содержит DMI/OS inventory; DiagnosticSensorsLinux.cpp:
+  21–45 перечисляет hwmon/thermal/power_supply/cpufreq, не /sys/class/leds.
+  Подключать Known Huawei LED к Unknown нельзя. План: bounded read-only metadata
+  существующих keyboard LED nodes, canonical parent/driver identity, brightness/
+  max/trigger/multicolor/error/permissions; без trigger/writer/chmod/modprobe.
+
+K4 [P3, completeness] Ошибка корня HID enumeration может выглядеть completed.
+  NativeInterfaceInventoryWindows.h:160 возвращает rows при invalid HDEVINFO,
+  не меняя rows.complete=false; :129 и164 при non-terminal enumeration error
+  также не снимают complete. DiagnosticWmiWindows.cpp:60 переносит этот флаг
+  в QueryCompletion. Ошибка в строках есть, но generic 'полный HID inventory'
+  нельзя выводить из одного completion=true. План: явный partial для этих веток;
+  endpoint unsupported/denied отдельно от absence. В этой задаче код не менялся.
+  Дополнительно :122–127,148,161–162 — общий20s budget сначала расходуется на
+  SetupAPI/SCM/hash/signature, затем на HID. HID phase может не начаться/не успеть;
+  обычный dump не гарантирует descriptor каждой клавиатуры. Per-endpoint errors
+  attributes/preparsed/caps — отдельные наблюдения, не автоматически отсутствие
+  устройства. Разделять collection_finished, enumeration_complete и descriptor
+  status, сохраняя partial rows; не считать любой complete флаг доказательством RGB.
+
+Onboarding contract до первого разрешённого управления
+  1. Actual board/BIOS/EC + native logical-device identity: PnP instance/container/
+     parent, HID interface/collection/MI, VID/PID/revision, usage/page, report IDs/
+     exact lengths, driver version/hash; встроенная keyboard vs external peripheral.
+  2. Стандартный подтверждённый API либо точный восстановленный OEM код/версия,
+     transport/protocol version, report framing/checksums, field masks/scales,
+     effect palette, brightness range и real getter availability. Не адресный поиск.
+  3. Capabilities per field: brightness/fixedColor/RGB/zones/per-key/nativeEffect/
+     softwareEffect/nativeTimeout. Getter source, raw, sampled time и errors.
+     requested/saved/accepted/actual/physicalObserved — раздельно; unknown остаётся
+     unknown. Не включать все controls только из connected/PawnIO installed.
+  4. Read-only discovery не захватывает автономное управление. Перед writer:
+     проверка native availability/OEM/external owner; общий DeviceOperation gate;
+     initial state/ownership snapshot и подтверждённый exit/rollback. При external
+     change остановиться; не сбрасывать чужие цвета/режим/яркость заводским reset.
+  5. Readback возможен — bounded expected-state checks/conditional rollback.
+     Readback отсутствует — явно commanded-only и отдельная OS ownership policy,
+     никакого выдуманного actual RGB или обещания подтверждённого rollback.
+  6. Таймер6цветов допускается только с реальным typed writer и его cadence/owner
+     semantics. Cycle interval, hardware effect speed и inactivity timeout — разные
+     поля. Поддержка одного не включает другие. White-only RGB cycle недоступен.
+  7. Disconnect/sleep/resume/availability loss/foreign change: прекратить записи,
+     заново подтвердить identity/capabilities/ownership. Не включать startup autoplay
+     из одного INI. На exit не воспроизводить старой чужой snapshot.
+
+Нынешний общий cycle (KeyboardBacklight.cpp:106–128, header:29–47) — host timer,
+6 цветов/1..3600с; background DeviceOperation, expected RGB/effect, остановка при
+чужом изменении. Яркость hotkeys не входит в его ownership. Stop/exit оставляет
+последний статический цвет. PortableSettings.cpp:318–338 хранит параметры цикла,
+не доказывает состояние оборудования; startup autoplay не реализован.
+
+Primary references (просмотрены20.10.2026)
+S1 https://learn.microsoft.com/en-us/windows-hardware/design/component-guidelines/dynamic-lighting-devices
+S2 https://www.usb.org/sites/default/files/hutrr84_-_lighting_and_illumination_page.pdf
+S3 https://learn.microsoft.com/en-us/uwp/api/windows.devices.lights.lamparray
+S4 https://learn.microsoft.com/en-us/uwp/api/windows.devices.lights.lampinfo?view=winrt-26100
+S5 https://docs.kernel.org/leds/leds-class.html
+S6 https://docs.kernel.org/leds/leds-class-multicolor.html
+S7 https://learn.microsoft.com/en-us/windows-hardware/drivers/hid/value-capability-arrays
+   https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/hidpi/nf-hidpi-hidp_getcaps
+
+Итог: сначала обогащать существующий dump конкретным identity/capability evidence,
+затем выбирать отдельный native typed lighting adapter. Сейчас никаких оснований
+включить Unknown writer/effects по чужой карте Wujie/GM6 нет. UI менять не требуется.

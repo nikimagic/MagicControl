@@ -1,0 +1,7 @@
+Lenovo Energy Management 15.11.29.70 for Legion Pro 5 16IRX8 (82WK)
+Official package: https://download.lenovo.com/consumer/mobiles/wwe00mae40.exe
+Support: https://pcsupport.lenovo.com/in/en/products/laptops-and-netbooks/legion-series/legion-pro-5-16irx8/downloads/ds561169-lenovo-energy-management-for-windows-11-64-bit-legion-pro-5-16irx8
+Released: 2023-03-10. Original installer SHA256: 884163897dd3a8315f1984aa14862421f59e96e9ab7e11bb088124c7aa00989f.
+Extracted AcpiVpc.sys version 15.11.29.70 SHA256: 6bc61af7806a6482754af7757ae7dd013d345bcc92e18901f6474fefc3e07c8d.
+The catalog is Microsoft Windows Hardware Compatibility Publisher signed; signtool verify /kp /c succeeded.
+The unmodified vendor installer is embedded for explicit user-initiated installation; never auto-install or overwrite a working/newer driver.

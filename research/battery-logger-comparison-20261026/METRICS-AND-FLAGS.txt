@@ -1,0 +1,117 @@
+Поля журнальных сообщений и битовые пространства. 26.10.2026
+
+Это дополнение к FIELD-MAP.txt: в нём описаны ВСЕ 62 регистра WUJIE,
+27 основных и 14CURRENT_CALC-полей GM6. Здесь — остальные сообщения логгера.
+
+Источник важнее имени показателя
+
+stream/device/source — метки источника и батареи. Windows и EC нельзя
+смешивать в один якобы атомарный набор или считать одним физическим прибором.
+WUJIE EC percent берётся из 4AB. GM6 EC percent вычисляется 100*436/404 при
+известных единицах и допустимых ёмкостях. Windows percent берётся из
+BatteryClass Capacity/FullChargedCapacity. Это три разных определения SOC.
+
+W/V/mA:
+Windows W=Rate/1000, V=Voltage/1000, mA=W*1000/V. Это расчётный OS ток.
+EC V=438/1000, mA=модуль 434 при XIF0=1; знак задаёт 432.
+EC W=±V*mA/1000, при idle с ненулевым модулем W неизвестна.
+Нельзя соединять 32 Вт Windows с 0 мА EC и объявлять это одним измерением.
+CURRENT_CALC signed050A и unsigned434 также относятся к разным публикациям.
+
+flow/present/ac/onlineKnown:
+flow — классификация по собственному state источника; present — отдельно.
+Unknown ac/present не превращается в offline/отсутствие батареи.
+У WUJIE текущий ECdecoder не заполняет onlineKnown из 490, хотя raw490 есть:
+поэтому EC FLAGS ac=unknown не означает неисправность или отсутствие AC.
+GM6 ECdecoder заполняет AC из 43C.0. Windows использует PowerState драйвера.
+
+Разные bitspaces:
+EC432: discharge=01,charge=02,critical=04.
+Windows PowerState: online/charging/discharging/critical — определения
+BATTERY_POWER_ON_LINE/BATTERY_CHARGING/BATTERY_DISCHARGING/BATTERY_CRITICAL
+из SDK; journaldriver_critical проверяет 08. Эти маски не переносить в 432.
+capabilities,technology,alert1,alert2,critical_bias — данные BatteryInformation,
+не байты EC7A6/742. Метаданные могут сохраняться после пропуска нового запроса.
+
+Температура C/temperatureRaw/temperatureSource/temperatureStatus:
+Windows: собственный BatteryTemperature query. EC WUJIE:4A2deci-K.
+Сохранённая/подставленная firmware температура не равна новому измерению датчика.
+При!BSOK WUJIEA926 публикует 0B72=19.85C; decoder готовность проверяет отдельно.
+У GM6 в текущих 27 полях нет 4A2; temperatureStatus явно сообщает, что регистр
+не подтверждён reader. Наличие firmware-пути не равно включённой телеметрии.
+
+Ёмкости/здоровье:
+design_capacity/full_capacity/remaining_capacity/capacity_unit/capacity_relative
+описывают данные конкретного source. EC XIF0=1 — counts/mAh; неизвестные
+единицы запрещают преобразование. В RAW SNAPSHOT дополнительно сохранены
+capacity_unit_raw/design_capacity_raw/full_capacity_raw/remaining_capacity_raw,
+raw_counts_not_converted=true. Исторические слова design_mAh в строке не отменяют
+этого ограничения. Значения 0/FFFF имеют собственные проверки валидности.
+WUJIE наполняет designMah/fullMah/remainingMah в EcBatteryReading; эти слова
+есть в RAW SNAPSHOT. Вложенные BatteryReading.designCapacity/fullCapacity/
+remainingCapacity его текущий decoder не наполняет:EC SOC/FLAGS может писать
+unknown для capacity метрик даже при наличии raw слов. Это различие форматов
+логгера, а не доказательство потери данных BMS.
+health_percent=full/design*100. Windows ёмкости могут быть подставлены ACPI
+при ISDB и cycles<50. Поэтому Windows100%health не опровергает EC90.625%.
+health_source/health_sampled_at_monotonic_ms/health_stale показывают сохранённую
+оценку и её происхождение; не новое измерение износа при каждом UI кадре.
+cycles — счётчик источника. Замена батареи может поменять его без порчи EC.
+
+discharge_seconds/charge_seconds:
+Оценки API/приложения, не firmware-таймер до достижения lower7D0.
+Неизвестное значение не заменяется нулём. Временные оценки не доказывают,
+что заданный зарядный upper или nativeHealthy физически включён.
+
+dynamic_stale/percent_at_ms/power_at_ms/temperature_at_ms:
+Признаки и monotonic timestamps continuity-кэша. Пропуск чтения не должен
+освежать время старого показания. Это часы приложения, не часы BMS.
+status/context — диагностический текст, не ещё один независимый raw регистр.
+
+Как читать типы сообщений
+
+SOC initial/changed:
+previous/current/delta — сравнение округлённых SOC одного stream/device.
+skipped_percent_samples — число пропущенных целых процентов между сообщениями,
+не число потерянных EC-пакетов и не самостоятельный диагноз падения ёмкости.
+
+FLAGS initial/changed:
+изменение классифицированных flow/ac/present и метаданных драйвера. Данные
+разных источников и приложений не являются одним bitspace.
+
+SNAPSHOT initial/periodic_10s/soc_change:
+initial содержит address/name/width/endian/meaning/value/decimal/status.
+meaning=documented_field — отметка нашего каталога, не доказательство полного
+firmware consumer. Запись periodic_10s — период журналирования/не обязательная
+задержка опроса, UI или применения команды.
+core_stable=true означает два совпавших core набора; atomic=false сохраняется.
+Необязательные кандидаты читаются отдельно, не одновременно со всем ядром.
+
+CHANGED:
+previous/current/status и, только при наличии обоих значений, xor/set/cleared.
+Недоступный байт не равен 0 и не может доказывать снятие всех флагов.
+Шумные telemetry-поля записываются по SOC/10s cadence; control changes — сразу.
+
+CURRENT_CALC:
+sample_seq/reason/core_at_ms/started_ms/finished_ms/duration_ms — контекст
+диагностического burst, без собственного аппаратного worker.
+coherence=per_field_double_read означает проверку каждого поля, не атомарный
+пакет всех 14 значений. physical_current_verified=false нельзя игнорировать.
+signed interpretation — способ отображения raw слова, не прямое чтение тока
+независимым прибором. 522 мВ и 834prepared-current не являются двумя амперметрами.
+
+Служебный JSON envelope:
+schema/utc/elapsed_ms/seq/slot/session/channel/app_version/actual_board/
+actual_profile/action_id — формат, время, версия и связь с действием.
+Это не аппаратные регистры. payload_-префикс защищает envelope от повторных
+ключей. Номер seq может иметь разрывы между основным и батарейным файлами:
+каналы разделены, sequence общая. Это не доказательство потери записей.
+
+Открытые ограничения полного разбора
+
+Все 103 регистровых описания учтены. Полная семантика всех consumer/producer,
+калибровка ADC, wall-clock единица privateH и косвенный смысл 7D0 НЕ закрыты.
+В GM6batteryCandidates нет 740/74C/7C3/770/742; это граница именно батарейного
+каталога, а не отсутствие этих адресов в EC. Startup identity хранится отдельно
+в project_id/platform_id/rom_id; для анализа нужен полный комплект логов.
+Одни raw флаги не являются разрешением менять источник питания/зарядник.

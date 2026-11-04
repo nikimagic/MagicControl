@@ -1,0 +1,10 @@
+From: 00d66634 To: 006b4fc6 Type: INDIRECTION Op: 0 ANALYSIS null
+From: 00ffa420 To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 010e2c33 To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 010e2c3e To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 010e2c49 To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 010e2c55 To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 010e2c60 To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 010e2c6b To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 010e2c76 To: 006b4fc6 Type: DATA Op: 0 ANALYSIS null
+From: 006b5534 To: 006b4fc6 Type: UNCONDITIONAL_CALL Op: 0 DEFAULT FUN_006b5530

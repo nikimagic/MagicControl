@@ -1,0 +1,10 @@
+LpcIO.bin: signed PawnIO Modules 0.2.10 module, unmodified.
+SHA256: B3896A1CAB0D808FCA31FE2EBCAE045D59DAC690DA87B17C858BB8DA357EB45E
+Copyright (C) 2025 namazso <admin@namazso.eu>
+License: LGPL-2.1-or-later; see COPYING in this directory.
+Source: https://github.com/namazso/PawnIO.Modules/tree/0.2.10
+The identical module was retained in the user's verified HLYL-WXX9 keyboard
+runtime and physically rechecked on that laptop on 2026-10-18.
+MagicControl uses its port/SuperIO IOCTLs only for the guarded IT8987 I2EC
+backlight path. Target writes are limited to volatile 02F4/03FC/1804.
+BIOS/EC flash and fan fields are never written by this backlight controller.

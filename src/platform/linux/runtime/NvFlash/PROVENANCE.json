@@ -1,0 +1,15 @@
+{
+  "version": "5.867.0",
+  "os": "linux",
+  "source_page": "https://www.computerbase.de/downloads/systemtools/grafikkarten/nvflash/",
+  "archive_sha256": "73ab51e121129059f1377b3bf21a8001f6649d64af2471455499c803a9c80301",
+  "oem_package_match": false,
+  "hardware_executed": false,
+  "files": [
+    {
+      "name": "nvflash",
+      "bytes": 15909600,
+      "sha256": "754693fb8f833be75601f95cb08a6e0cf538053cce84ab69020ec74ae96a6e70"
+    }
+  ]
+}

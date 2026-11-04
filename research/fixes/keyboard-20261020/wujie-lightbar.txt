@@ -1,0 +1,135 @@
+Wujie X5SP4NAG — полоса у петель, HID presence и OEM admission
+20.10.2026. Ограниченная статическая сверка, без production/UI изменений,
+без перечисления живого железа, открытия HID, feature reports, EC/драйверных
+операций, тестов, сборок и коммитов. HYDROC данные не переносятся.
+
+1. Три разных утверждения
+Физическая полоса, совместимый Windows device interface и право записи —
+не одно состояние. Сообщение владельца о физической полосе следует сохранять
+как owner-reported hardware presence; оно не определяет VID/PID/usage.
+Наш LightingOwnership сейчас проверяет только reviewed OEM services/processes.
+Он не перечисляет HID и не подтверждает ни наличие, ни отсутствие полосы.
+
+2. Что найдено в родном коде
+Корень: C:\Users\admin\Documents\mechrevo\Decompiled\DefaultTool\.
+LightingModel/LM_Manager.cs:82–112:
+  LB_Init — отдельный ITE lightbar path, не EC SingleZone клавиатуры.
+LightingModel/ITE_SPEC.cs:7–21:
+  VID decimal1165=048D;
+  LBPIDList28673/28672/24581/24584/24592 =7001/7000/6005/6008/6010;
+  lightbar usage page65283=FF03. Это общий OEM candidate list, не inventory Wujie.
+LightingModel/LM_ITE_RGB.cs:4049–4105:
+  PID7000/7001 открываются с Usage2; firmware80H getter и UsagePageFF03
+  выбирают MEZone_Lighbar4 и подзоны logo/hinge.
+  Остальные кандидаты4108–4137 идут через Usage1, с дополнительными firmware/
+  BIOS project checks и типамиLightbar/2/3. Нельзя выбрать hinge лишь по VID048D.
+MyRGBKeyboard/HIDLightbar_hinge.cs:146–156:
+  только успешный LB_Init и типMEZone_Lighbar4 создают MEZone_Lighbar4_hinge.
+MyControlCenter.MyRgbKeyboard/HIDLightbar4_hinge.cs:10–17,39–51:
+  controlByte33=0x21; native brightness command09H с control code;
+  отдельные настройки Lightbar_hinge_PowerSwitch/ACLight/DCLight.
+То есть OEM действительно умеет отдельный HID узел/коллекцию для hinge,
+но эта generic ветка ещё не привязана доказанным inventory к exact Wujie X5.
+
+Есть и ДРУГОЙ legacy EC lightbar path:
+  GCUService_Reference_w568w/GCUService/MyControlCenter/MyRgbLightbarManager.cs:
+  695–719 — управление байтом decimal1864=748;
+  803/834/865 — RGB decimal1865/1866/1867=749/74A/74B.
+  src/protocols/uniwill/x5sp4nag/Registers.h:246–264 содержит эту карту,
+ 765.6 capability,767.1 trigger,768.1 status как отдельные поля.
+Само наличие EC имён/байтов не доказывает, что физическая hinge полоса Wujie
+использует именно этот транспорт. Клавиатура Wujie EC RGB тоже не доказывает
+EC transport отдельной полосы. ITE HID и legacy EC нельзя смешивать в один writer.
+
+3. Пределы сохранившихся данных этого Wujie
+C:\Users\admin\Documents\mechrevo\Fan_X15Pro\Diagnostics\EcSnapshots\
+default_EC\20261005-162655\ec-table.md:84,96:
+ 748=80,765=A1; legacy LIGHTBAR capability765.6 сброшен.
+Таблица прямо предупреждает, что наличие управляемой полосы этой модели
+не подтверждено. comparison.md соседнего20261004-120044:39 повторяет границу.
+Это отрицательный capability legacy EC, НЕ доказанное отсутствие ITE HID/LED.
+
+tests/test_util/analysis/keyboard-ec-timeout/timeout-control-search.md:34–38
+пересказывает прежний PnP inventory: VID_048D не встречался, были UNIW0001/I2C.
+В этой ограниченной сверке не найден полный matching HID snapshot с
+completeness/error flags, descriptors и hinge usage2/FF03 этого Wujie.
+Поэтому итог НЕ «Windows точно не видит узел» и НЕ «полосы нет», а:
+  exact compatible hinge interface presence = unknown/not established;
+  historical inventory note = no048D observed in that saved observation;
+  actual current HID access/owner/availability = not probed.
+Новой физической проверки полосы, цвета, HID команды или занятости не было.
+
+4. Даже native Init false не доказывает missing node
+DefaultTool/UsbHidModel/HIDManager.cs:30–93:
+  SetupDi enumeration, затем CreateFile(read|write,share3)46, attributes51,
+  VID/PID56, preparsed data/caps58 и usage65. Init возвращает один false на
+  отсутствующий match, неоткрытый handle, ошибкуcaps, исключение или проблемы
+  перечисления. Win32 access-denied/sharing failure отдельно не сохраняется.
+Следовательно, native boolean Init нельзя повторить как presence detector.
+Read/write open тоже не равен пассивному обнаружению: descriptor inventory
+должен быть отдельной read-only операцией без HID GetFeature/SetFeature.
+
+5. Точная семантика нынешнего LightingOwnership
+src/platform/windows/LightingOwnershipWindows.h:8–10:
+  LightingOwnership { bool writable; std::string status; }
+17–59 проверяет SCM QUERY_STATUS для GCUBridge/GCUService/AiStoneService и
+унифицированный Toolhelp walk GCUService.exe/AiStoneService.exe.
+59: return {true,"Проверенные OEM-службы и процессы подсветки не активны"};
+  Эта фраза НЕ обещает HID presence; комментарий14–16 прямо говорит, что
+  snapshot не exclusive lease, а identity остаётся у backend.
+63–65: ensureLightingWritable — fail-closed admission перед command.
+
+Реальный предел/риск представления:
+  writable=true — только oemAdmissionAllowed, не общий hardwareWritable.
+  writable=false объединяет active policy blocker и неизвестный SCM/process
+  status. Возвращаемый status позволяет человеку различить их, но тип — нет.
+  Текст«Подсветка занята OEM» при активном service означает observed policy
+  blocker, НЕ доказательство, что этот process держит нужный HID handle.
+Никакой существующий фрагмент не устанавливает missingHid или absentLightbar.
+Проблема возникнет, если вызывающий UI преобразует этот bool в «узел найден/
+не найден/полоса отсутствует». Такой вывод текущим inspector не разрешён.
+
+6. Предлагаемые независимые typed states
+Это контракт данных для последующей работы, не новый UI и не реализация сейчас:
+PhysicalAssemblyPresence:
+  Unknown | OwnerReportedPresent | ObservedPresent | ConfirmedAbsent.
+InterfacePresence:
+  NotProbed | PresentExactMatch | NoMatchInCompleteEnumeration | UnknownPartial.
+ProtocolSupport:
+  Unknown | CandidateIdentity | ConfirmedExactProtocol | Unsupported.
+AccessAvailability:
+  NotProbed | Ready | SharingViolation | AccessDenied | DriverUnavailable |
+  Disconnected | ErrorUnknown.
+OwnerObservation:
+  NotChecked | NoReviewedOwnerObserved | NativeProcessObserved |
+  HolderUnknown | InspectionFailed.
+Каждое наблюдение хранит source/time, Win32 error, enumerationComplete,
+identity/interfacePath/VID/PID/usage/usagePage, а не один общий bool.
+
+Корректные сообщения/выводы:
+- complete enumeration, exact reviewed identity, no match:
+  «Совместимый HID-узел не найден в Windows»; физическая полоса остаётся отдельной.
+- partial/permission/error enumeration:
+  «Не удалось определить наличие HID-узла», не «узла нет».
+- exact interface enumerated, open ERROR_SHARING_VIOLATION32:
+  «Узел найден, доступ занят»; владелец неизвестен без отдельного доказательства.
+- ERROR_ACCESS_DENIED5:
+  «Узел найден, доступ запрещён», не «занят родным ПО».
+- no matching protocol/strip observation:
+  «Полоса не обнаружена/не подтверждена этим способом», не «физически отсутствует».
+- reviewed OEM process active:
+  «Родное ПО активно; запись не разрешена» независимо от interface presence.
+При known=false/partial hardware writer остаётся недоступен, исходный error
+сохраняется. Полная пустая enumeration доказывает лишь отсутствие match в ней.
+
+7. Хэши прочитанных OEM файлов
+ITE_SPEC.cs:
+19a5dd3cd9969ad115744f87507429cdbe65a9f848eaa256ca6b8ee8c2375b77
+LM_ITE_RGB.cs:
+89f19ada30f4f6c4e4acc51834fa07aaaf9cef16c8003d84471d98e6fa4bc3f7
+UsbHidModel/HIDManager.cs:
+593f7caf9a4cd90131b6213c903df2b3d729c52404e3aee0b230a0702c569e3b
+
+Итог: отдельный native hinge ITE HID transport в OEM найден, его exact presence
+на Wujie ещё не установлен. Нынешний owner admission не заменяет interface
+inventory и не должен объявлять hardware отсутствующим из одного bool.

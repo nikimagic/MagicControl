@@ -1,0 +1,391 @@
+GM6IR0C — статическая ревизия MagicControl 0.1.75
+Дата: 19.10.2026. Исследователь: агент модели GM6IR0C.
+
+ГРАНИЦЫ РЕВИЗИИ
+Прочитаны действующие исходники приложения, exact active OEM decompilation,
+сохранённые отчёты пользовательских журналов и состав portable. Аппаратные
+команды, GUI, OEM EXE/DLL, драйверы и тесты не запускались. Исходники,
+конфигурация, аппаратные настройки и portable не изменялись.
+Единственный результат этой работы — настоящий отчёт.
+Внешний эталон ВСЕХ карточек и вкладок — Wujie. Аппаратный адаптер модели
+не даёт основания создавать собственную страницу или менять геометрию/скролл.
+
+1. EXACT IDENTITY И ПРОИСХОЖДЕНИЕ
+
+Фактическая модель: MECHREVO JiguangX Series GM6IR0C; плата GM6IR0C.
+Из пользовательских материалов: Intel Core i7-14650HX, NVIDIA RTX 4060 Laptop,
+BIOS N.1.05MRO09, SMBIOS EC 1.12. EC ProjectID 0x740=25 (0x19),
+0x78E.bit6=1, не commercial; штатная ветвь MyFanManager_RamFan1p5.
+Это не X5SP4NAG/Wujie, не HYDROC Project26 и не универсальная карта Uniwill.
+Profile.cpp задаёт отдельный id/protocol/capabilities, Gm6Controller проверяет
+identity и RAM1.5 перед командами; battery имеет собственную такую же проверку.
+
+Побайтово прочитанные локальные артефакты (SHA256):
+build/research-gm6ir0c/samples/GCUService-active.exe
+  7074680 байт; 8fd02bf5f42629998d8ec716c3e6ff906baf73cb356b1fdd7585a26d77a49daf
+build/research-gm6ir0c/samples/GCUBridge-active.exe
+  2122248 байт; 45b2c1d9d7d90cc9a31936655e872d4c108703a9f442e3b6e1d6037af59375b4
+build/research-gm6ir0c/samples/DefaultTool-active.exe
+  1126264 байта; 7393bc72bdc45b6751b49f2eef035668dd0697bb3f0de8be4d9e9aef9754e7ac
+build/research-gm6ir0c/samples/UWACPIDriver.sys
+  43776 байт; 5b4208d762dad4fec1cfc66adcea29dbb3644e917ba77944306c390b90ce2a20
+Последний файл — вложенный старый SYS, НЕ доказательство хэша установленного SYS.
+Материалы владельца указывают установленный пакет 10.48.11.331/oem179.inf;
+действующий системный SYS в рамках этой ревизии не читался.
+
+Основные exact OEM источники:
+build/research-gm6ir0c/decompiled-oem-active/MyControlCenter.MyFanCtrl.decompiled.cs
+build/research-gm6ir0c/decompiled-oem-active/MyControlCenter.MyFan.MyFanManager_RamFan1p5.decompiled.cs
+build/research-gm6ir0c/decompiled-oem-active/MyControlCenter.MyFan.FanTable.MyFanTableCtrl.decompiled.cs
+build/research-gm6ir0c/decompiled-oem-active/MyControlCenter.MyFan.FanTable.FanTable_Manager1p5.decompiled.cs
+build/research-gm6ir0c/all-active/020000EA-MyECIO.AcpiCtrl.cs
+build/research-gm6ir0c/all-active/02000285-MyControlCenter.FanInfo.cs
+build/research-gm6ir0c/battery-active/GCUService.MySystem.BatteryProtection2.cs
+build/research-gm6ir0c/lighting-active/MyControlCenter.MyRgbKeyboard.SingleZone.cs
+build/research-gm6ir0c/lighting-active/MyControlCenter.KeyboardCloseTimer.cs
+Это активные тела методов; ранние защищённые Runtime exception stubs не применялись.
+
+2. МАТРИЦА ПЯТИ ОБЛАСТЕЙ
+
+2.1 Драйверы / ABI / identity / сериализация
+Реализовано:
+- Windows: прямой \\.\ACPIDriver, IOCTL read 0x9C40A488/write 0x9C40A48C,
+  вход EcPacket 8 байт, выход16; проверяется длина ответа. OEM AcpiCtrl:
+  all-active/020000EA-MyECIO.AcpiCtrl.cs:64–66,185–225,350–391.
+- src/platform/windows/uniwill-acpi/BackendWindows.cpp:23–41,104–125,156–196:
+  один Global\\MagicControl.EcTransactions.v2 между процессами/сессиями;
+  EcAccess::Transaction и короткие операции дополнительно используют этот gate.
+- src/devices/mechrevo/gm6ir0c/ControlWindows.cpp:171–188:
+  exact profile, Project25/RAM1.5, feature/protocol guard; активные GCUService.exe
+  или AiStoneService.exe запрещают запись. OEM процессы не останавливаются.
+- Батарея пользуется тем же backend transaction mutex, но отдельным typed API.
+- PawnIO — отдельный источник Intel MSR/I801/PCH. ACPIDriver не считается
+  заменой PawnIO и не даёт доступ к AMD SMU на этой Intel-плате.
+Подтверждено прежними журналами: EC чтения; часть command readback и Max cleanup.
+Неизвестно: точный хэш текущего установленного SYS; реакция на новую его ревизию.
+Linux: src/platform/linux/BackendLinux.cpp:6–21 явно не предоставляет GM6 EC.
+Это намеренная граница возможностей, а не незаметно работающий setter.
+
+2.2 Датчики CPU/GPU/RAM/SSD/батареи
+Реализовано:
+- Intel CPU family6 B7/BA/BF: DTS valid31/TjMax и RAPL 0x611 с rollover32,
+  единицами0x606 и интервалом; allowlist в SensorModuleWindows.h. Ни MSR-write,
+  ни перенос AMD power override не используются. Код:
+  src/platform/windows/pawnio/IntelTelemetryWindows.cpp:20–79.
+- NVIDIA NVML: точные UUID/PCI, источник мощности, raw выбросов, повторный
+  запрос, поля185/186, отдельные ошибки API и PnP before/after. NVAPI-дополнение
+  подбирается по PCI; RTX40 дополнительные каналы не переносятся на RTX50.
+  src/platform/common/NvidiaGpu.cpp:159–265;
+  src/platform/windows/NvidiaSensorsWindows.cpp:86–145.
+- DDR5: Intel I801 + SPD5118, SHA модуля, Global Access_SMBUS mutex;
+  SMBus0x50–0x57, только read-транзакции; в обычном UI два хаба,
+  в диагностике до8. Serial SMBIOS не объявляется доказанным serial хаба.
+  src/platform/windows/pawnio/IntelMemoryWindows.cpp:9–69.
+- SSD: Storage property и NVMe SMART composite + отдельные sensor1..8;
+  все найденные диагностические датчики идут отдельно. Температура59°C
+  дополнительного сенсора не заменяет composite около28°C и не означает
+  автоматически другой диск или контроллер. Конкретные физические позиции
+  vendor-defined сенсоров без документации Kingston неизвестны.
+- Battery Class: raw BatteryTemperature, Win32 ошибка, декодирование десятых K;
+  CPU/PCH/ACPI зоны не подставляются как температура батареи. Health — full/design,
+  нулевой CycleCount не выдается за подтверждённые0 циклов.
+- PCH и ACPI thermal источники отдельные, не батарея и не RAM.
+Подтверждено архивом logs_GM6IR0C.zip 0.1.69 (отчёт log-review-20261019.txt):
+  CPU46–83°C, RAPL13.147–76.264Вт; GPU37–48°C;
+  DDR5 hub50:28–47.25°C, hub52:30.25–50.25°C; SSD23.85–31.85°C.
+  BatteryTemperature: Win32=1 во всех252 образцах, температура недоступна.
+Это подтверждение старого сеанса, НЕ физический тест новой0.1.75.
+Неизвестно: конкретное состояние runtime D3 при каждом выбросе590006мВт;
+  PnP MostRecentPowerState сам по себе не доказывает runtime D3cold или MUX.
+Intel GPU IGCL уже имеет V2 и legacy compatibility shapes, включая
+INVALID_ARGUMENT/INVALID_SIZE; прежняя ошибка не равна отсутствию реализации.
+Код src/platform/windows/IntelGpuWindows.cpp:124–149. Успех новых форм на этом
+экземпляре не доказан текущим статическим просмотром.
+Linux использует native sysfs/hwmon/NVML; наличие общего UI не доказывает
+равенство доступных датчиков Windows и Linux на конкретной машине.
+
+2.3 FANs / Manual online / link / restore
+Реализовано и сверено с exact OEM:
+- RPM CPU464:465, GPU46C:46B (не X5 GPU46D); PWM75B/75C делится на2.
+  OEM all-active/02000285-MyControlCenter.FanInfo.cs:8–42;
+  наш ControlWindows.cpp:187–199,211–219 использует high-low-high и несколько проб.
+- RAM1.5 CPU F00/F10/F20, GPU F30/F40/F50; Up[i]=next transition,
+  Down0 сохраняется, Duty*2; commit7C6.2 после заполнения, respective7C5.7.
+  OEM FanTable_Manager1p5.decompiled.cs:625–714,1176–1188;
+  MyFanTableCtrl.decompiled.cs:139–159; наш ControlWindows.cpp:59–74.
+- Default снимает RAM/custom/light/Boost без обнуления таблиц и без подмены CSV.
+  Max меняет только751.6; Manual включает native RAM. SETs OEM режимы используют
+  точные Office/Gaming/Turbo references и возвращают PL overrides к0.
+  OEM MyFanManager_RamFan1p5.decompiled.cs:2537–2623;
+  наш ControlWindows.cpp:281–318.
+- Online: один контроллер, независимые saved Manual CPU/GPU, linked CPU-кривая
+  по max(CPU,GPU),1с, гистерезис3°C,85°C=>100% обоим. Свежие DTS/NVIDIA
+  обязательны. Датчик потерян — попытка вернуть захваченные поля.
+- Снимок владения включает точные маски/таблицы; перед каждым шагом и возвратом
+  expected проверяется. Чужое изменение не перетирается старым дампом.
+  При исходно неактивной RAM возврат не очищает таблицы нулями.
+- Native режимы не сбрасываются при выходе. Только online возвращает своё
+  предыдущее управление. Max probe приостанавливает online и делает cleanup.
+- Общий fan-curves.csv целиком используется для всех моделей; editor не
+  перезаписывается аппаратной RAM. UI общих FansPage/контролов сохранён.
+Подтверждено: exact протокол и часть пользовательского readback/cleanup.
+Не подтверждено новой физической пробой: every online/link/failsafe переход,
+  автономное исполнение таблиц в каждой версии EC и максимальные RPM.
+Примечание: онлайн-защита работает в процессе приложения; она не является
+  автономной аппаратной защитой при зависании процесса/завершении питания.
+
+2.4 Батарея — native policy, readback, rollback, save, restore
+Реализовано корректно по exact активному OEM:
+- BatteryProtection2:0 Performance,1 Balanced,2 Healthy. Read-modify-write
+  только7A6.bits4–5 (00/10/20); это не доказанные100/95/85%.
+  OEM battery-active/GCUService.MySystem.BatteryProtection2.cs:267–314.
+- Общий NativeBatteryController с отдельной exact identity GM6 и отдельным
+  gm6ir0c-device-settings.ini. Соседние биты, FANs, PL,7B9/7D0 не меняет.
+- Unknown комбинация3 запрещает запись; сохраняется только явный выбор.
+  save/readback failure пытается откатить собственные биты, если значение ещё
+  наше; при появлении OEM rollback не навязывается, ошибка журналируется.
+  src/platform/windows/NativeBatteryWindows.cpp:64–112.
+- Worker восстанавливает только имеющийся BatteryProtection ключ после старта
+  и подтверждённого сна; без ключа нет startup-write. Ошибка restore журналируется
+  однократно, режим не переприменяется каждым опросом.
+  NativeBatteryWindows.cpp:37–56,129–130; MainWindow.cpp:443,869.
+- Три кнопки используют общую карточку с заголовком/геометрией Wujie;
+  меняется смысл/данные native policy, не создаётся своя вкладка.
+Подтверждено: маски/вызовы OEM и сохранённый OEM HealthProtectionStatus.
+Неизвестно: фактические верхний/нижний пороги каждого режима, алгоритм firmware,
+  остановка зарядного тока и поведение на конкретном AC/USB-C источнике.
+Нет основания обещать численные проценты или считать отсутствие температуры
+батареи отсутствием физического датчика в её BMS.
+
+2.5 Подсветка / цикл / таймер
+Реализовано:
+- Общий KeyboardBacklight; GM6 RGB guard766.2, яркость78C.bits7:5 и disable.bit1,
+  strobe.bit4; RGB769/76A/76B, apply767.5, rainbow767.7,
+  pulse7C5.bits2:0. Fan respective7C5.7 и USB/lightbar в767 сохраняются масками.
+  OEM SingleZone.cs:366–415,827–860,1035–1094;
+  src/core/src/KeyboardBacklight.cpp:65–100;
+  src/protocols/uniwill/SingleZoneBacklight.h:8–12.
+- Собственная калибровка GM6 (white50/40/40) в данных, не самостоятельный UI.
+- Цикл6: общий программный таймер1–3600с, Background DeviceOperation,
+  expected RGB/effect, прекращение при внешнем изменении/ошибке. Яркость Fn
+  не захватывается. При выходе нет восстановления устаревших цветов.
+  KeyboardBacklight.cpp:102–135. Нет самовольного autoplay на старте.
+- Физическое соответствие четырех pulse-палитр не выдумано; цвета pulse
+  не заимствованы с Wujie. OEM AutoOff — программный KeyboardCloseTimer,
+  не найденный аппаратный EC timeout. Отключённое поле аппаратного таймера
+  не является неисправностью работающего setter.
+Подтверждено журналом0.1.69:721 успешный command readback,12 запусков цикла,
+  без зарегистрированных ошибок цикла. Это не видеопроверка721 цветов.
+Фикс общего мигания Background/Interactive добавлен позднее; старый журнал
+  не подтверждает визуальное отсутствие мерцания в0.1.75.
+
+3. РЕАЛЬНЫЕ ДЕФЕКТЫ / ФУНКЦИОНАЛЬНЫЕ ПРОБЕЛЫ
+
+[P2 GM6-01] Стабильность RPM ошибочно названа подтверждённой физической реакцией.
+src/platform/common/FanMaximum.cpp:11–34: beforeRpm записывается, settled
+проверяет последние4 положительных RPM на30й секунде с разбросом<=3%/100RPM.
+Рост/изменение от baseline и достижение максимума эта проверка не устанавливает.
+src/devices/mechrevo/gm6ir0c/ControlWindows.cpp:277–278,230: settled+restored
+делает fanResponseConfirmed=true, далее интерфейс говорит «реакция ... подтверждена».
+Плато2500RPM при игнорируемом Boost пройдёт ту же проверку, что Max6000RPM.
+OEM MyFanManager_RamFan1p5.decompiled.cs:2616–2622 — лишь команда751.6;
+all-active/02000285-MyControlCenter.FanInfo.cs:21–42 — отдельная тахометрия.
+Последствие: ложная уверенность в аппаратном исполнении/полноте калибровки.
+Предложение: разнести commandReadback,stablePlateau,observedResponse,maxKnown.
+Не требовать роста всегда: baseline уже мог быть Max. Если реакции не отличить
+от исходного состояния, отмечать неизвестно/уже Max, а не physical confirmed.
+Это дефект диагностики уверенности; небезопасность самого masked Boost setter
+данной находкой НЕ доказана.
+
+[P2 GM6-02] Потеря сохранённого Intel Manual черновика может скрываться успехом.
+src/gui/windows/SettingsPage.cpp:457: после setPower открывается с trunc
+gm6ir0c-power.txt, запись в ofstream не проверяется, финализация тоже;
+исключения stream не включены. При запрете записи/полном диске/обрыве
+старый файл может остаться пустым/частичным, UI сообщает успешную операцию.
+Чтение на следующем запуске SettingsPage.cpp:294 не восстанавливает эти числа.
+OEM MyFanManager_RamFan1p5.decompiled.cs:2655–2668 подтверждает только запись
+PL1/PL2/PL4 в EC; долговечность нашего локального txt — отдельная обязанность,
+такого txt/ABI в OEM нет. Ошибка относится к приложению, не к доказанному PL.
+Предложение: общий атомарный проверяемый writer (образец PortableSettings.cpp:40–57),
+явная ошибка «применено, но не сохранено»; не сообщать firmware failure,
+если фактический set/readback был успешен. Не менять внешний вид карточки.
+
+[P3 GM6-03, shared monitoring] Источник основного SSD показания неверно меняется
+на NVMe SMART в диагностике, даже когда значение взято из Storage property.
+src/platform/windows/MonitoringWindows.cpp:425 запоминает property temperature.
+При diagnostic=true SMART дополнительно запрашивается;450 не заменяет имеющееся
+число, но451 безусловно меняет item.source на NVMe SMART при любом item.celsius.
+Достаточно разных успешных property/composite значений, чтобы число и источник
+в базовом поле разошлись. Даже invalid composite не мешает такой подмене source.
+OEM-сопоставление не применимо: это стандартный Windows/NVMe путь, не EC OEM.
+Последствие: затрудняется разбор именно спорных28/59°C и точного происхождения.
+Предложение: менять source только при присвоении соответствующего значения;
+отдельно сохранять property и SMART readings с именем/индексом/единицами.
+Данный статический дефект НЕ означает, что число59°C ошибочно.
+
+[P2 GAP GM6-04] В dump нет свежего штатного запроса внутренних factory FAN tables.
+Это функциональный пробел относительно запроса владельца, не ложная маркировка
+текущего JSON: существующий ram_note корректно предупреждает об ограничении.
+src/platform/windows/DiagnosticDumpWindows.cpp:26–64,83–100:
+Default снимает commit; снимок показывает текущую RAM, рядом добавляются
+компилированные OEM references из старого архива. Это не текущие factory tables.
+Точный активный OEM уже содержит реальный механизм, не заглушку:
+FanTable_Manager1p5.decompiled.cs:861–880 снимает APExist, запрашивает Gaming2,
+Office3,Turbo1 и возвращает APExist;
+883–916: F5F=mode,F5D=FD,F5E=C9, до10 опросов с500мс,
+готовность когда оба маркера изменились, затем GetEcFanTable.
+Предложение: отдельная явная диагностическая операция строго GM6 под gate,
+OEM ownership guard, сохранением/возвратом APExist и контролем readiness,
+с полным журналом/сырыми ответами. Не запускать этот пишущий handshake из paint,
+обычного polling, preview или под видом полностью read-only snapshot.
+Отказ/timeout должен оставлять factoryTable=null и exact статус.
+Образ EC flash и выдаваемая firmware RAM-таблица — разные артефакты.
+
+4. ГИПОТЕЗЫ И НЕОБХОДИМЫЕ ДАЛЬНЕЙШИЕ ПРОВЕРКИ
+
+- Фильтр NVIDIA использует maximum/enforced/default envelope. Если все три
+  недоступны, исходный590006мВт не отбрасывается только по этому правилу
+  (NvidiaGpu.cpp:181–191,204–211). Это явно видимая граница, но такой набор
+  ответов в нынешнем сеансе GM6 не установлен; отдельно проверить degraded API.
+- Разделить GPU Runtime D3, recent PnP D-state, MUX/OEM policy78B и фактический
+  display routing. Не устанавливать режим GPU на основании одного PnP поля.
+- Прогнать на владельце только после отдельного поручения online/link,85°C
+  защиту, потерю температуры, пробуждение, OEM-конфликт и точный restore.
+  Статическая OEM-карта не доказывает физическое исполнение каждой команды.
+- Измерить зарядный ток/верхнюю и нижнюю границы трех native battery modes.
+  Пока7A6 readback подтверждает выбор firmware policy, не его процент.
+- Температура батареи Win32=1 — реальное ограничение Battery Class в архиве.
+  Не сканировать случайные EC адреса ради похожего числа; нужен exact BMS/OEM путь.
+- Имя GCUBridge не добавлено в blacklist автоматически: артефакт действительно
+  существует, но независимый EC writer GCUBridge без GCUService здесь не доказан.
+  При дальнейшем разборе проверить его полномочия, не выдавать одно имя за баг.
+- Старые research README содержат исторические «не подключено/ещё не проверено».
+  Решения в этом отчёте сверены с кодом0.1.75, а не только с этими формулировками.
+
+5. PORTABLE / WINDOWS И LINUX
+
+Оба build-version.txt фактически0.1.75. SHA256 рабочих EXE/ELF совпадают
+с build/windows/bin/Release/MagicControl.exe и build/linux/bin/MagicControl:
+Windows: 7f55881e552e60200edf9c311d8b81d2c39135f91835c5b2f8bd601c9cd43cb4
+Linux:   431364267fd36bc1693e2c4dc5379197659fca76ec762d888504f8ef614e07c2
+В рабочем windows/PawnIO находятся IntelMSR.bin,SmbusI801.bin,
+IntelPCHThermal.bin,PawnIOLib.dll и остальные обязательные модули/лицензии.
+cmake/PawnIORuntime.cmake проверяет presence и pinned hashes; stager копирует
+весь этот список. Хэши исходных Intel modules сверены:
+IntelMSR d6ed85d65ab17a22f813ef98207d6d537155ee2ded5976a21cb48413c9b92e5f
+SmbusI801 a0f7d066e7efda28c0e754c1f52dbd8dc280d388ba8575b514a80cb67490530c
+IntelPCHThermal 478500ae78aebef3ae7a0b5fe4848d2d5737e8f7c5d51200c284a61c21d7865d
+Установленный OEM SYS и ControlLib/NVML/NVAPI остаются системными зависимостями;
+portable не устанавливался/не запускался в рамках ревизии.
+SettingsPage обеих ОС использует общие BatteryPolicy/geometry; Linux native
+battery/FAN/PL/EC-RGB setters GM6 не включены без подтверждённого транспорта.
+Сам факт общей версии и наличия файла не объявляется runtime/hardware тестом.
+
+ИТОГ
+Выявлены3 P2 дефекта (уверенность Max; непроверенное сохранение PL;
+побочное переприменение FANs из SETs — дополнение ниже),1 shared P3 дефект
+provenance SSD и1 P2 функциональный пробел factory table dump.
+P1 по прочитанным путям не заявляется. Неподтверждённое физическое поведение
+перечислено отдельно и не подменяет реальные дефекты исходников.
+
+6. ПЕРЕКРЁСТНОЕ ДОПОЛНЕНИЕ: SETs CPU ПРЕСЕТ ПЕРЕПРИМЕНЯЕТ FANs
+
+[P2 GM6-05 / common X1] Подтверждён прямой побочный эффект SETs на FANs.
+Независимая проверка после чтения common.txt:X1:
+src/gui/windows/SettingsPage.cpp:824 — карточка «Производительность Intel CPU»;
+1357–1358 — writePerformance непосредственно вызывает gm6Controller->setMode;
+src/devices/mechrevo/gm6ir0c/ControlWindows.cpp:281–290:
+  stopOnline(); putTables(factoryCurves[mode],false); custom/light=0;
+  mode751; Intel overrides=0; RAM commit=1.
+putTables (59–74) переписывает FAN RAM и respective. Это не только смена CPU PL:
+Manual online прекращается, пользовательская RAM-кривая заменяется OEM reference,
+а раздельное управление принудительно меняется на совместное.
+
+Родной OEM действительно так связывает whole-system profile с FANs:
+MyFanManager_RamFan1p5.decompiled.cs:825–843 выбирает default/custom fan table;
+2537–2604 меняет native mode/custom/light. Поэтому низкоуровневая последовательность
+не объявляется случайным переносом X5 регистров или выдуманным OEM поведением.
+Но это самостоятельный вопрос от разрешённого поведения нашей CPU-карточки.
+
+В репозитории есть противоречащая контрактная документация:
+- AGENTS.md:108–110 прямо запрещает запись вентиляторных таблиц из SETs,
+  называет это согласованным пользовательским поведением, без исключения GM6.
+- src/devices/mechrevo/gm6ir0c/README.md:71–75 прямо описывает GM6 SETs как
+  полноценный OEM режим, связанный с FANs; POWER_MODES.md:3–6 ссылается туда.
+  Это описание существующей реализации/аппаратной семантики, но в доступном
+  контексте нет прямого пользовательского разрешения отменить общее правило.
+- FAN_MODES.md основной запрет адресно описывает Wujie; его конкретные регистры
+  и реализацию нельзя автоматически перенести на GM6. Данный вывод опирается
+  на общий AGENTS.md и фактическую связь вызовов, а не на перенос карты Wujie.
+- Требование владельца о Wujie как внешнем эталоне само по себе касается UI;
+  оно не доказывает согласованное исключение для изменения FANs из CPU-карточки.
+
+Вывод: X1 подтверждён как контрактная ошибка приложения и противоречие docs,
+а не опровергнут совпадением с OEM. Предыдущий раздел2.3 описывал реализацию,
+но не означал, что связанное whole-system действие согласовано владельцем.
+Физическая неподтверждённость не нужна для этого вывода: stopOnline и RAM writes
+видны прямо в исходниках.
+
+Предлагаемое направление (в этой ревизии не выполнялось): отделить CPU-only
+API/подтверждённые параметры PL от комплексного OEM setMode и сохранить FANs,
+online intent и actual-state. Не обещать независимый native preset, если его
+исполнение ещё не доказано, и не заменять его молча догадкой по мощности.
+Согласовать противоречивые README/контракты. Внешний вид, порядок карточек,
+геометрия и скролл Wujie должны остаться неизменными.
+
+7. УТОЧНЕНИЕ СОСТАВА OEM-ДРАЙВЕРОВ ДЛЯ ПОСТАВКИ
+
+Дополнительная read-only проверка ZIP19.10.2026, без извлечения/установки.
+Архив: build/research-gm6ir0c/Mechrevo-Research-GM6IR0C-20261017-215647.zip.
+В нём присутствуют ДВА РАЗНЫХ ПОЛНЫХ пакета, а не только один raw SYS.
+
+7.1 Актуальный для подтверждённой установленной версии GM6 пакет:
+Архивный путь после верхней папки Mechrevo-Research-GM6IR0C-20261017-215647/:
+files/ProgramFiles-OEM/Mechrevo Control Center/UWACPIDriver/
+INF DriverVer=10/28/2025,10.48.11.331; HWID ACPI\INOU0000.
+  UWACPIDriver.sys 46352 байта
+    SHA256 6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235
+  UWACPIDriver.inf 2034 байта
+    SHA256 ed17fb99b0d9fab6eb116a603ea34a42b8aa38e1978f128c826f8856b13f5e8e
+  uwacpidriver.cat 11342 байта
+    SHA256 27a8c480c1d9cdaa1ce5c4c8c9963c9df519061ce1476e398e8f6cdab2bacf6b
+Все три файла побайтово совпадают с src/platform/windows/runtime/Uniwill/.
+Фактическое имя runtime-каталога — Uniwill, не Uniwill10.48.11.331.
+Также проверен вложенный OEM distribution ZIP:
+files/ProgramFiles-OEM/Mechrevo Control Center/ZipFiles/UWACPIDriver.zip.
+Он содержит тот же SYS/INF/CAT с теми же тремя хэшами. Это дополнительное
+независимое подтверждение происхождения complete package из exact OEM набора,
+помимо текущего PROVENANCE.json, который указывает первоначальный DriverStore.
+Исторический способ копирования в репозиторий по совпадению байтов не переименовывается.
+
+Архивный drivers/pnputil-enum-drivers.txt содержит:
+  Published Name oem179.inf; Original Name uwacpidriver.inf; Provider Uniwill;
+  Driver Version 10/28/2025 10.48.11.331;
+  Signer Microsoft Windows Hardware Compatibility Publisher.
+samples/report.json:105–111 подтверждает то же для ACPI\INOU0000\0.
+Это доказывает установленную версию/пакет в снимке; отдельный хэш работающего
+системного SYS из этих полей не следует.
+
+7.2 Исторический пакет, соответствующий raw samples/UWACPIDriver.sys:
+files/ProgramFiles-OEM/Control Center/UWACPIDriver/
+INF DriverVer=09/13/2022,17.53.43.609; HWID ACPI\INOU0000.
+  UWACPIDriver.sys 43776 байт
+    SHA256 5b4208d762dad4fec1cfc66adcea29dbb3644e917ba77944306c390b90ce2a20
+  UWACPIDriver.inf 2034 байта
+    SHA256 e3fc062eb4ca1e425fb01f2ef77cae8826e070d4c5c291431d846b1cc804349d
+  uwacpidriver.cat 11286 байт
+    SHA256 861344669e9cdc481b26c02c37aff04b828b41415d3ec6bf9ead05aa9dc779c4
+Сам по себе samples/UWACPIDriver.sys — не инсталляционный пакет. Но в исходном
+архиве его полный INF/CAT комплект найден; называть его «неизвестной версии»
+после этой проверки уже неверно. Ветви17.53 и10.48 не сравнивать как линейный
+счётчик новизны: даты INF у них2022 и2025 соответственно.
+
+Для метаданных штатной GM6 поставки указывать complete10.48.11.331 и его
+SYS/INF/CAT без подмешивания файлов17.53.43.609. Если исторический пакет
+сохраняется отдельно, маркировать его точной версией/датой/происхождением,
+не как одновременно устанавливаемый второй драйвер на тот же HWID.
+НаличиеOEM байтов/подписи не является разрешением на публичную перепаковку;
+существующий статус прав в PROVENANCE.json этим исследованием не изменяется.
+MagicControl.rc.in:37–41 включает нынешний complete package/README/provenance
+как ресурсы; embedded-driver-resources.json отдельно фиксирует байты0.1.75.
+Установка, выгрузка, замена или выполнение любого драйвера не производились.

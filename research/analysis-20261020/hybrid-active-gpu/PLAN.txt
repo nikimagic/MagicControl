@@ -1,0 +1,128 @@
+GPU cards / final display-route policy / 2026-10-20
+
+Owner clarification supersedes the initial activity-selection research:
+FANs shows the adapter that outputs the image on the monitor containing its
+window, marked hybrid when the OS confirms available integrated+discrete GPUs.
+It does NOT choose the busiest/foreground-render GPU in this phase. Both GPUs
+may work simultaneously. PDH, D3DKMT statistics, synthetic rendering and MUX
+setters were NOT added. This is source implementation/review, not runtime proof.
+
+Current architecture and fixed cooling boundary
+MonitoringWindows.cpp previously selected NVIDIA whenever hasNvidia; common
+NvidiaGpu.cpp:readNvidiaMonitoring matches the legacy name or sole provider row,
+not OS activity or display route. This remains the existing fixed cooling source.
+GM6 ControlWindows.cpp::temperatures/driveOnline uses that discrete temperature
+for channel2/thermal protection; X5 online uses processors[1] too. Neither was
+replaced with Intel iGPU temperature. CardLoader makes a presentation-only
+projection; its fan RPM/PWM are the supplied physical FanReadout/shared channel2,
+never Intel driver fan data. Graphs keep their existing fixed temperature.
+
+Implemented components
+1. core/include/MagicControl/GpuPresentation.h:
+   GpuCardReading = exact adapter instance + independently sourced values.
+   GpuDisplayRoute = GDI device/DRM connector, source adapterId, targetAdapterId,
+   source/status/primary. Raw GpuProviderReading retains original provider handle
+   and timestamp separately from selected display data. GpuPresentationSnapshot
+   has cards/routes/rawReadings/default selectedAdapterId/selectionReason/status,
+   hybridAvailable and initialized. No tuner receives a display adapterId.
+2. gui/common/gpu/{IntelCard,NvidiaCard,AmdCard}.h each owns its vendor data
+   projection; CardLoader selects it through the common ProcessorCard model.
+   GPU card geometry/fonts/palette/renderer/scrollbar are unchanged. Shared
+   MonitoringCards delegates channel1 only; CPU Intel PCH/Package/source remains
+   the root-approved branch. Existing Wujie APU/NPU secondary rows are preserved.
+3. ui::processorCard(..., const std::string& displayDevice={}) accepts a copied
+   GUI monitor selector. Windows passes MONITORINFOEX.szDevice; GTK passes GDK
+   connector. No GUI objects are read by monitoring/vendor worker threads.
+4. Windows GpuDisplayRoutesWindows.cpp maps active QueryDisplayConfig source
+   LUIDs through DisplayConfigGetDeviceInfo(GDI name). Default follows the actual
+   primary GDI display. Identical clone paths collapse; ambiguous mappings are
+   refused. Attached DXGI outputs provide a qualified fallback when QDC is empty
+   or unavailable; adapter0/high-performance preferences are never fallback.
+5. Linux MonitoringLinux::displayRoutes maps connected+enabled DRM connectors
+   to an exact canonical PCI ancestor. GDK connector picks the matching card.
+   Without a GUI hint only a single active route can be the qualified default;
+   multiple active monitors with unknown compositor-primary remain unknown.
+   boot_vga is not used as a current desktop route. WSL route stays unavailable.
+6. Provider data binds via exact OS adapterId/LUID, or unique full PCI location
+   with segment qualification. Names do not bind providers. Windows lacks PCI
+   segment metadata, so NVML segment0 plus a unique present physical devnode and
+   bus/device/function is required; other/ambiguous locations stay unbound.
+   Memory comes only from the selected adapter/provider. Intel uses dedicated
+   OS capacity, not another NVIDIA card's VRAM or shared-memory-as-VRAM.
+
+Latency isolation / no extra control polling
+MonitoringReader(access, diagnostic, collectGpuPresentation=false) defaults off.
+Only both GUI FansPages opt in true (Wujie agent integration). General cooling
+and existing diagnostic readers retain their original source path; the new
+Intel/Radeon/catalog/route collection is not run there. FastDiagnosticSource
+already reads all vendor adapters separately and is not duplicated here.
+The allowed readNvidiaMonitoring(readings,sample) overload lets GUI reuse ONE
+NVML poll for the unchanged fixed cooling sample and its display catalog.
+The reader overload wrapper retains previous behavior for other callers.
+Presentation provider timestamps start before the poll; older-than10s numeric
+rows are not promoted. Late GUI age checking does not extend cooling sample age.
+No generic promise is made that NVML/IGCL/driver metadata reads never wake dGPU.
+
+Validity / identity / power
+initialized=false preserves legacy/preview output only. A real initialized
+catalog with an unknown route displays unknown values, not the old NVIDIA row.
+LUID changes/removal are observed through fresh enumeration, without joining
+different adapters by name. A same-name multi-GPU configuration remains separate.
+Intel display power is intentionally null: legacy IGCL gpu/card-energy readings
+may correlate with CPU Package; raw evidence is retained, not relabelled iGPU W.
+Root's CPU Package display still includes whatever its real package domain
+contains. NVIDIA590006mW filtering/source status was not changed; unavailable
+is not converted to zero. iGPU missing temperature/usage stays unavailable.
+Hybrid badge describes OS integrated+discrete inventory, not a proven current
+BIOS MUX/Advanced Optimus state. Source/target LUID mismatch is retained as such.
+
+Official primary references checked20.10.2026
+
+Display/source identity:
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-querydisplayconfig
+https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-displayconfig_path_target_info
+https://learn.microsoft.com/en-us/windows/win32/api/dxgi/ns-dxgi-dxgi_adapter_desc
+https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_6/nf-dxgi1_6-idxgifactory6-enumadapterbygpupreference
+QDC exposes display paths and adapter IDs. DXGI preference orders adapters for
+device creation; it does not identify another application's current rendering.
+Adapter LUID is the current instance identity, not a permanent hardware serial.
+
+Memory scope:
+https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_4/nf-dxgi1_4-idxgiadapter3-queryvideomemoryinfo
+QueryVideoMemoryInfo usage/budget is for the calling process. Existing
+GraphicsAdapters processLocalUsageBytes must not become whole-device VRAM used.
+
+Activity research retained for a LATER explicit policy change:
+https://devblogs.microsoft.com/directx/gpus-in-the-task-manager/
+Microsoft describes per-GPU VidSch/VidMm data with WDDM2+, and busiest-engine
+headline utilization rather than adding independent engine percentages. It
+does not mean one GPU is globally the only active GPU.
+https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhaddenglishcounterw
+https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhgetformattedcounterarrayw
+https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhcollectquerydata
+Documented PDH has language-neutral paths, wildcard arrays, two-sample rate
+requirements and per-counter status. Missing/invalid counters are not idle0.
+No PDH source was implemented after the owner's display-route clarification.
+https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtquerystatistics
+This API is documented reserved for system use; no private-layout fallback added.
+
+Optional modern DXCore activity reference, not used for current selection:
+https://learn.microsoft.com/en-us/windows/win32/api/dxcore_interface/ne-dxcore_interface-dxcoreadapterstate
+https://learn.microsoft.com/en-us/windows/win32/api/dxcore_interface/ne-dxcore_interface-dxcoreadapterproperty
+https://learn.microsoft.com/en-us/windows/win32/dxcore/dxcore_interface/nf-dxcore_interface-idxcoreadapter-querystate
+https://learn.microsoft.com/en-us/windows/win32/dxcore/dxcore_interface/nf-dxcore_interface-idxcoreadapter-isquerystatesupported
+The APIs describe engine time/count, per-process time and runtime support tests.
+SDK10.0.26100.0 dxcore_interface.h already contains these typed structs. New
+enum availability still requires runtime probing; documentation has prerelease
+qualifications. It cannot be assumed from the general DXCore minimum OS version.
+The local SDK per-process input is uint32 processId; do not guess layout from
+prose that describes a process handle. No such activity ABI was invoked here.
+
+Remaining practical checks (not executed)
+Root builds/stages both OS packages and performs its permitted static checks.
+On real hybrid hardware compare internal/external monitor routes, window moves,
+cloning/MST, remote desktop/permissions, GPU reset and suspend/resume. Confirm
+Intel card lacks borrowed NVIDIA VRAM/power, while channel2 graph/control still
+uses the exact discrete/shared cooling source. Vendor calls can be slow or wake
+a GPU; this implementation neither changes driver power policy nor manufactures
+a render workload. No tests/GUI/hardware/build/commit ran in this subtask.

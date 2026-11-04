@@ -1,0 +1,4 @@
+From: 00d6a794 To: 007db86d Type: INDIRECTION Op: 0 ANALYSIS null
+From: 01021db4 To: 007db86d Type: DATA Op: 0 ANALYSIS null
+From: 011038c3 To: 007db86d Type: DATA Op: 0 ANALYSIS null
+From: 00406529 To: 007db86d Type: PARAM Op: 1 ANALYSIS entry

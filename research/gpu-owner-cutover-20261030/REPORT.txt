@@ -1,0 +1,93 @@
+GPU R4 и зависимости служебных моделей,30.10.2026
+База015eca69 /0.1.403. Финальный продукт0.1.405 (checkpoint0.1.404); сборка/portable
+и SHA-256 записываются после завершения в VERIFICATION.json.
+
+Один путь команды GPU
+GUI Win32/GTK -> GpuOperations.submit -> общий admit -> ResourceWorker Runtime
+-> executeGpuOperation -> applyGpuPowerResource -> прежний DiscreteGpu provider
+-> его native range/identity/readback -> общий результат -> GpuOperations.take.
+CLI -> executeGpuOperation (с его уже полученным DeviceOperation reservation)
+-> тот же provider/readback/result. CLI больше не вызывает setter напрямую.
+
+Typed GpuOperationRequest: Read / SetPower / ResetPower, исходный providerId,
+native value. Context: audit ID, view-only, immutable preview rows, reservation.
+До обращения к provider для записи проверяются preview, непустая identity,
+наличие значения и владение общим gate. Чужая reservation отбрасывается;
+занятый gate не вызывает provider вообще. Асинхронный путь резервирует gate
+перед постановкой в pool и удерживает до принятия результата/закрытия модели.
+CLI передаёт свою reservation, не пытается захватить gate повторно.
+
+GpuOperations владеет provider, core ResourceWorker lane, pending result,
+display cache и состоянием busy/applying. Два фронтенда не содержат native
+thread/mutex/result-buffer. Они передают snapshot preview только с UI thread;
+worker не читает GUI globals и не вызывает виджеты. Win32 readiness — PostMessage;
+GTK — idle с прежним life guard. Shutdown join предшествует уничтожению view.
+Ошибки запуска/worker завершают исходную команду с её providerId; OSD не должен
+зависать из-за потерянной action metadata. Ошибка чтения после setter не остаётся
+успешным результатом. CLI читает тот же результат и сохраняет код ошибки.
+
+Scope для всех моделей
+Сервис не ветвится по названию ноутбука. Действуют существующие DiscreteGpu
+NVIDIA/Radeon backend на обеих ОС, прежние NVML/ADLX/sysfs и их ограничения.
+NVIDIA значения в ваттах, Radeon — существующая native единица провайдера.
+Ни модель каталога, ни raw resource observation не разрешают запись.
+Unknown/неподдержанный backend сохраняет прежний отказ; новый writer не добавлен.
+В гибриде Intel/NVIDIA выбирается исходный control handle NVIDIA, не монитор,
+physicalId, текстовое имя или интегрированная Intel. Graphics/provider код не менялся.
+Windows общий notifier обновляет доступность обеих GPU страниц вместе с SETs/FANs/KEYs;
+GTK сохраняет прежний poll и проверяет gate в availability и при admission.
+
+Устранение обратных зависимостей
+В core/platform/devices/protocols нет include на GUI header. Это не перенос
+renderer в сервис и не compatibility wrapper вокруг старого потока.
+- Windows SettingsCommandModel с распознаванием диапазонов native control IDs
+  удалён. settingsActionSemantics рядом с SettingsAction определяет persistence,
+  quick confirmation, cycle и lighting classification по typed intent.
+  Effect/interval/color edits цикла сохранены как три явных intent, а не
+  случайное совпадение номера кнопки. Worker получает semantics захваченными.
+- Сравнение readback режима напряжения использует явный номер0/1/2; вычитания
+  первого ID кнопок больше нет. Numeric control_id остаётся только audit metadata;
+  внутренние запросы без native control получают0.
+- SettingsNotice и CPU label/button count находятся во frontend. Модель вызывает
+  чистый notice port на UI thread при подготовке действия; worker его не вызывает.
+- BatteryCardView/initial preference decode находятся в core BatteryUiPolicy,
+  GUI только импортирует тот же тип. Код миграции предпочтений перенесён без изменений.
+- Accepted fan projection находится в FanTelemetry и используется model/renderer
+  с одним телом. FAN telemetry audit больше не импортирует MonitoringCards и
+  UI-language formatting; audit числа имеют invariant decimal point.
+- Чистые lighting/fan notice payload builders находятся в core OsdMessage,
+  без OSD renderer/state/KeysPolicy/GUI заголовков. Исторический namespace
+  mc::gui::osd относится к data contract, не к зависимости на widget.
+- UTF8/UTF16 adapter перенесён в platform/windows/TextWindows; старый GUI Text.h
+  удалён, потребители используют OS adapter. Удалённых forwarding headers нет.
+
+Сохранение геометрии и проверка
+SOURCE-OBSERVATIONS.json содержит сравнение с0.1.403: GPU paint/geometry/scroll,
+SETs paint идентичны за исключением квалификации namespace encoding.
+Geometry, ScrollModel, DiscreteGpuCard, theme, Linux Ui.cpp, provider GpuDevice,
+Wujie/GM FAN controllers не изменены. PageMechanics изменён только include/имя
+того же UTF8 adapter; его координаты, шаги и алгоритмы прокрутки не менялись.
+Существующий fixture settings queue адаптирован к typed API; тесты не запускались.
+Приложение, EC/BIOS/VBIOS/vendor утилиты не запускались, аппаратной проверки нет.
+
+Границы результата
+R4 закрывается общим command path/admission и компиляцией, не физическим прогоном.
+Зависимости служебных моделей от GUI header удалены. Осталось5 GUI файлов с
+упоминанием std::thread/jthread: Windows/Linux UpdateWindow, Windows OsdPopup,
+MainWindow.cpp/.h (screen flip). Это отдельный долг, не объявлен global GUI=0.
+Не добавлены IPC daemon, новый polling loop, модельные EC карты или новые capabilities.
+
+Checkpoint0.1.404: обе сборки и portable завершены, четыре SHA-256 сверены.
+Финальная сверка обнаружила отдельную границу battery Automatic/index4: он
+не должен иметь remember Battery как процент. Исправление до финальной выдачи
+следует отдельным коммитом/общим билдом; аппаратный writer не меняется.
+
+Финальное исправление0.1.405: SettingsAction BatteryUpper.value — индекс,
+а не процент. Индексы0..3 соответствуют100/95/85/60; индекс4 Automatic
+остаётся remember Ignore, batteryUpper=false, как в исходном GUI mapping.
+Общий BatteryUiPolicy задаёт границу, локальная копия списка не добавлена.
+Существующий fixture адаптирован на индекс2, а не число85. Тесты не запускались.
+
+Финал:0.1.405 complete, Windows/Linux GUI+CLI verified. Обе рабочие portable
+обновлены; четыре независимых сравнения SHA-256 совпали. Embedded ProductVersion
+Windows GUI/CLI и оба build-version.txt равны0.1.405. Подробности VERIFICATION.json.

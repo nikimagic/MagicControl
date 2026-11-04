@@ -1,0 +1,76 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\AmiAfu\amigendrv64.sys
+
+
+Signature Index: 1
+Hash of file (sha256): A233FD00EC237D25C6049B1F9751E50398B0C3DF5BEA6524FA37BC46079A85E9
+
+Signing Certificate Chain:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Windows Third Party Component CA 2012
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Apr 19 02:58:38 2027
+
+        SHA1 hash: 77A10EBF07542725218CD83A01B521C57BC67F73
+
+
+            Issued to: Microsoft Windows Hardware Compatibility Publisher
+
+            Issued by: Microsoft Windows Third Party Component CA 2012
+
+            Expires:   Wed Feb 18 23:08:09 2026
+
+            SHA1 hash: BA3C7053CDAD447B4C9E15ABAECB26F0291EFB92
+
+
+The signature is timestamped: Wed Aug 20 22:57:28 2025
+
+Timestamp Verified by:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Time-Stamp PCA 2010
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Sep 30 21:32:25 2030
+
+        SHA1 hash: 36056A5662DCADECF82CC14C8B80EC5E0BCC59A6
+
+
+            Issued to: Microsoft Time-Stamp Service
+
+            Issued by: Microsoft Time-Stamp PCA 2010
+
+            Expires:   Wed Apr 22 22:42:44 2026
+
+            SHA1 hash: 4989486909603FDD7FE3672232D327BA449C0BCE
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\AmiAfu\amigendrv64.sys
+
+
+Number of files successfully Verified: 1
+
+Number of warnings: 0
+
+Number of errors: 0
+

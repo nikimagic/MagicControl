@@ -1,0 +1,13 @@
+﻿
+
+CimClassName        : OemWMIMethod
+CimSuperClassName   : 
+CimSuperClass       : 
+CimClassProperties  : {Active, InstanceName}
+CimClassQualifiers  : {Description, dynamic, GUID, locale...}
+CimClassMethods     : {OemWMIfun}
+CimSystemProperties : Microsoft.Management.Infrastructure.CimSystemProperties
+
+
+
+

@@ -1,0 +1,36 @@
+AMI authenticode None 0x00000000
+AMI authenticode 0 0x00000000
+AMI authenticode 1 0x00000000
+AMI driver_whql None 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+AMI driver_whql 0 0x800B0109
+AMI driver_whql 1 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+FPT16 authenticode None 0x00000000
+FPT16 authenticode 0 0x00000000
+FPT16 authenticode 1 0x00000000
+FPT16 driver_whql None 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+FPT16 driver_whql 0 0x800B0109
+FPT16 driver_whql 1 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+FPT19 authenticode None 0x00000000
+FPT19 authenticode 0 0x00000000
+FPT19 authenticode 1 0x00000000
+FPT19 driver_whql None 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+FPT19 driver_whql 0 0x800B0109
+FPT19 driver_whql 1 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+NVFlash1 authenticode None 0x00000000
+NVFlash1 authenticode 0 0x800B010A
+NVFlash1 authenticode 1 0x00000000
+NVFlash1 driver_whql None 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+NVFlash1 driver_whql 0 0x800B0109
+NVFlash1 driver_whql 1 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+NVFlash2 authenticode None 0x00000000
+NVFlash2 authenticode 0 0x800B010A
+NVFlash2 authenticode 1 0x00000000
+NVFlash2 driver_whql None 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+NVFlash2 driver_whql 0 0x800B0109
+NVFlash2 driver_whql 1 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+Insyde authenticode None 0x00000000
+Insyde authenticode 0 0x00000000
+Insyde authenticode 1 0x00000000
+Insyde driver_whql None 0x00000000 Microsoft Windows Hardware Compatibility Publisher
+Insyde driver_whql 0 0x800B0109
+Insyde driver_whql 1 0x00000000 Microsoft Windows Hardware Compatibility Publisher

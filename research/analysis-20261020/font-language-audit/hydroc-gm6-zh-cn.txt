@@ -1,0 +1,194 @@
+MagicControl — HYDROC/GM6 + Simplified Chinese UI audit
+Date: 2026-10-20. Static source audit only. Production/UI/config unchanged.
+Report owner: /root/hydroc. Common loader and Traditional Chinese are separately assigned.
+
+SCOPE AND METHOD
+Read AGENTS.md and docs/LINUX-UI-PARITY.md. Reviewed the complete shared
+Localization.h catalog, Windows localization adapter and relevant GM6/HYDROC
+status-producing paths, shared cards, Windows/Linux SETs/FANs/GPU pages,
+model labels and text measurement paths. Used static literal/catalog inspection;
+no application, GUI, hardware, build, tests or OEM code was run.
+Line numbers below refer to the inspected source snapshot.
+
+CATALOG COVERAGE: CONFIRMED FACTS
+src/gui/common/Localization.h:14–216 has 201 Entry records, each with Russian,
+English, Simplified and Traditional slots. All 201 Russian keys are unique under
+ordinal comparison; all Simplified slots are nonempty. Case variants such as
+Загрузка/загрузка and spelling variants with …/... are separate keys.
+This proves field coverage for the catalog, NOT complete UI localization:
+there is no exhaustive UI-key enum or compile-time lookup requirement.
+translate():219–239 greedily replaces known Russian fragments; unknown parts
+remain literal. Matching is case-sensitive and limited by Cyrillic word boundaries.
+English-only source strings are returned unchanged by :220.
+Simplified entries reviewed use simplified characters (驱动/电池/内存/固件/
+键盘/设置/颜色/转储); no definite traditional-character leakage was found.
+This is a language review, not a glyph-cmap or native-speaker certification.
+
+FINDINGS
+
+[P2] ZH-01 — Battery support/enforcement boundary is not localized for HYDROC/GM6
+src/gui/windows/SettingsPage.cpp:753,1367:
+"Процентные пороги для этой модели пока не подключены."
+"Процентные пороги 100/95/85 для этой модели пока не подтверждены. Штатные профили не являются процентами."
+Neither full sentence has a catalog entry; useful meaning remains Russian.
+The three disabled buttons remain percentages, so the explanation matters.
+Proposed Simplified translations (preserve meaning and disabled state):
+"此型号尚未接入百分比充电阈值控制。"
+"此型号的 100%/95%/85% 充电阈值尚未验证。原厂保护模式不代表这些百分比。"
+NativeBatteryWindows.cpp:165 supplies:
+"Штатный профиль прочитан из EC; процент остановки не установлен" ->
+"已从 EC 读取原厂保护模式；未设置停止充电百分比。"
+"Неизвестная комбинация защиты EC" -> "EC 保护配置未知。"
+SettingsPage.cpp:987–988 exposes native-battery status when not writable;
+NativeBatteryWindows.cpp:117–150 contains ownership/rollback failures also
+missing full translations. Do not translate readback as physical cutoff proof.
+Suggestion: structured status IDs with parameters at the presentation boundary;
+preserve raw backend errors in logs. Confidence high: exact strings absent.
+
+[P2] ZH-02 — GM6 control refusal / online safety / recovery explanations remain mixed
+src/devices/mechrevo/gm6ir0c/ControlWindows.cpp:130–132,218–240,334–361;
+src/gui/windows/FansPage.cpp:813,877–879,904,990;
+src/gui/windows/SettingsPage.cpp:437,460,798–816.
+Examples and exact proposed Simplified wording:
+"GM6IR0C: для Manual online нужны свежие Intel DTS и NVIDIA температуры обоих каналов"
+-> "GM6IR0C：在线手动控制需要 Intel DTS 和 NVIDIA 两个通道的最新温度。"
+"GM6IR0C: недействительная температура; online отменён"
+-> "GM6IR0C：温度无效，已取消在线手动控制。"
+"Управление занято OEM: <owner>. Остановите эту службу перед применением."
+-> "控制正由原厂服务占用：<owner>。请先停止该服务，再应用设置。"
+"Сначала завершите возврат штатного режима через Default."
+-> "请先通过“默认”完成恢复原厂控制。"
+"Аппаратное управление недоступно; локальная кривая не применена."
+-> "硬件控制不可用；本地风扇曲线尚未应用。"
+"Intel overrides подтверждены чтением EC."
+-> "Intel 功率覆盖值已通过 EC 回读确认。"
+"PL4 Double: масштаб этой ревизии ещё не подтверждён; используйте штатные лимиты"
+-> "PL4 Double：此硬件版本的换算比例尚未验证，请使用原厂功率限制。"
+Placeholder owner/IDs/numbers are preserved. Do not silently stop OEM services.
+Restore diagnostics must distinguish unknown/readback/enforcement and external
+ownership. Confidence high on coverage; proposed wording needs normal review.
+
+[P2] ZH-03 — Missing-sensor and Linux transport limitations lack full translations
+src/gui/common/MonitoringCards.h:27–42,65–77,108,143;
+src/gui/windows/FansPage.cpp:1284,1530;
+src/gui/linux/FansPage.cpp:35,98,397,405;
+src/gui/linux/SettingsPage.cpp:31,135,137.
+Entries exist for "Температура недоступна", but NOT the following exact labels:
+"Источник оборотов недоступен" -> "转速数据源不可用"
+"Источник недоступен" -> "数据源不可用"
+"Источник не подключён" -> "尚未接入数据源"
+"датчик EC недоступен" -> "EC 传感器不可用"
+"Нет показаний" -> "无读数"
+"Источник неизвестен" -> "数据源未知"
+"Не установлена" -> "未安装"  (feminine source form is absent)
+"Разрядка" -> "放电"  (only "Разряд" is currently cataloged)
+"Нет дополнительных данных" -> "无其他数据"
+"Intel CPU · Linux EC-транспорт не подключён"
+-> "Intel CPU · 尚未接入 Linux EC 通信接口"
+"Linux-драйвер подсветки ещё не подключён."
+-> "尚未接入 Linux 背光驱动。"
+"Управление вентиляторами недоступно: Linux EC-транспорт не подключён."
+-> "风扇控制不可用：尚未接入 Linux EC 通信接口。"
+"Синхронизация вентиляторов недоступна: Linux EC-транспорт не подключён."
+-> "风扇同步不可用：尚未接入 Linux EC 通信接口。"
+Unavailable must remain unavailable; do not replace missing values with0.
+These are application explanations, not opaque third-party errors requiring
+literal retention. Confidence high.
+
+[P2] ZH-04 — Linux tooltips/dialog titles bypass label-only translation
+src/gui/linux/Ui.cpp:99–113 translates only GtkLabel recursively.
+src/gui/linux/SettingsPage.cpp:159 sets raw Russian color tooltips;
+:178 sets gtk_color_dialog_set_title(dialog,"Выберите цвет");
+:218,223,230 set Russian custom-color/timeout tooltips.
+No corresponding adapter updates tooltip/title properties on language changes.
+Adding catalog entries alone does not fix this route.
+Proposed exact strings:
+"Выберите цвет" -> "选择颜色"
+"Выбрать цвет для предпросмотра" -> "选择预览颜色"
+"Автоматическое выключение подсветки пока недоступно."
+-> "背光自动关闭功能暂不可用。"
+"Настройка таймера EC пока не найдена для этой платы."
+-> "尚未找到此主板的 EC 定时器设置方法。"
+Color tooltip mapping: Белый=白色, Красный=红色, Оранжевый=橙色,
+Жёлтый=黄色, Зелёный=绿色, Голубой=青色 (RGB0/255/255),
+Синий=蓝色, Фиолетовый=紫色.
+Use the same source-preserving translation adapter for tooltip/dialog properties;
+localize on creation and language changes, without recreating cards/scroll.
+Confidence high: inspected route handles labels only. System dialog's own
+standard buttons may follow system locale; do not claim app locale controls them.
+
+[P2] ZH-05 — Desktop Linux OSD notification path bypasses shared localization
+src/gui/linux/OsdService.cpp:124–136 notify() passes next.title/detail directly
+to org.freedesktop.Notifications.Notify. No translate call in this path.
+By comparison src/gui/windows/OsdPopup.cpp:193 uses localizedDrawText and
+Linux in-app canvas text goes through Ui.cpp:74.
+Consequently desktop notifications can remain Russian while the app is Chinese,
+even after the needed catalog entries are added. Translate title/detail at the
+last presentation boundary; retain original event payload/keys and raw logs.
+Confidence high for this path; no desktop notification service was executed.
+
+[P3] ZH-06 — Cycle details and English mode captions are not fully localized
+SettingsPage.cpp:800–816 mixes cataloged "Цикл 6" with absent lowercase words
+"цвет", "каждые", "пауза", "режим", "аппаратная радуга", "пресет EC".
+Case-sensitive matching means existing "Цвет" / "Каждые" entries do not cover
+those dynamic fragments. Prefer full templates:
+"六色循环 · 第 {index}/6 色 · 每 {seconds} 秒切换"
+"六色循环已暂停：等待确认背光状态"
+"当前亮度：{level}/4 · 模式：{mode}"
+"硬件彩虹效果"; "EC 预设 {index}".
+src/gui/linux/FansPage.cpp:394 and Windows FansPage.cpp:303–312 contain
+Default/Manual/Max/Manual\nonline; Linux SettingsPage.cpp:154 uses Manual.
+These have no Russian bytes and translate():220 returns them unchanged.
+If the product policy is a fully Chinese UI, propose captions 默认 / 手动 /
+最大转速 / 在线手动 (last may retain a two-line presentation without redesign).
+Plainly adding English Entry keys will still not work with the current early exit.
+If these English labels are an intentional user-approved product convention,
+keep them and explicitly document that exception; internal enums/files unchanged.
+Confidence high on coverage; caption-policy choice is not a functional defect.
+
+[P3] ZH-07 — Technical wording refinements, not blockers
+Localization.h:38 Веб-камера ->网络摄像头 suggests network/IP camera.
+For a laptop webcam, prefer 摄像头 (or 内置摄像头 only if known internal).
+:46 Мульти ->多色 is broad. For the confirmed native rainbow effect2 in
+KeyboardBacklight.cpp, 彩虹 better explains the action. Apply only to that
+semantic action; do not relabel an unrelated multicolor effect globally.
+:65 Штатное управление EC ->EC 自动控制 adds an assumption about algorithm.
+Prefer EC 固件控制 to preserve "firmware owns control", regardless of its curve.
+:70 OEM hysteresis ->OEM 回差 is understandable engineering Chinese; OEM 滞回
+is a clearer temperature-control convention. This is a consistency suggestion,
+not a proven mistranslation. Keep one term across both tooltips and status text.
+:185 current "EC 读回已确认更改。" is comprehensible; prefer
+"更改已通过 EC 回读确认。" without claiming physical response.
+Clock/CPU/GPU/VRAM/PWM/PL1/PL2/PL4/EC/ACPI/NVMe/SMART/DTS/RAPL/PawnIO,
+API result names, hashes and hardware IDs may appropriately remain Latin.
+No need to invent translated names for HYDROC-16 G2 or GM6IR0C.
+
+FONT/LONG-MODEL OBSERVATIONS — NO CONFIRMED CLIPPING CLAIM
+DeviceHeader.h:15–20 centrally supplies both model labels:
+"MECHREVO · JiguangX GM6IR0C", "Eluktronics · HYDROC-16 G2".
+These are hardware/product identities and should remain byte-for-byte; do not
+translate JiguangX to another model name or shorten HYDROC identification.
+"Unknown" is explicitly the user's chosen display name (LINUX-UI-PARITY.md),
+so retaining English is intentional, not a missing Simplified translation.
+Windows MainWindow.cpp:1734–1743 measures localized status text; SettingsPage
+:612,618,856–857,890 measures translated captions with actual selected font.
+Linux Ui.cpp:62–83 translates before Pango layout and ellipsizes non-wrapped text;
+AboutPanel.cpp:117–145 measures model names/current-language note and uses
+single-line ellipsis, not arbitrary model wrapping. This is good architecture.
+NotoSansSC family is shared in Fonts.h:14–15; Windows Layout.h:35–39 uses it
+when enabled, otherwise Segoe family; Linux Ui.cpp:50–69 uses it when enabled,
+otherwise GTK system family. Generic loader/fallback certification belongs to
+other agent; this report does not claim every glyph fits at all DPI or that all
+system fonts cover Chinese. No actual GUI/measurement/render was run.
+Changing a translation may require checking current-font/DPI measured text;
+keep shared geometry/scrollbar and use measured text/ellipsis as documented.
+
+PRIORITY / BOUNDARY
+No P1 device-command defect found in this static language review.
+First localize complete safety/availability/rollback templates, then properties
+outside ordinary labels, then cycles/mode captions and terminology refinements.
+Full-key or typed-message coverage avoids per-model dictionary forks and mixed
+Russian/Chinese fragments. Raw vendor/Win32/HRESULT/API strings should remain
+available in diagnostics alongside a translated user explanation.
+A static201-entry field check is not proof of complete UI-key coverage, rendering,
+font fallback, desktop OSD behavior or physical hardware capability.

@@ -1,0 +1,3 @@
+563: public const ushort ecBt1Temperature = 1186;
+565: public const ushort ecBt1RSOC = 1195;
+801: public const ushort ADDR_MYFANI_MIN_SPEED = 1950;

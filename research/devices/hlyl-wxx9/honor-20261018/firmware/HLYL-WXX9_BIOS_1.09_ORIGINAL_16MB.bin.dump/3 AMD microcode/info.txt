@@ -1,0 +1,9 @@
+Type: AMD microcode
+Subtype: 
+Base: 6A8900h
+Offset: 6A8900h
+Full size: C80h (3200)
+Body size: C80h (3200)
+Date: 26.05.2020
+CPU signature: 00008601h
+Revision: 08600104h

@@ -1,0 +1,147 @@
+Unknown / общая диагностика — исправления аудита
+Дата: 19.10.2026. Исходный аудит: research/audits/models-20261019/unknown.txt
+Исходники переданы родителю для общей сборки. Этот агент не запускал сборки,
+тесты, GUI/CLI, драйверы, OEM-программы, SSH или аппаратные операции.
+Дизайн/геометрия/renderer/scrollbar карточек Wujie не менялись этим агентом.
+
+U1 — Radeon per-device coverage
+  src/platform/windows/RadeonGpuWindows.cpp
+  Убрано глобальное hasIdentity: успех одного AMD адаптера не скрывает другой.
+  Каждый OS adapter получает отдельный unavailable DXGI fallback, если его
+  identity не покрыта vendor observations. Привязка ADLX/ADL к ОС требует
+  единственного PCI VEN/DEV/SUBSYS совпадения; имена не используются.
+  При неоднозначных одинаковых GPU OS identities сохраняются раздельно; данные
+  iGPU не копируются на dGPU. Независимые ADL и ADLX handles не склеиваются.
+
+U2 — bounded persistent read-only fast providers
+  Новые файлы:
+    src/platform/common/FastDiagnosticWire.h
+    src/platform/windows/DiagnosticWorkerWindows.cpp
+    src/platform/linux/DiagnosticWorkerLinux.cpp
+  Изменены:
+    src/platform/common/DiagnosticDumpInternal.h
+    src/platform/common/DiagnosticDump.cpp
+    src/gui/windows/main.cpp
+    src/gui/linux/main.cpp
+    src/cli/main.cpp
+    src/platform/windows/CMakeLists.txt
+    src/platform/linux/CMakeLists.txt
+
+  Parent recorder выполняет bounded IPC; Monitoring/Storage/Battery/PawnIO/
+  NVML/ADLX/IGCL/PlatformSensors и read-only fan getters живут в отдельном
+  persistent процессе. Экземпляры сохраняются между запросами: RAPL/energy
+  delta не сбрасывается на каждом sample. Fixed early entrypoint работает до
+  GUI/single-instance/preferences; принимает только sample/quit protocol.
+  Нет произвольных SQL/путей/адресов/команд записи в fast IPC.
+
+  Windows: отдельный JobObject с kill-on-close, ограниченный список наследуемых
+  handles, framed pipe, deadline10с на весь проход. Linux: posix_spawn, отдельная
+  process group, Unix socket, MSG_NOSIGNAL/nonblocking parent, poll/deadline.
+  Timeout/cancel прекращает только read-only worker, не fan writer/cleanup.
+  Parent teardown ждёт не более1с; нет TerminateThread или detached reader.
+  Restart limit3 предотвращает бесконечный шторм зависших провайдеров.
+
+  Прогресс передаётся после независимых provider stages: уже полученные rows,
+  vendor JSON и pending provider сохраняются при последующем timeout. Первая
+  IPC операция также bounded, отмена подключена до неё. Конструктор recorder
+  ждёт baseline не более12с; начальный неполный проход отключает Max-пробы.
+  Windows X5 backend wrapper сохраняет identity/transaction semantics, но
+  writable=false и write() всегда throws. Board verification — только чтение.
+  GM6 sampler использует точные getter addresses/ProjectID25/RAM1.5 guards,
+  диагностический read-only транспорт; Gm6Controller/watchdog не создаётся.
+  Unknown не получает EC/HID доступ; HYDROC fan map не заимствуется.
+  Honor diagnostic MonitoringReader вызывает новый pure HWMI readTelemetry()
+  от профильного агента: без I2EC/PNPCFG/backlight configuration-port sessions.
+
+  Slow WMI остаётся в уже изолированном fixed helper с total deadline8с/query.
+  Hardware commands/Max/cleanup остаются у command owner: их нельзя убивать
+  ради timeout телеметрии. Первоначальный raw EC dump остаётся до SensorRecorder.
+
+  Минимальное окно —60000мс между сохранёнными завершёнными provider passes.
+  Timeout/error rows не объявляют выполненную минуту сами по себе. Отдельно
+  записываются elapsed/span всех fast rows, completed provider span/count и
+  failed/partial count в sampling-window.json. Отмена сохраняет partial пакет.
+  Финальные graphics/vendor/battery JSON берутся из worker snapshot, без
+  повторного неограниченного вызова драйвера в command-owner thread.
+  Последующий timeout не стирает последнюю полную snapshot; snapshot_utc и
+  provider_pass_complete обозначают возраст/полноту, ошибки остаются в timeline.
+
+U3 — неизвестный AC, raw status и свежесть
+  src/core/include/MagicControl/Monitoring.h
+  src/platform/windows/MonitoringWindows.cpp
+  src/platform/linux/MonitoringLinux.cpp
+  src/platform/common/DiagnosticDump.cpp
+  onlineKnown отделён от совместимого bool online; JSON online=null при unknown.
+  Новый powerStatus сохраняет ACLineStatus/BatteryFlag/Win32/IOCTL PowerState
+  либо sysfs online/status. В sensors.jsonl online также nullable с raw status.
+  Windows AC известен только для ACLineStatus0/1 либо успешного BatteryStatus.
+  Linux учитывает валидные online0/1, любой1 имеет приоритет; неизвестное неfalse.
+  Timestamp-only изменение не участвует в BatteryReading equality. Изменения
+  родителя stampBatteryReading (заполнение только нулевых timestamps), TTL10с
+  retainBatteryReadings и dynamicStale сохранены. UI-индикацию исправляет root.
+
+U4 — нативные OEM интерфейсы/драйверы
+  src/platform/windows/NativeInterfaceInventoryWindows.h (новый)
+  src/platform/windows/DiagnosticWmiWindows.cpp
+  src/platform/windows/InventoryDetailsWindows.cpp
+  Fixed metadata operation использует существующий isolated WMI wire/helper,
+  hard deadline20с и streamed rows: timeout сохраняет уже полученные записи.
+  SetupAPI собирает System/HIDClass/Keyboard и ACPI device instances:
+  HardwareIDs/CompatibleIDs/Service/Driver key/Enumerator, INF/provider/version.
+  SCM config/status только читается: service state/type/start/ImagePath отдельно.
+  Доступные local driver images получают SHA256 и offline embedded WinVerifyTrust
+  status; ошибки доступа, неподдерживаемые пути и size limits явно сохраняются.
+  Catalog membership/revocation не проверяются; embedded NO_SIGNATURE не
+  объявляется доказательством отсутствия catalog signature.
+  HID: interface path, VID/PID/version, usage page/usage и длины report descriptors.
+  Открытие metadata handle с desiredAccess0; нет GetFeature/SetFeature/WriteFile
+  к HID, service start, установки драйвера или OEM transport selection.
+  PawnIO остаётся отдельным dependencies inspector, не подменяет OEM driver.
+
+U5 — доступность/выделение FANs без backend
+  Изменения общей GUI logic делает root. Этим агентом renderer/контролы/геометрия
+  не изменялись. Загруженный CSV не расширяет аппаратные возможности Unknown.
+
+U6 — provenance SSD
+  src/platform/windows/MonitoringWindows.cpp
+  Принятое значение и source присваиваются вместе. Storage property51/52
+  не переименовывается в SMART после отдельного неудачного/непринятого SMART
+  чтения. Тип шины хранится отдельно от выбранного temperature source.
+  Диагностика по-прежнему сохраняет независимые composite/sensor1..8/raw/status.
+  Не приписывается controller/NAND семантика по величине температуры.
+
+U7 — все системные батареи
+  src/platform/windows/BatteryInterfacesWindows.h (новый общий enumerator)
+  src/platform/windows/InventoryDetailsWindows.cpp
+  src/platform/windows/DiagnosticWmiWindows.cpp
+  src/platform/windows/MonitoringWindows.cpp
+  src/platform/linux/MonitoringLinux.cpp
+  src/platform/common/DiagnosticDump.cpp
+  Windows inventory перечисляет все BATTERY_SYSTEM_BATTERY, исключает short-term
+  UPS, сохраняет стабильный PnP/interface id, serial/unique id/model и metadata
+  отдельной батареи. Enumeration/IOCTL errors и partial states не замалчиваются.
+  Metadata battery operation также bounded20с/streamed в fixed helper.
+  Windows/Linux MonitoringSnapshot.batteries и readBatteries() возвращают каждую
+  системную батарею отдельно; карточка остаётся одной, её primary выбирается явно
+  по устойчивому id. Суммарный PowerStatus обозначен aggregate, не смешивается
+  с physical Battery IOCTL capacity/temperature/health. Linux ids включают sysfs
+  path и доступный serial. battery.json сохраняет совместимые primary fields,
+  primary_device_id и devices[]; sensor rows содержат battery identity.
+
+Смежные согласованные исправления
+  - Windows EC systemPowerCache ограничен10с от последнего успешного getter;
+    пропуск не обновляет timestamp, после expiry значение очищается.
+  - В dump settings добавлен hydroc16g2-device-settings.ini.
+  - В Windows platform CMake по поручению родителя подключён готовый
+    RamFanFactoryWindows.cpp. Сам factory export hook/writes этот агент не
+    добавлял: root интегрирует их после освобождения общего Dumper/header.
+
+Проверка/границы
+  Статически просмотрены entrypoints, fixed opcode/allowlist, callbacks,
+  cancellation до baseline, lifetime/process boundaries, per-device identities,
+  источники/nullable JSON и filelists. git diff --check не сообщил whitespace
+  errors. Это не доказательство компиляции или работы на ноутбуке.
+  Результат общей сборки/portable и аппаратных проверок сообщает родитель.
+  В режиме неустранимого kernel D-state процесс нельзя синхронно гарантированно
+  завершить из user space; parent wait ограничен, OS сохраняет/reaps child,
+  reader не остаётся в уничтоженной памяти родителя. Активные writers не убиваются.

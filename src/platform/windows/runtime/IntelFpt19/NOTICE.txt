@@ -1,0 +1,18 @@
+Intel Flash Programming Tool 19.0.5.1948
+Copyright Intel Corporation. All rights remain with their respective owners.
+
+Original unmodified FPTW64_8102.exe from the official Colorful iGameCenter2.0.0.82:
+https://www.colorful.cn/igamecenter/
+https://download.colorful.cn/iGameCenter/iGameCenter-2.0.0.82-2026.09.12-Installer_Prod.exe
+PROVENANCE.json records exact hashes and the original member/resource path.
+This is an attribution/provenance record, not a redistribution license grant.
+The Intel/OEM software terms continue to apply.
+
+MagicControl admits only the actual HYDROC/YAOSHI Ultra9 275HX configurations
+with a reviewed LPC ID, and exposes only fixed -I and whole-flash -d reads.
+No firmware payload, OEM installation/flash script, unlock or reset is included.
+driver-reference.bin is an unchanged signed PE resource (version2508.0.23.0)
+kept for offline signature validation, not installed separately by our code.
+The vendor tool manages its own driver only after conflict checks.
+Both files are embedded in the Windows EXE and extracted into the existing
+protected offline runtime cache on an explicit BIOS capture request.

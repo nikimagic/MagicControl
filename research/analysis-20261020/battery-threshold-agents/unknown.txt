@@ -1,0 +1,190 @@
+Unknown — общий процентный battery backend: исследование
+Дата: 20.10.2026. Исходная portable Windows:0.1.86; revision по поручению:237e520.
+Исследование: только исходники проекта/официальные спецификации и SDK.
+Production/UI/scroll/INI не менялись. Программы, тесты, драйверы, службы, SSH,
+OEM, EC/UEFI/SMU, сборки/коммиты не запускались. Интеграция — только root.
+
+Вывод
+1. Для Unknown на Linux есть пригодный model-neutral ABI: конкретная системная
+   батарея экспортирует charge_control_start_threshold и end_threshold.
+   Требуемый контракт: restart=80, stop=100/95/85. Это не поддержка всех моделей:
+   capability определяется нативным kernel interface и реальными ответами.
+2. Среди проверенных общих Windows контрактов процентная пара не установлена.
+   Проверены Battery Class query/set/status, новый SDK с charger/source fields,
+   WinRT Battery, power policy и ACPI BCL. Наличие OEM extension возможно;
+   отрицательный вывод относится к рассмотренным API, не ко всем драйверам мира.
+3. Зарядная команда, ограничение тока, критический уровень/уведомление и native
+   режим защиты — разные возможности. Ни одна сама не означает stop95/restart80.
+4. Readback80/95 подтверждает принятую конфигурацию; остановку тока и возобновление
+   при80 нужно отдельно наблюдать. Сборка, драйвер и enum mode этого не доказывают.
+
+Матрица интерфейсов
+
+W1. Windows Battery Class telemetry
+  Обнаружение: GUID_DEVICE_BATTERY/SetupAPI, действительный battery tag,
+  BATTERY_SYSTEM_BATTERY; short-term UPS отдельно. Получение информации,
+  статуса/ёмкости/Rate/Voltage/temperature поддерживается по ответам драйвера.
+  Capability percentage pair: не определена этими query/status структурами.
+  Setter pair/readback pair: нет полей такой пары в рассмотренном контракте.
+  BATTERY_WAIT_STATUS.LowCapacity/HighCapacity задают критерии ожидания status,
+  не пороги зарядного контроллера. Источники S1,S3,S5,S6.
+
+W2. Windows IOCTL_BATTERY_SET_INFORMATION
+  Документированы BatteryCharge/BatteryDischarge: пожелание заряжать/разряжать
+  конкретную батарею сейчас, payload процента игнорируется. Для них есть отдельные
+  capability bits BATTERY_SET_CHARGE_SUPPORTED/DISCHARGE_SUPPORTED.
+  BatteryCriticalBias — maintenance critical bias, не stop/restart SOC.
+  Write handle/access и успешный IOCTL не добавляют отсутствующий процентный API.
+  Нет documented percentage pair getter, с которым подтвердить80/95. S2,S4.
+
+W3. Более полный современный Windows SDK
+  Проверен локальный SDK10.0.26100.0/shared/poclass.h:127–135,147–165,182–189,
+  208–284,391–441 и публичный Microsoft mirror S6.
+  SET enum шире старой Learn-таблицы: также BatteryChargingSource, BatteryChargerId,
+  BatteryChargerStatus. Их структуры описывают source type, MaxCurrent, USB power/
+  port/OEM charger metadata; это не две SOC границы. SOURCE_CHANGE — notification.
+  Customized I/O имеет FunctionId/Value и capability masks, но единая семантика
+  SOC80/95 ими не задана: нужен отдельный документированный extension protocol.
+  Поэтому нельзя обосновывать вывод о Windows только старыми тремя SET levels.
+  S6 и локальные заголовки Microsoft, без вызова функций.
+
+W4. WinRT Battery / Windows battery policy
+  Windows.Devices.Power.Battery перечисляет controllers и возвращает BatteryReport;
+  reviewed public members не задают SOC pair. Low/critical/reserve/energy-saver
+  thresholds power policy относятся к действиям/индикации при разряде.
+  Нельзя переиспользовать их как protection stop/restart. S7,S8.
+  Вывод: generic Windows percentage backend остаётся unavailable, пока конкретный
+  нативный интерфейс не предъявит подтверждённый setter/getter именно SOC pair.
+
+A1. ACPI charge limiting / maintenance
+  ACPI6.6 §3.9.6: _BST.BatteryState.bit3 обозначает BCL active; реальные charging/
+  discharging bits0/1 продолжают сообщать факт. При bit3=1 и0/1=0 — steady state;
+  bit3 сам не сообщает численный stop или restart. S9.
+  §10.2.2.5–6: _BMC управляет calibration, disable charging, разрешением discharge
+  на AC и temporary BCL suspension; _BMD сообщает capabilities/status.
+  Процентной пары аргументов у _BMC нет. _BTH и Windows thermal _DSM задают долю
+  зарядного тока/скорости; _BTP — trip notification; _BCT — оценку времени. S10,S11.
+  Не вызывать их как запасной percentage setter или для обхода battery/thermal
+  protection. Процедуры могут воздействовать сразу на все батареи.
+
+  Внимание к namespace bits: _BST bit3 = BCL, но BATTERY_STATUS.PowerState0x8
+  на Windows = BATTERY_CRITICAL. Это разные контракты, бит копировать нельзя.
+  batclass.h имеет отдельный miniport→class BatteryChargeLimitState notification;
+  это признак состояния, не публичный percentage setter. S5,S6,S12.
+
+  Редакционная неоднозначность ACPI6.6: prose _BMC bit3 ссылается на _BMD
+  Capability bit6, тогда как таблица _BMD указывает suspension support bit5,
+  bits31:6 reserved. Не исправлять это догадкой в writer; нужна подтверждённая
+  трактовка/erratum и реализация конкретной платформы. Никаких AML вызовов здесь.
+
+L1. Linux power_supply start/end thresholds
+  ABI: start — SOC ниже которого заряд начинается, end — SOC выше которого
+  прекращается; диапазон0..100. End может округляться к поддерживаемой ступени,
+  фактический порог выясняется чтением после записи. S13.
+  Capability: для каждой Battery supply отдельно; читаемые числовые значения,
+  присутствующие native attributes и фактические права writer. Без определения
+  конкретного OEM register map приложение пишет через штатный kernel driver.
+  Нужны именно80/100,80/95,80/85 в readback; округлённое80/90 не успех80/95.
+  Отсутствующие/read-only attributes не дают полной управляемой пары.
+
+L2. Linux реальные permissions и setters
+  power_supply_sysfs.c:435–456 скрывает неподдержанную property; write bit для
+  владельца выставляется при положительном property_is_writeable. Store вызывает
+  power_supply_set_property и возвращает ошибку драйвера. S14.
+  power_supply_core.c и power_supply.h: наличие writable callback/extension,
+  runtime get/set result и доступ текущего процесса — отдельные факты. S15,S16.
+  Обычно writer root, но mode/ACL/LSM/container/user namespace могут отличаться.
+  Не chmod/chown, не устанавливать модули и не поднимать права молча. fs access
+  лишь предварительная оценка: реальный open/write может отказать позже.
+
+L3. Другие Linux properties
+  charge_control_limit — ток в microamps, не SOC%; capacity_alert_* — trip points.
+  charge_behaviour auto/inhibit-charge/force-discharge — режим поведения,
+  не аппаратная пара процентов. Программный daemon с inhibit по SOC был бы
+  отдельным runtime механизмом и не обещает сохранения после выхода/сна. S13.
+  charge_types/charge_type: Custom предназначен для charge_control_*; если
+  он нужен/предлагается данным драйвером, учитывать его actual readback и права.
+  Не считать наличие поля времени, mode enum или Standard/Adaptive доказательством
+  активной точной пары. Отсутствие дополнительного mode ABI не разрешает угадывать
+  скрытый activate byte; конфигурация и enforcement должны оставаться раздельны.
+
+Предложение выбора backend для Unknown (исследовательский контракт, не код)
+  Идентичность:
+    - OS и фактическая battery supply/interface identity, canonical sysfs device,
+      model/serial где доступны, driver/module binding, physical/aggregate scope.
+    - Без привязки к выбранному preview имени; не переносить право записи на
+      другую батарею после hotplug и не выполнять write-all-BAT*.
+    - Unknown EC/HID и Uniwill/SMBus/UEFI карты не подключать ради процентов.
+
+  Capability evidence:
+    readStart, readEnd; writeStart, writeEnd; rawCurrent; currentMode и knownModeABI;
+    exactRequestedPair/actualPair; provider/driver/source paths; scope/persistence;
+    write/readback errors; requested/saved/accepted/enforcementObserved отдельно.
+    Полный capability 'all presets80/(100,95,85)' нельзя выводить из одной записи.
+
+  Допуск одной кнопки:
+    - Оба native threshold getters должны позволять установить/проверить цель.
+    - Start read-only, но стабильно80: можно менять end, если80 проверяется перед
+      действием/после него; это per-preset доступность, не programmableStart.
+    - Только end с неизвестным restart: partialEndOnly; не заявлять общий контракт.
+    - Есть оба writer: сохранять валидный исходный pair, выбирать порядок записи
+      с промежуточным start<=end, читать оба поля после каждого шага.
+    - Нет atomic pair setter: сериализация приложения не защищает от другого
+      OEM/daemon writer. Перед каждым шагом re-read ожидаемого состояния, при
+      конфликте прекратить, не перезаписывать чужой выбор.
+    - Error/rounding/mode mismatch: target не принят. Ограниченный rollback только
+      пока native state принадлежит попытке, затем отдельный verified/unknown.
+    - Не перебирать 'близкие' проценты и не узнавать поддержку пробными writes при
+      пассивном обнаружении. Первый explicit requested target остаётся проверкой
+      actual acceptance; недоступный exact preset не маскировать другим числом.
+
+  Физическое действие:
+    Конфигурация80/95 не означает немедленный разряд с98% до95%. Не включать
+    force-discharge. Нужны независимые AC/status/current/capacity по той же батарее
+    вокруг stop и повторного старта, затем проверка выхода/suspend/resume/reboot.
+    Gauge rounding/нормализация процентов и thermal/adaptive policy могут менять
+    наблюдение. До такой проверки enforcementObserved/persistence остаются unknown.
+
+Точное состояние нашего кода
+  - Unknown/Profile.cpp:4: пустой EC backend/protocol/caps.
+  - BackendFactoryWindows.cpp:7–14: для неизвестной платы нет verified EC transport.
+  - BatteryInterfacesWindows.h:14–60: сейчас read-only Battery Class enumeration.
+  - LaptopControl.h:14–20,33–38: общие chargeStart/chargeEnd/chargeWritable и typed
+    setter существуют, но фабрика не создаёт модель-нейтральный percentage backend.
+  - HuaweiControlLinux.cpp:21–38,65–68,89–104,127: standard threshold paths уже
+    используются внутри точного HLYL профиля; не вызывать этот класс для Unknown,
+    потому что он также владеет Huawei Fn/lighting/timeout. Выделять общий battery
+    adapter, не копировать весь Huawei controller и не наследовать его special0/0.
+  - BatteryChargeWindows.cpp:37–38,195–201: Wujie пишет restart80 readback, но
+    комментарий фиксирует наблюдаемый restart84 и запрещает обещать physical80
+    без реального цикла. Требование пользователя restart80 — target, не новый
+    доказанный physical факт для всех ноутбуков.
+  - Карточки/100/95/85/геометрия остаются общими, Wujie — визуальный эталон.
+    Backend capabilities меняют только доступность/actual state, не дизайн.
+
+Источники (официальные, просмотрены20.10.2026)
+S1 https://learn.microsoft.com/en-us/windows/win32/power/ioctl-battery-query-information
+S2 https://learn.microsoft.com/en-us/windows/win32/power/battery-set-information-str
+S3 https://learn.microsoft.com/en-us/windows/win32/power/ioctl-battery-query-status
+S4 https://learn.microsoft.com/en-us/windows/win32/power/battery-information-str
+S5 https://learn.microsoft.com/en-us/windows/win32/power/battery-status-str
+S6 https://raw.githubusercontent.com/microsoft/win32metadata/main/generation/WinSDK/RecompiledIdlHeaders/shared/poclass.h
+   Локальная независимая сверка: Windows Kits/10/Include/10.0.26100.0/shared/poclass.h
+S7 https://learn.microsoft.com/en-us/uwp/api/windows.devices.power.battery?view=winrt-26100
+S8 https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/battery-settings
+S9 https://uefi.org/specs/ACPI/6.6/03_ACPI_Concepts.html#battery-charge-limiting
+S10 https://uefi.org/specs/ACPI/6.6/10_Power_Source_and_Power_Meter_Devices.html
+S11 https://learn.microsoft.com/en-us/windows-hardware/design/component-guidelines/acpi-battery-and-power-subsystem-firmware-implementation
+S12 https://raw.githubusercontent.com/microsoft/win32metadata/main/generation/WinSDK/RecompiledIdlHeaders/shared/batclass.h
+    https://learn.microsoft.com/en-us/windows/win32/api/batclass/nf-batclass-batteryclassupdatedata
+S13 https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-power
+S14 https://raw.githubusercontent.com/torvalds/linux/master/drivers/power/supply/power_supply_sysfs.c
+S15 https://raw.githubusercontent.com/torvalds/linux/master/drivers/power/supply/power_supply_core.c
+S16 https://raw.githubusercontent.com/torvalds/linux/master/include/linux/power_supply.h
+S17 https://raw.githubusercontent.com/torvalds/linux/master/drivers/acpi/battery.c
+    Generic ACPI state decoding: charge-limited→Not charging, не SOC pair setter.
+
+Версии master URLs не следует считать pinned kernel установленного ноутбука.
+При будущей интеграции фиксировать release/module/driver identity каждой системы.
+Public Windows документы и заголовки достаточны для границ перечисленных API;
+они не доказывают невозможность OEM-драйвера с иным документированным интерфейсом.

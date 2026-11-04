@@ -1,0 +1,55 @@
+Общий код подсветки: статическая проверка корня, baseline5b1f092
+20.10.2026. Hardware/GUI/OEM/тесты/сборки не запускались.
+
+Подтверждено по текущим исходникам
+
+1. src/core/src/KeyboardBacklight.cpp обслуживает только два exact-профиля:
+   Wujie и GM6. model() проверяет профиль/Backlight capability/EC identity;
+   runtime support0x766.bit2 обязателен. Это НЕ универсальный Uniwill writer.
+2. read/apply находятся внутри EcAccess::Transaction. Свежие masked writes
+   используют backend transaction lock. DeviceOperation — локальная сериализация
+   операций приложения, НЕ обещание владения против постороннего OEM-софта.
+   GM6Controller дополнительно проверяет OEM owner перед setter.
+3. Пульсация владеет7C5.bits2:0, не fan respective bit7. Rainbow —767.bit7,
+   RGB strobe —767.bit5, brightness —78C.maskE2 со strobe10. Neighbor USB/lightbar
+   в767 не входят в маску эффекта. Нет fan-table/power writes из этого helper.
+4. Journal выполняет ограниченный rollback только полей, ещё совпадающих с
+   собственной записью. Потерю владения/ошибку пишет в log. Возврат из setter
+   подтверждает RAM fields, не физическую яркость/цвет/исполнение strobe.
+5. KeyboardColorCycle — host jthread,1–3600с, шесть UI RGB цветов. Background
+   DeviceOperation исключает другие операции, не публикуя interactiveBusy:
+   поэтому очередная смена цвета не должна отключать все кнопки интерфейса.
+   В текущей ревизии это проверка источника, не новый визуальный прогон.
+6. expected ownership у цикла проверяет RGB/pulse/rainbow, намеренно не Fn
+   brightness. Внешняя смена RGB/эффекта останавливает цикл при следующем шаге.
+   stop/exit оставляет последний статический цвет. Startup autoplay отсутствует.
+7. SettingsPage destructor присоединяет action worker, затем уничтожает cycle.
+   Не найден отдельный explicit suspend/resume hook цикла. Wujie restore и
+   adapter indication используют тот же DeviceOperation, но меняют RGB/эффекты:
+   цикл может остановиться как при внешнем изменении. Это ограничение lifecycle,
+   не доказанная порча аппаратного состояния. Нужна единая явная политика pause/
+   resume/indication, без старого fan/APU snapshot и без новых model renderers.
+8. Wujie auto-off поле намеренно disabled: текущий код не выдает host timer за
+   сохраняющуюся после выхода настройку EC. Cycle interval и idle timeout —
+   разные механизмы. Родной host timeout не доказывает аппаратный EC timeout.
+9. NativeMode сейчас явный preset: Wujie brightness4+mono+cyan; GM6 brightness4+
+   mono+factory RGB76C–76E. Это не отдача ownership обратно OEM/firmware и не
+   восстановление всего исходного снимка. Не описывать кнопку иначе.
+10. Linux SETs пока не вызывает общий EC RGB core; выбор custom color там
+    обозначен как preview. Реальный Huawei sysfs backend отдельно.
+
+Пробелы диагностического контракта
+
+Полный EC RAM и настройки keyboard-cycle/device-settings копируются в дамп,
+но нет общей типизированной временной шкалы keyboard state/selected-vs-effective/
+writer owner. Read-only HID descriptor inventory УЖЕ реализован в
+NativeInterfaceInventoryWindows.h и включен в InventoryDetailsWindows.cpp:241:
+access0, Attributes/PreparsedData/Caps, UsagePage/Usage/report lengths; без
+Feature/Output reports. Старый HYDROC dump не содержит этой новой секции.
+Повторный штатный дамп нужен прежде нового extractor; наличие EC RAM само по
+себе не заменяет HID инвентаризацию. Самопроизвольный PWM0 не обязательно
+означает selected level0. Отдельный protocol getter80/88 — уже новый шаг,
+не descriptor read: нужны exact HID admission и отдельный reviewed backend.
+
+Модельные детали, дефекты и первичные ссылки — в пяти отдельных отчетах.
+Здесь записаны только проверенные свойства общего core/UI lifecycle.

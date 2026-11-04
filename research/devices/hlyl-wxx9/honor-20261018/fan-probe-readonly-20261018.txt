@@ -1,0 +1,3 @@
+CPU=46C RPM=0/0
+BEFORE flags=00 period=200 duty0=0 duty1=0 target0=0 target1=0
+READ ONLY. No fan target/flag writes.

@@ -1,0 +1,43 @@
+SETs/FANs encapsulation,31.10.2026
+Baseline2bda990c, existing product420. Scope: four application models and native
+view bindings, all existing model families/Windows+Linux, no hardware access.
+
+Checkpoint421: all owner fields private. Frontends use composition, not model
+inheritance; Windows nested pure view ports contain no execution or mutable state.
+Read-only Presentation bindings refer to owner data, with opaque backend presence
+and read queries. No writable state/queue/pending/backend handles exported to GUI;
+no extra snapshot cache. View-local synchronization/last-render flags remain UI.
+Typed draft edits live in owners; HPBSD mandatory point counts/ranges preserved,
+Huawei targets and Wujie/GM edits follow former algorithms. Backend factory pair
+SettingsBackendsWindows.h/.cpp deleted and merged as private static owner methods;
+existing fixture accesses use explicit friendship, not production mutation methods.
+Fixtures adapted but not run. No app/controller/firmware tool/hardware launched.
+
+Source comparison:13paint/layout/scroll/graph methods unchanged after only owner
+call qualification; common geometry/scroll/theme/protocol/controller sources unchanged.
+Evidence SOURCE-OBSERVATIONS.json. All four GUI units are checked by compilation.
+No source controller/writer/codec or curve/preset/period changes in this package.
+
+Common421build completed, portable GUI+CLI for both OS updated; four SHA comparisons
+recorded in VERIFICATION-421.json. Windows EXE lock resolved by user tray exit, never
+force-stopped. Initial private/method/type binding compile errors fixed in same build.
+Final API review calls for two small hardenings before final delivery: move Linux
+monitoring-provider injection to constructor and restrict preview seed, and fold stock
+power optimistic intent into submit rather than exposing a separate choose method.
+This completed-build checkpoint does not claim final package closure; follow-up422.
+
+Final422: Linux monitoring source is a constructor dependency; seedPreviewModels
+only writes vendor/model metadata when preview. No generic published sample/provider
+setter remains on the GTK view path. Stock power optimistic intent is part of typed
+submit, not a separate frontend state transition. Both GUI constructions/read paths
+compile with private owner fields and const view bindings. No backend context/handle
+is returned; queued work and mutable pending observations stay private.
+Two Linux Canvas layout/paint blocks also compare unchanged after owner qualification.
+Native model/controller/protocol bodies and universal input limits are unchanged.
+Validation is compilation/source/integrity only; no app/test/hardware execution.
+Remaining header-weight/naming/private helper cleanup in WORKLIST is a separate task;
+this package closes direct GUI state mutation and backend/queue field access.
+
+Final verification: common422complete; both actual Windows/Linux portable GUI+CLI
+updated and four SHA-256 pairs matched, sidecars/Windows ProductVersion422.
+Local edited-document links resolve. Application/tests/hardware not executed.

@@ -1,0 +1,52 @@
+MagicControl0.1.225 — HPBSD DDR5 integration and explicit SMU validation
+27.10.2026
+
+The shared PawnTelemetryReader uses the existing signed/pinned SMBus module.
+Only exact HPBSD BIOS1.06 AMD19h:75h enables page7 recovery for addresses50/51.
+MR11 is temporarily7->0->7, checked after each selector and after errors,
+under the existing global SMBus mutex. SPD identity/revision/vendor/capability
+are validated, MR49/50 is decoded by the existing common temperature decoder.
+No EEPROM, MR26, thermal thresholds, bus mux/frequency or old laptop protocol
+is written. A restoration failure poisons this reader; other profiles keep
+Module::temperature unchanged. First successful selector trace is logged once
+per hub/module session, explicit audited diagnostics retain their normal trace.
+
+The pure Jedec helper has fault injection at24read/selector points, validates
+the successful38.25C case and refusal without writes for an unknown hub.
+Existing HPBSD3348interrupted-fan-restore cases and GPU presentation checks pass.
+
+ApuPowerReader shares the low-level MP1 transport. The Honor wrapper retains
+its previous arguments, response3B10564, ranges, guards and compensation.
+HPBSD has a separate explicit entry with response3B10578, exact PM4C0009,
+5–65W ordered STAPM/Slow/Fast, bounded ready wait, shared PCI mutex, fresh
+baseline, repeated readback and checked restoration. Only the private internal
+probe invokes it; normal GUI/CLI polling, SETs capabilities and startup/sleep
+restore do not apply new HPBSD power modes. No inherited OEM preset values.
+
+LIVE TEST1 (same production reader and setter success path)
+Baseline54400/60000/65000mW saved before writes.20/25/30W confirmed in PM,
+then54.4/60/65W restored. All47fan-policy bytes unchanged, exit0.
+CPU workload only consumed~14.8W, so that run alone does not prove enforcement.
+
+LIVE TEST2
+Baseline again54400/60000/65000mW.8/10/12W confirmed in PM. With the same CPU
+workload SMU APUpower fell from~14.8W to9.99–10.01W at Slow10W; independent
+package RAPL settled around9.97–10.09W. This confirms short-window enforcement,
+not long STAPM time constants. Factory54.4/60/65W restored; all47fan-policy
+bytes identical; POWER_CYCLE_COMPLETE baseline_verified=true, exit0.
+Memory readings throughout37.5–38.25C/35.75–36.25C, CPU peak41.5C.
+Both live runs observed exact1:1 milliwatts. Final setter removes the unused
+speculative coefficient branches; the successful wire sequence is unchanged.
+No fan/EC policy, BIOS, voltage, thermal setting or app preferences modified.
+Raw stdout/stderr, baseline and logs are in verify-power-memory-20261027 and low.
+Internal probe binaries identify the preceding0.1.224 resource version because
+that explicit test target reused the last completed runtime before Build-All;
+its freshly compiled sources and SHA are retained separately from product225.
+
+COMMON BUILD
+Build-All reserves0.1.225 for Windows/Linux GUI and SSH CLI, stages and verifies
+both working portable trees. A local explicit-file commit closes the build.
+Delivery is a clean Windows package through the existing.magiccontrol-update
+engine (actual spelling:.magiccontrol-update), preserving settings and backup.
+GitHub publication not requested. Activation/version/hash evidence recorded
+separately after installation. Other laptops were not physically retested.

@@ -1,0 +1,56 @@
+HYDROC descriptor candidate helper —20.10.2026
+================================================
+Изменены только новый protocol header, README модели и этот отчёт.
+Production lighting writer, UI/карточки/scrollbar, INI, драйверы и оборудование
+не менялись. Тесты/билды/коммиты/OEM/GUI/CLI не запускались.
+
+Pure header:
+src/protocols/uniwill/hydroc16g2/KeyboardHid.h.
+Вход KeyboardHidDescriptor{vid,pid,revision,usagePage,usage,featureBytes}.
+Выход keyboardHidCandidate(): family/typeProvisional, candidate/keyboard,
+needsFw80/needsEc73c/needsProjectId/calibrationUnknown, permission=false.
+keyboardHidCandidateText() даёт строку для existing HID descriptor rows.
+Согласован с агентом Unknown, который владеет общим inventory collector.
+
+Источники exact OEM5.23.51.56, recovered-20261019/readable-csharp:
+020000DD-LightingModel.ITE_SPEC.cs:10–24 —048D,keyboard PIDallowlist,
+отдельные lightbar PID,Usage1,PageFF12/FF02/FF03.
+020000DF-LightingModel.LM_ITE_RGB.cs:4115–4299 —FW80/Page/EC73C routing;
+020003F3-MyControlCenter.MyRgbKeyboard.HIDKeyboardFactory.cs:13–83 —classes.
+Исходный GCUService SHA256:
+e5d388b45515d06567c2e71e4c2b882a1fa9313704d70785f19aec960e361003.
+Полные hashes16 источников — research/analysis-20261020/
+keyboard-backlight-agents/hydroc.json.
+
+Дескриптор НЕ разрешает управление:
+- Иной VID или неизвестный PID остаётся rejected.
+- Native lightbar7001/7000/6005/6008/6010 явно не keyboard candidate.
+- Keyboard requiresUsage1 и FeatureReportByteLength>=9. Не выдумывается
+  allowlist только9/65байт: это минимальный payload, точнаядлина остаётсяcaps.
+- FF12 provisional FourZone с явной unresolved Project17 exception;
+  FF02 provisional1st/3nd98, необходимFW80; FF03 требуетсяFW80+EC73C.
+- Revision/bcdDevice не участвует в выборе firmware family. Нет скрытой
+  подстановки600B из HydroControl G1 или FWmajor34 из названия G2.
+- Нет открытия devices, Feature queries, SetFeature, EC writes либо setter code.
+- Никакой selected/preview model не делает descriptor permission.
+
+Общий NativeInterfaceInventoryWindows.h уже умеет read-only HID caps.
+Агент Unknown добавит аннотацию helper после успешных Attributes/GetCaps.
+Новый дамп даст фактические candidates и errors/completeness; descriptor-only
+FW80 не узнает, поэтому physical writer и controls остаются guarded.
+
+Host idle timer исследован отдельно от welcome1A. Для дальнейшей общей
+архитектуры нужны canonical UI RGB, backend-owned conversion, typed state,
+fresh readback/ownership и scoped retry; current EC0..50 codec нельзя просто
+переименовать в HID0..255. Вид Wujie не меняется.
+
+Статическая проверка общей интеграции после helper:
+Проверены KeyboardBacklight.cpp/.h, SettingsPage.cpp и GM6 setKeyboard/restore.
+HYDROC не направляется в EC SingleZone0..50, candidate не включает writer.
+Cycle использует typed callbacks; GM6 setKeyboard не сохраняет шаги цикла вINI.
+Power epoch/ownership проверяются на записи и rollback; при неизвестном
+состоянии cleanup writes не выполняются. RGB rollback проверяет группу.
+После временного эффекта cycle rebase допускается по подтверждённому Mono;
+внешняя RGB/effect смена останавливает цикл. stop очищает active иpaused.
+Нового блокирующего дефекта в просмотренных участках не обнаружено.
+Это статический результат: компиляция, тесты и аппаратные пробы не запускались.

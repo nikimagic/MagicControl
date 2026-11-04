@@ -1,0 +1,147 @@
+
+
+Verifying: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\AmiAfu\amigendrv64.sys
+
+
+Signature Index: 0 (Primary Signature)
+Hash of file (sha256): A233FD00EC237D25C6049B1F9751E50398B0C3DF5BEA6524FA37BC46079A85E9
+
+Signing Certificate Chain:
+    Issued to: Sectigo Public Code Signing Root R46
+
+    Issued by: Sectigo Public Code Signing Root R46
+
+    Expires:   Thu Mar 22 02:59:59 2046
+
+    SHA1 hash: CCBBF9E1485AF63CE47ABF8E9E648C2504FC319D
+
+
+        Issued to: Sectigo Public Code Signing CA EV R36
+
+        Issued by: Sectigo Public Code Signing Root R46
+
+        Expires:   Sat Mar 22 02:59:59 2036
+
+        SHA1 hash: 0185FF9961FF0AA2E431817948C28E83D3F3EC70
+
+
+            Issued to: AMI US Holdings, Inc.
+
+            Issued by: Sectigo Public Code Signing CA EV R36
+
+            Expires:   Fri Feb 05 02:59:59 2027
+
+            SHA1 hash: F156882A2D66B146B2981825BBF24592D96F29CE
+
+
+The signature is timestamped: Wed Aug 20 22:23:51 2025
+
+Timestamp Verified by:
+    Issued to: USERTrust RSA Certification Authority
+
+    Issued by: USERTrust RSA Certification Authority
+
+    Expires:   Tue Jan 19 02:59:59 2038
+
+    SHA1 hash: 2B8F1B57330DBBA2D07A6C51F70EE90DDAB9AD8E
+
+
+        Issued to: Sectigo Public Time Stamping Root R46
+
+        Issued by: USERTrust RSA Certification Authority
+
+        Expires:   Tue Jan 19 02:59:59 2038
+
+        SHA1 hash: 853D632D938282617CD09035C491DE92C142DAC7
+
+
+            Issued to: Sectigo Public Time Stamping CA R36
+
+            Issued by: Sectigo Public Time Stamping Root R46
+
+            Expires:   Sat Mar 22 02:59:59 2036
+
+            SHA1 hash: C6AE54E47886F17C3D5512488C69C34A7AF9C2DD
+
+
+                Issued to: Sectigo Public Time Stamping Signer R36
+
+                Issued by: Sectigo Public Time Stamping CA R36
+
+                Expires:   Sat Mar 22 02:59:59 2036
+
+                SHA1 hash: 38C914811044B4DC663E93D4744B814186A9B5B1
+
+
+
+Signature Index: 1
+Hash of file (sha256): A233FD00EC237D25C6049B1F9751E50398B0C3DF5BEA6524FA37BC46079A85E9
+
+Signing Certificate Chain:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Windows Third Party Component CA 2012
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Apr 19 02:58:38 2027
+
+        SHA1 hash: 77A10EBF07542725218CD83A01B521C57BC67F73
+
+
+            Issued to: Microsoft Windows Hardware Compatibility Publisher
+
+            Issued by: Microsoft Windows Third Party Component CA 2012
+
+            Expires:   Wed Feb 18 23:08:09 2026
+
+            SHA1 hash: BA3C7053CDAD447B4C9E15ABAECB26F0291EFB92
+
+
+The signature is timestamped: Wed Aug 20 22:57:28 2025
+
+Timestamp Verified by:
+    Issued to: Microsoft Root Certificate Authority 2010
+
+    Issued by: Microsoft Root Certificate Authority 2010
+
+    Expires:   Sun Jun 24 01:04:01 2035
+
+    SHA1 hash: 3B1EFD3A66EA28B16697394703A72CA340A05BD5
+
+
+        Issued to: Microsoft Time-Stamp PCA 2010
+
+        Issued by: Microsoft Root Certificate Authority 2010
+
+        Expires:   Mon Sep 30 21:32:25 2030
+
+        SHA1 hash: 36056A5662DCADECF82CC14C8B80EC5E0BCC59A6
+
+
+            Issued to: Microsoft Time-Stamp Service
+
+            Issued by: Microsoft Time-Stamp PCA 2010
+
+            Expires:   Wed Apr 22 22:42:44 2026
+
+            SHA1 hash: 4989486909603FDD7FE3672232D327BA449C0BCE
+
+
+
+Successfully verified: C:\Users\admin\Documents\mechrevo_dsh\MagicControl\src\platform\windows\runtime\AmiAfu\amigendrv64.sys
+
+
+Number of signatures successfully Verified: 2
+
+Number of warnings: 0
+
+Number of errors: 0
+

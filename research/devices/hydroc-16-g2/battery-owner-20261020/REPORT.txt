@@ -1,0 +1,32 @@
+HYDROC-16 G2, explicit owner battery trial20.10.2026
+
+Exact recovered OEM5.23.51.56 independently confirms upper7B9.low7
+(100raw0/95/85) and restart7D0.low7 (80); preservebit7. Native named modes
+7A6.4-5 have no established percentage mapping. Private setter presence and
+readback do not prove EC charge cutoff; no activation flag is guessed.
+
+Shared NativeBatteryController protocol/rollback reused, per-field attempt
+ownership preserved. HYDROC adds a SEPARATE threshold-only transport allowing
+only7B9/7D0 low7, native policy and diagnostic transports remain restricted.
+Exact SMBIOS/Project26/RAM1.5/PnP/service/SYS11.2.18.347 pin unchanged.
+No WMI/UEFI/FANs/PL/platform writes, persistence or trial startup/resume replay.
+Standard Wujie card100/95/85 now enabled on verified HYDROC owner-trial backend.
+
+Exact BatteryInfo independently confirms cycles word4A6,68in supplied dump;
+read-only fallback only for one completely enumerated physical battery. Health
+82.8125%/charging watts stay Windows. No transplanted GM6 capacity/ISDB map.
+Archive/source hashes and initial context in evidence.json. Hardware not run.
+Physical cutoff/restart verification is the owner step in OWNER-CHECK.txt.
+
+Follow-up0.1.100: user asked connector explicitly after completed0.1.99.
+Exact recovered MyEcCtrl171-197 confirms round=7CC&1, Type-C=7CC&36,
+reported Type-C rating=max(7CD,7CE). Raw81 means round=true/TypeC=false.
+Shared SETs row adds this HYDROC read-only source, without port1/2 guesses or
+DC adapter watts. Fresh OS AC required; missing flags is unknown, not noAC.
+The complete0.1.99 input snapshot was verified and committed separately,
+then a new common build was selected for this connector amendment.
+
+Follow-up0.1.101: owner confirmed GM6 also uses a barrel connector. Exact
+GM6 masks now read independently; raw0 remains unknown. Fresh OSAC fallback
+says physical 'Power connector: DC', without claiming EC-confirmed activity.
+Positive native port flags take precedence, no HYDROC watt map copied to GM6.

@@ -1,0 +1,35 @@
+Уточнение отдельных флагов мощности Wujie — 20.10.2026
+
+Проверено чтением текущего C++ и восстановленного родного C#.
+Новых обращений к оборудованию, запусков GUI или проб не выполнялось.
+
+Механизм                       Поле
+Наш переключатель Turbo EC     0x7C3: platform 7/4
+Штатный профиль Turbo          0x751: (value & 0x90) == 0x10
+High Power                     0x7A5.7, маска 0x80
+Overboost                      0x7A5.4, маска 0x10
+Признак поддержки Turbo        0x49F.1, capability, не команда включения
+Ручные STAPM / Slow / Fast     0x783–0x785
+
+Текущий UI: src/gui/windows/SettingsPage.cpp:1693 вызывает
+setBatteryAutomatic. src/devices/mechrevo/x5sp4nag/windows/
+BatteryChargeWindows.cpp:319–325 ведёт к applyBatteryChargeLimit с platform
+automatic ? 7 : 4 (строка177), адрес 0x7C3 (строка45).
+
+Восстановленные тела, а не заглушки:
+C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Reference_w568w/
+GCUService/MyControlCenter/MyFan/MyFanManager_RamFan1p5.cs:
+5441–5466 SetOverBoostMode читает1957, сохраняет остальные биты маской EF,
+добавляет10 при включении; 5469–5494 SetPowerStatus аналогично использует
+маску7F и добавляет80. Адрес1957 десятичный = 0x7A5.
+GCUService/MyECIO/MyEcCtrl.cs:321–325 GetTurboModeSupport читает0x49F.1.
+
+Отдельные OEM флаги существуют. Это не доказывает их работу на каждом
+ноутбуке и не означает, что именно их меняет наша кнопка Turbo EC.
+Прежние физические наблюдения Wujie:
+tests/test_util/analysis/highpower-overboost-20261016/REPORT.md:8–28.
+High Power удерживался, лимиты SMU не изменились; Overboost сбрасывался.
+Проверки под нагрузкой и полного штатного OEM пути этим не заменены.
+
+Поэтому батарейные пороги GM6/HYDROC не связываются с этими флагами,
+текущая политика Wujie в этом билде не изменена.

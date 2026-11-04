@@ -1,0 +1,113 @@
+Wujie — выполненная проба ровно EC0x78E.bit4
+Дата:20.10.2026. Прогоны1–2: оптическое наблюдение; прогон3: HID/PnP A/B.
+Основной исторический раздел ниже описывает первые2прогона; третий — в дополнении7.
+
+Результат
+Оба раза78E:EC→FC, readbackFC. Во всех22периодических отсчётах каждого прогона
+бит оставался1; self-revert в этих наблюдениях не зафиксирован. Затем fresh
+masked rollback FC→EC подтверждён. Оба durable recovery markers:
+RecoveryPending=false,Phase=restored_confirmed. Незавершённого восстановления нет.
+
+Это подтверждение записи/удержания capability-флага, НЕ включение питания полосы
+и НЕ доказательство её свечения. HID/748/RGB команды не отправлялись.
+
+1. Авторизация и подготовка
+Владелец явно поручил поставить флаг полосы в EC. Для повторного прогона также
+прямо написал «ещё раз, я не смотрел». Никакого дополнительного permission
+не запрашивалось; root перед обоими target запусками объявлял окно наблюдения.
+Перед вторым запуском был новый каталог/nonce, новый fresh before и preflight,
+а не повтор старого snapshot. Первый rollback был подтверждён до второго prepare.
+
+Точная машина:
+MECHREVO / WUJIE Series-X5SP4NAG,BIOS=N.1.20MRO15.
+Live EC identity454=82,456=72,740=26 проверена перед target и при наблюдении.
+Configured/installed SYS:
+C:\Windows\System32\drivers\UWACPIDriver.sys,
+SHA2566e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235,
+AuthenticodeValid,SCM UWACPIDriver Running.
+Helper повторно проверял hash и держал read lock файла на время опыта.
+
+В обоих свежих контекстах:AC=1,OEM GCUBridge/GCUService/AiStoneService отсутствуют,
+их процессов и MagicControl процессов не наблюдалось. Power/sleep clocks,
+SMBIOS/BIOS,EC identity и reviewed process/service snapshot в ходе опыта
+не изменились. Unknown/changed context запрещает дальнейшие writes.
+
+2. Узкий helper и транзакции
+Source:build/research-hinge-20261020/FlagTest.cs,
+entrypoints только --flag-prepare и --flag-test.
+Единственный write address — константа78E,mask10. Нет arbitrary CLI register,
+write buffer или vendor DLL; product EC/FAN/APU/SMU/GUI controllers не создаются.
+Непосредственно перед каждой мутацией fresh read:
+  target=(current & ~0x10)|0x10;
+  rollback=(current & ~0x10)|(original &0x10).
+Другие свежие биты сохраняются, включая RAM/FAN bit6.
+Global\MagicControl.EcTransactions.v2 удерживался только на короткие
+read/compare/mask/write/readback и отдельные polls, не на всё окно12с.
+
+До target durable initial.json и recovery.json/journal сохранены с Flush(true)
+и write-through rename. RecoveryPending ставится до попытки DeviceIoControl.
+При current==original возвращение — no-op; при current==attempted возвращается
+только наша маска. При unstable/unknown context старый byte не воспроизводится.
+Firmware self-revert не встречается повторным target write/reassert.
+Нормальное завершение помечает recovery завершённым лишь после fresh final read.
+Markers сохранены, не удалены.
+
+3. Прогон1
+Каталог:build/research-hinge-20261020/flag-20261020-072226-32df1a
+Target ACK:10:24:20.950775МСК,Win32error0,returned16.
+Immediate readback:FC.
+Hold:22отсчёта,первый elapsed19мс,последний12023мс,всеFC.
+У всех(sample &~10)=EC: соседние биты78E не изменились в прочитанных кадрах.
+Rollback readback:10:24:33.5563883МСК,EC;restorationConfirmed=true.
+WriteIoctls=2:один target и один rollback. Других записей нет.
+Оптический результат:NOT_OBSERVED — владелец сообщил,что не смотрел.
+Это НЕ «свечения не было» и не отрицательный аппаратный результат.
+
+4. Прогон2 — отдельное новое разрешение и snapshot
+Каталог:build/research-hinge-20261020/flag-20261020-072551-2d563e
+Target ACK:10:27:33.9960831МСК,Win32error0,returned16.
+Immediate readback:FC.
+Hold:22отсчёта,первый elapsed43мс,последний11867мс,всеFC;
+полное временное окно перед завершением проверки~12с.
+Соседние биты78E сноваEC во всех прочитанных кадрах.
+Rollback readback:10:27:46.4453709МСК,EC;restorationConfirmed=true.
+WriteIoctls=2:один target и один rollback;contextLost=false,recoveryPending=false.
+Оптический результат:OWNER_REPORTED_NO_LIGHT; владелец ответил «Нет, не светилась».
+Относится только к прогону2; прогон1 остаётся NOT_OBSERVED. ACK/бит не означают свечение.
+
+5. Сохранность и ограничения
+Итого два target + два rollback write IOCTL; все только78E.mask10.
+HID GetFeature/SetFeature0; EC748/RGB/FAN/APU/батарея/741.0 writes0;
+UEFI/NVRAM/persistentSave/USBenable/install/servicecontrol0.
+Полный EC RAM не снимался: соседние изменения относятся именно к другим битам
+78E. Не заявляется,что все остальные аппаратные показатели были неизменны;
+helper их не писал и не управлял ими.
+Краткое удержание флага не доказывает persistent storage/reboot поведение,
+допуск HID полосы,получение LightbarType или доступность её LED питания.
+К748/RGB после опыта автоматически не переходили.
+
+6. Артефакты и хэши
+В каждом отдельном каталоге:initial.json,journal.jsonl,recovery.json,result.json,
+test-output.json,test-error.txt. Второй также содержит fresh driver-signature-
+preflight.json и target-preflight.json; первый preflight сохранён в корне helper.
+Машиночитаемый файл рядом с этим отчётом hinge-flag-test-20261020.json включает
+обе trial записи, точные timestamps/ACK/readbacks/samples, оптические статусы,
+контексты, полные paths/размеры/SHA256 raw артефактов и SHA256 helper source/EXE/DLL.
+Production/src/CMake/portable/UI/INI/git в этой работе не менялись.
+
+
+7. Прогон3 — выполненная A/B HID/PnP enumeration
+Новый nonce:flag-20261020-073603-dd5a97; fresh original78E=EC.
+Readback targetFC10:36:28.9235251МСК;100polls держалсяFC~30с.
+Readback rollbackEC10:36:59.0001514МСК; финальный guard/check завершён
+10:36:59.0221808МСК. recoveryPending=false; contextLost=false.
+Девять полных снимков, каждый4HID/23USB-HIDdevnodes/errors0.
+До/прифлаге0,2.10,5.00,10.09,20.16,29.73с/послевозврата0,5с:
+new/gone/changed0 по полным paths/instances и metadata/descriptor rows.
+Все6during снимков завершилисьдоrollback, ITE048Dpresent/history0.
+За~30с этотset не создалновыйHID; физическоеотсутствиеполосынедоказано.
+Optical дляпрогона3ненужен; никакихHIDfeature/748/RGBкоманднебыло.
+Отдельныеточныеindex/diff/completebaseline/artifacthashes:
+hinge-flag-enumeration-20261020.txt и .json.
+Итого3target+3ownedrollback=6writeIOCTL, всеисключительно78E.mask10.
+Все3recoverymarkers restored_confirmed/pendingfalse. Новыхзаписейпослеопытанет.

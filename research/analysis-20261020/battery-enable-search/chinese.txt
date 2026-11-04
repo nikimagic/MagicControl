@@ -1,0 +1,141 @@
+GM6/HYDROC: китайские источники о включении процентного ограничения
+Проверено в интернете20.10.2026. Только исследование, без production-правок,
+запуска чужих скриптов, EC/WMI/UEFI вызовов, тестов, сборок или аппаратных проб.
+
+Вывод
+Найден предметный lead: платформа/ROMID/Stored Limit могут блокировать consumer
+порога даже при успешном readback7B9. Но найденная физическая проверка относится
+к AMD JIAOLONG, исходный разбор firmware — к Wujie14XA. Прямого доказательства
+этой ветки в GM6IR0C Project25 N.1.05MRO09 либо HYDROC-16 G2 Project26
+N.1.13ELU11 нет. Совпадение Project26 с JIAOLONG не делает платы одинаковыми.
+Поэтому это направление статического поиска exact EC consumer, не разрешение
+переносить7C3=4, ROMID770=4 или запись87F в эти модели.
+
+Локальное исходное наблюдение (поручение root, не новый аппаратный тест):
+GM6 logs(3):85/80 удерживаются, remaining/full86→87%, ток≈+1.6A,7C3=7.
+Это противоречит утверждению «85/80 уже исполняется»; gate остаётся гипотезой.
+
+1. Китайский первичный репозиторий losewayy
+URL https://github.com/losewayy/uniwill-ec-charge-limit
+Точный target заявлен в README и docs/RESEARCH.md: JIAOLONG Series-X6xR55xK,
+Ryzen9 8945HX / RTX5070Ti, BIOS N.1.21MRO34 от29.01.2026, EC1.32,
+Project0x1A=26 / BIOS ProjectTRX1. Это НЕ Intel GM6IR0C и НЕ HYDROC G2.
+README ограничивает физическую валидацию одной этой конфигурацией; широкое
+Tongfang/Uniwill applicability не является таблицей доказанных совместимостей.
+Дата публикации README отдельно не установлена; ниже есть датированные пробы.
+
+Исследовательские детали:
+https://github.com/losewayy/uniwill-ec-charge-limit/blob/main/docs/RESEARCH.md
+Raw https://raw.githubusercontent.com/losewayy/uniwill-ec-charge-limit/main/docs/RESEARCH.md
+Строки2–4 identity,111–131 прямо заимствуют pseudocode из Wujie14XA:
+сначала проверяются7C3/770, затем допустимость87F, только затем используется
+live7B9. Строки150–160 сообщают: на JIAOLONG7C3=4 включало742.bit2 примерно
+за2сек;7C3=5 не включало, а после снятия override gate падал примерно за5сек.
+Таким образом даже constants4/5 из родственного разбора не полностью совпали
+с наблюдениями другого build. Stored-limit/mailbox и persistence на EC1.32
+сам автор оставляет непроверенными (169–183). Exact EC1.32 code image/hash или
+адресный disassembly consumer в прочитанном документе не предоставлены.
+
+Датированный журнал той же, не независимой, машины:
+https://github.com/losewayy/uniwill-ec-charge-limit/blob/main/docs/verification-log.md
+23–24.09.2026: при ROMID770=4 и работающем watcher после подключения AC на55%
+заряд достиг48,048/80,080mWh=60%, Charging=False, ChargeRate=0,7B9=BC,
+742=26. Полная cutoff-проверка записана для ROMID-path, а не для нашей платы.
+Короткое наблюдение Fn/температур не является проверкой всех product branches.
+
+2. Китайское issue с воспроизводимым симптомом, НЕ GM6
+https://github.com/faintonce/open-revo/issues/38
+Открыто23.09.2026, закрыто автором28.09.2026. Та же JIAOLONG8945HX/5070Ti,
+тот же BIOS/EC. Автор сообщает, что записанный60% не исполнялся до override.
+В обсуждении нет обнаруженного exact GM6IR0C/HYDROC G2 подтверждения.
+Закрытое issue и благодарность collaborator не заменяют валидацию новой платы.
+
+3. Точность WMI-примера: читать код, не переносить готовый скрипт
+https://github.com/losewayy/uniwill-ec-charge-limit/blob/main/tools/wmi_stored_limit.ps1
+Raw https://raw.githubusercontent.com/losewayy/uniwill-ec-charge-limit/main/tools/wmi_stored_limit.ps1
+Строки24–34 используют root/WMI AcpiTest_MULong.GetSetULong:
+READ=(uint64(0x0100)<<32)|address; WRITE=(uint64(value)<<16)|address.
+Пример RESEARCH.md:86 напечатан другим hex числом: правильное вычисление
+READ87F по скрипту даёт0x000001000000087F, а не0x010000000000087F.
+Это статическая арифметическая проверка, вызов не выполнялся.
+Скрипт прекращает работу при sentinelFEFEFEFE, но mismatch ProjectID лишь
+печатает NOTE(44–46); адрес/значение произвольные, paired ownership rollback
+отсутствует. Его нельзя считать нашим exact-board guarded adapter. Наличие
+AML frontend не доказывает существование EC handler на каждой прошивке.
+
+Интеграционные рекомендации автора:
+https://github.com/losewayy/uniwill-ec-charge-limit/blob/main/docs/INTEGRATION.md
+Там742.bit2 предлагается как gate observation. Фраза «единственный надёжный
+признак» не принимается как доказательство physical cutoff: нужны ещё ток,
+remaining/full и поведение при пересечении upper/restart. Документ называет
+процедуру read-only, хотя detection flow содержит записи; не запускать его
+под видом чистого чтения. Теоретический87F-path не объявлен измеренным.
+
+4. Исходный consumer-разбор: Wujie14XA, не GM6/HYDROC
+https://gist.github.com/w568w/957976b59906e0ce5d6c13ad342e1593
+Wujie14XA/Forza14X, EC2.08/2.12, BIOS N.1.14MRO19/N.1.14MRO50.
+Разбор указывает7B9/live,87F/stored,742.bit2,7C3/770 и условный ранний выход
+из control loop. Это источник pseudocode losewayy, а не второй независимый
+reverse-engineering exact JIAOLONG EC1.32. Gist связывает EC images с
+https://github.com/minortex/GX4HRXL-firmware ; при проверке20.10.2026 ссылка
+вернула404. Хэш того image через эту ссылку не подтверждён. Изображения/коды
+GX4HRXL нельзя подменять образами GM6IR0C или HYDROC-16.
+
+5. Китайская заметка Tianhe Gao: дополнительная плата
+https://tianheg.co/til/hardware/mechrevo-ec-charge-limit/
+Дата публикации явно не показана; просмотр20.10.2026. Заявлен WingDragon15Pro,
+а не GM6/HYDROC, без exact board/BIOS/EC. Автор сообщает65% cutoff, приводит
+DSDT CGLM7B9 и ссылку на w568w. Пример AML меняет возвращаемый battery status;
+сам по себе он не демонстрирует управление зарядным IC. Это полезный lead для
+сопоставления _BST/CGLM, не достаточное основание нового setter/gate.
+
+6. CVE-2026-64143 проверена по первичному upstream, не только форуму
+https://github.com/torvalds/linux/commit/26cbe119f99c86dcb4a0136d2bc73c0c716d80e4
+Изменение uniwill_init(force) исключает battery feature вместо UINT_MAX;
+добавлен запрет forcing unsupported charging interface. Commit message говорит
+о возможном постоянном повреждении батареи некоторых старых моделей(~2020),
+не утверждает, что все2024–2025 платы повреждаются или уже безопасны.
+Kernel CVE record:
+https://kernel.googlesource.com/pub/scm/linux/security/vulns/+/532b7a5822a5879693dafb0e357333cf92f8271b/cve/published/2026/CVE-2026-64143.mbox
+Публичная запись19.07.2026. Upstream исправление реально существует;
+предупреждение losewayy не выдумано, но не даёт exact GM6 gate semantics.
+
+Текущий первичный driver:
+https://raw.githubusercontent.com/torvalds/linux/master/drivers/platform/x86/uniwill/uniwill-acpi.c
+Строки278–280:7B9 low7 и REACHED bit7;221–226:770 — начало14байт ROMID.
+339–341 разделяют несовместимые charge_limit/charge_modes capabilities;
+3173–3175 force исключает CHARGE_LIMIT. Battery init1997–2020 заменяет0/invalid
+threshold на100 только на поддерживаемых устройствах. Это не доказательство
+GM6-кодирования100raw0 и не platform unlock. В файле не найдены GM6IR/HYDROC,
+не обнаружен generic7C3/87F gate writer;742.bit2 как зарядный enable там не
+определён. Следовательно нельзя ссылаться на kernel как на universal gate API.
+
+7. HYDROC соседний первичный проект — другая генерация
+https://github.com/Gumwars/HydroControl
+README указывает HYDROC-16 G1 /14900HX/4090 и проверку одной модели.
+Автор прямо сообщает, что native charging modes на его машине не дают видимого
+cap. В списке есть CHARGE-CEILING-TRIGGER-CHAIN.md, EC-FIRMWARE-FINDINGS.md и
+battery-evidence. Детальные документы при прямом открытии вернули cache miss,
+поэтому их содержимое в этом отчёте не объявляется прочитанным. Это lead для
+другого исследователя; G1 не подменяет G2/275HX/5090.
+
+8. Форумы и слабые результаты
+https://tieba.baidu.com/p/7025982789 — жалобы на любые native режимы и100%,
+предположения о скорости зарядки. Exact современная плата/BIOS и код отсутствуют;
+дата поста в доступном извлечении не установлена. Не evidence enable gate.
+https://3304711297.github.io/youshouldknow/笔电相关/同方模具电池充电模式与跳升至满电现象解析/
+Generic85/91/98 и «Windows100% remap», без конкретной платы/consumer-кода;
+не использовать для переименования наших native0/1/2 в100/95/85.
+Поиск затрагивал точные GM6IR0C/HYDROC имена, 极光X14650HX/4060, 充电阈值,
+充电保护, EC,7B9/7D0/7C3/7A6/87F; GitHub/Gitee,贴吧,知乎,哔哩哔哩 и общую
+выдачу. В найденных доступных результатах exact gate для двух target не выявлен.
+Это ограниченный результат поиска, не утверждение об отсутствии кода вообще.
+
+Практический следующий шаг (вывод автора отчёта)
+Сопоставить exact GM6/HYDROC firmware consumer7B9,7D0,742.bit2,7C3,770,87F и
+WMI/DSDT OEMG/RKBC/WKBC. Обычный readback0xFF из H2RAM87F не доказывает, что
+сам EC stored_limit=FF: может быть blind window, что требует разделять в логах.
+Не добавлять platform/ROMID/87F writer по этим аналогам. Читать наличие метода
+и exact identity статически можно; существование runtime handler остаётся
+отдельной проверкой. Физическое исполнение подтверждать данными тока/ёмкостей,
+а не только selected mode,7B9/7D0 или gate bit.

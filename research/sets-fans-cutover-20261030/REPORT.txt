@@ -1,0 +1,97 @@
+SETs/FANs resource cutover,30.10.2026
+Baseline: f17042fd / product0.1.401. Final product verification appended below.
+
+SCOPE AND ACTUAL OWNERSHIP
+Four pages (Win32/GTK SETs/FANs) no longer own execution threads, queue,
+pending results, backend callbacks or success/recovery/persistence decisions.
+Windows view bindings retain controls/layout/native input and paint. Their
+platform models own typed hardware context, draft/observed state and completion.
+GTK retains only input/layout and main-context readiness delivery/lifetime guard.
+No foreign model maps, wider capabilities or new firmware commands were added.
+
+One process-owned core finite Runtime now serves INFO/KEYs/SETs/FANs. It has four
+bounded workers, one reserved interactive lane; observation backlog cannot occupy
+that reserved worker. ResourceWorker is a client lane/result lifetime, not a
+per-window native thread. ResourceDispatch<Request> supplies the shared admission
+and one-queued-interactive-after-read contract. TaskContext isolates audit TLS
+between reused workers. Existing command scopes still carry their captured IDs.
+
+Permanent controllers have ResourceActor leases from one core registry, retaining
+old dedicated thread identity, stop tokens, explicit notify/join and exact loop
+bodies. These are NOT finite pool tasks: cooling/restore/watchdog/cycle loops
+cannot queue behind WMI. Actor startup publishes its lease before callback entry;
+move-only reader captures remain single-owned. Normal leases join/release.
+The registry intentionally lives for the process, avoiding a static shutdown join
+on orphaned diagnostic RPC work. Detached INFO owns captured data/capabilities;
+its previous close-without-waiting-for-unbounded-WMI contract is retained.
+
+REMOVED / REPLACED
+- Windows SettingsOperationCoordinator class and its separate thread mechanics.
+  Old .h/.cpp paths replaced by SettingsOperationsWindows.h/.cpp and core dispatch.
+- Linux SettingsOperationCoordinatorLinux.h deleted; no compatibility wrapper.
+- GUI JobResult, SetsResult, sensor/command/monitoring worker fields, pending
+  buffers, native-per-model thread launch paths, duplicated GTK completion policy.
+- GUI arbitrary Settings action callbacks (19 call sites) replaced with typed
+  SettingsAction data. Worker capture points to model, never a widget/view object.
+- Config saves/restore/cycle edits/logger preparation/tray resolution/power draft
+  load/escape cancellation moved with model policy, not wrapped around old GUI.
+
+PRESERVED ADMISSION AND ORDER
+Wujie uses the same FanController resource transaction/actor, including explicit
+Default APP/Copilot teardown and no CPU/PL/custom-table changes. GM family uses
+same native/readback/online guards/codecs; Honor and HPBSD keep their actual typed
+fixed/curve controllers and watchdog policies. HPBSD point counts/projection and
+independent thermal guard remain intact. HYDROC keeps existing controllers/HID/
+LPP policy. Unsupported/inventory/preview profiles do not gain writers. Linux
+continues to expose only existing typed/sysfs backend capabilities; it does not
+inherit Windows EC/HWMI commands. DeviceRegistry and writer/codec implementations
+were not broadened. Slot values, saved profiles and editor bounds unchanged.
+
+SETs worker order action -> observe -> verify -> supplemental -> cycle check ->
+persist/classify is retained. Readback, stop/rollback and save semantics stay at
+existing resource entries. Native snapshots from a superseded epoch do not become
+confirmation. UI restore of cycle remains guarded, no new general restore loop.
+Each native page keeps its existing independent scroll position and renderer;
+there is no new scroll implementation/gutter/padding/coordinate adjustment.
+
+MEASUREMENT (NOT GAMING A WORD COUNT)
+THREAD-OWNERSHIP.json uses comparable std::thread/std::jthread references in
+active cpp/h (including type/factory/id references, not a count of live threads).
+GUI:11 ->7 files; platform:10 ->2; core:3 ->1; devices:5 ->0; update:1 ->1.
+All four target pages and SettingsPage.h have zero direct native thread refs.
+Core has TWO real owners in one implementation: finite pool and permanent actor
+registry. A ResourceWorker/Actor lease instance is not a separate implementation.
+Only AMI/NVFlash external-process cleanup waiters remain raw platform owners;
+these preserve child/driver-lease cleanup and are OS adapters, not UI workers.
+Remaining GUI debt OUTSIDE THIS TASK: NVIDIA pages, UpdateWindow, native OsdPopup
+renderer, screen flip/MainWindow plus its type declaration. Global GUI=0 is NOT
+claimed. Those workflows need a separate migration, not a fake counter rename.
+No new production source files were added alongside old paths; Windows owner
+files replace old coordinator paths. Research extraction helpers are temporary.
+
+VERIFICATION LEVEL
+92 static checks in SOURCE-CHECK.json: exact geometry/paint/scroll function
+comparisons, old controller algorithms after ownership-type normalisation,
+unchanged resource writer/codec/registry paths, old wrappers absent, GUI worker
+creation absent. These prove source boundaries, not physical hardware behavior.
+Existing queue/GTK failure fixtures were adapted to new APIs (not run); no new
+runtime tests were added. No application, driver, EC, BIOS/VBIOS reader or hardware
+was run. Private INI/CSV/logs/dumps were not edited or staged. No GitHub packaging
+or publication requested. Existing compiler warnings outside this migration
+remain; a warning-free whole project is not claimed.
+
+BUILD NOTES
+Build objects were cleaned before the final product build because ownership/type
+layout changed. Common version0.1.402 was reserved once. Missing logging includes
+were fixed after compilation failures; the same unfinished build was resumed.
+All-model source audit found implicit Honor/HPBSD watchdog/OEM event thread
+owners and moved them mechanically before final verification. A harmless new
+unused stop-token warning was annotated; source guard required a final resume
+on the final fingerprint. Intermediate platform library checks did not stage
+portable. Sandbox-stalled intermediate MSBuild tree was stopped after verifying
+its cmake command; MagicControl was never terminated by the agent.
+
+FINAL: common build 0.1.402 complete, Windows/Linux verified.
+Final fingerprint 9aac936514d5c244f8035bf3199c06c74dd4cbce4b0eae5f57ddcb11c82fca7a.
+Both actual working portable versions and four SHA-256 independently compared
+with build outputs and manifest. No hardware/app/tests execution.

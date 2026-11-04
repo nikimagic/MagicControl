@@ -1,0 +1,1 @@
+FfsParser::performSecondPass: the last VTF appears inside compressed item
