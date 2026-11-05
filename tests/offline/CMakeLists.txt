@@ -169,6 +169,21 @@ set_tests_properties(process_storage_concurrency PROPERTIES LABELS "offline;stor
 add_subdirectory(firmware)
 add_subdirectory(lenovo)
 
+add_executable(sleep_power_observation test_sleep_power_observation.cpp)
+target_compile_features(sleep_power_observation PRIVATE cxx_std_20)
+target_include_directories(sleep_power_observation PRIVATE "${MC_REPO}" "${MC_REPO}/src/core/include" "${MC_REPO}/build/windows/generated")
+if(WIN32)
+    target_compile_options(sleep_power_observation PRIVATE /utf-8 /W4)
+    target_compile_definitions(sleep_power_observation PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    set_property(TARGET sleep_power_observation PROPERTY MSVC_RUNTIME_LIBRARY MultiThreaded)
+    set(MC_SLEEP_LIB "${MC_REPO}/build/windows/lib/Release")
+    target_link_libraries(sleep_power_observation PRIVATE "${MC_SLEEP_LIB}/magiccontrol_platform.lib" "${MC_SLEEP_LIB}/magiccontrol_core.lib" "${MC_SLEEP_LIB}/magiccontrol_storage.lib" "${MC_SLEEP_LIB}/magiccontrol_runtime.lib" advapi32 ole32 oleaut32 wbemuuid setupapi cfgmgr32 tbs winhttp windowsapp user32 powrprof uuid bcrypt dxgi version wintrust crypt32 shell32)
+else()
+    target_sources(sleep_power_observation PRIVATE ${MC_OFFLINE_PROFILES} "${MC_REPO}/src/devices/DeviceRegistry.cpp" "${MC_REPO}/src/devices/mechrevo/ReportedProfiles.cpp")
+endif()
+add_test(NAME sleep_power_observation COMMAND sleep_power_observation)
+set_tests_properties(sleep_power_observation PROPERTIES LABELS "offline;sleep;power;fake-smu" TIMEOUT 20)
+
 # Real Wujie power codec and memory-only EC transport on both host OSes.
 add_executable(wujie_power_fake_ec wujie-power/TransportChecks.cpp "${MC_REPO}/src/protocols/uniwill/x5sp4nag/Performance.cpp")
 target_compile_features(wujie_power_fake_ec PRIVATE cxx_std_20)

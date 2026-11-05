@@ -1,5 +1,6 @@
 #include "../../../src/platform/windows/FanDeviceActionsWindows.h"
 #include "../../../src/platform/windows/ConfigurationRestoreWindows.h"
+#include "../../../src/platform/windows/SettingsSnapshotWindows.h"
 #include "../../../tests/TestBoardFixture.h"
 #include "MagicControl/EcAccess.h"
 #include "MagicControl/Logging.h"
@@ -146,10 +147,16 @@ int main(){try{
         auto observed=readEcPerformance(ec);
         check(observed.acceptedValid&&observed.accepted.sustained==10&&observed.accepted.shortBoost==10&&observed.accepted.peak==20,
             "old accepted limits were confused with Custom request");
+        mc::gui::SettingsSnapshot sample;sample.valid=true;sample.power=observed;
+        sample.apu.stapmLimitWatts=12.;sample.apu.slowLimitWatts=18.;sample.apu.fastLimitWatts=25.;
+        check(mc::gui::observedSettingsPowerLimits(sample,false,true)==std::array<std::optional<double>,3>{10.,10.,20.},
+            "fake SMU or requested values overwrote old accepted EC limits");
         {std::lock_guard lock(memory->gate);memory->bytes[0x46a]=15;memory->bytes[0x46b]=25;memory->bytes[0x46f]=45;}
         observed=readEcPerformance(ec);
         check(observed.acceptedValid&&observed.accepted.sustained==15&&observed.accepted.shortBoost==25&&observed.accepted.peak==45,
             "updated fake EC accepted limits were not observed");
+        sample.power=observed;check(mc::gui::observedSettingsPowerLimits(sample,false,true)==std::array<std::optional<double>,3>{15.,25.,45.},
+            "fresh accepted EC limits were not displayed independently of fake SMU");
         {std::lock_guard lock(memory->gate);memory->bytes[0x46a]=0;}
         check(!readEcPerformance(ec).acceptedValid,"unavailable accepted limit was falsely confirmed");
         {std::lock_guard lock(memory->gate);memory->bytes[0x46a]=15;memory->bytes[ec::kBoardProjectId]=25;}
