@@ -404,6 +404,17 @@ Max/100% удерживается30с, чтобы прошивка заверш�
 
 ## BIOS/VBIOS coordination,01.11.2026
 
+NVIDIA captures may start with an Init-from-ROM `NVGI` header rather than
+`55 AA`. The common VBIOS validator follows the documented IFR v1/v2/v3
+directory to the PCI chain, preserves the entire source file, and reports the
+prefix and IFR version in the manifest. A generic `0000:0000` EFI image is
+accepted only after a matched NVIDIA PCI image inside such a container. Identity,
+chain bounds and legacy checksum remain mandatory. Source: Linux nova-core
+VBIOS layout https://docs.kernel.org/gpu/nova/core/vbios.html . The GM6IR0C
+0.1.483 capture contains IFR v3 and a PCI chain at 0x9400; this does not prove
+EEPROM capacity, full physical flash coverage, bootability, or explain the
+reported display flicker and application exit.
+
 Windows NVML polling and NVFlash share Global\MagicControl.NvflashCapture.v1.
 Optional polls skip rather than block while capture owns access; preflight waits
 at most8s for a current poll. The initialized NVML provider stays with the pending

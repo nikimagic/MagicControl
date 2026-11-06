@@ -88,7 +88,7 @@ std::string captureJson(const Capture& c){return "{\"capture_kind\":"+q(c.kind)+
 std::string capacityJson(const diagnostics::nvflash::Capacity& c){return "{\"recognized\":"+std::string(c.recognized?"true":"false")+",\"admitted\":"+(c.admitted?"true":"false")+",\"bytes\":"+std::to_string(c.bytes)+",\"k_units\":"+std::to_string(c.kUnits)+",\"organization_bits\":"+std::to_string(c.width)+",\"manufacturer\":"+std::to_string(c.manufacturer)+",\"device\":"+std::to_string(c.device)+",\"part\":"+q(c.part)+",\"descriptor\":"+q(c.descriptor)+",\"reason\":"+q(c.reason)+",\"source\":\"NVFlash --check recognized EEPROM descriptor; K * width *128 bytes\",\"derived_from_rom_file_size\":false}";}
 std::string structure(const std::vector<std::uint8_t>& image,unsigned device){
     const auto s=diagnostics::vbios::validate(image,device);
-    std::string out="{\"validated\":true,\"trailing_bytes_preserved\":"+std::to_string(s.trailingBytes)+",\"images\":[";
+    std::string out="{\"validated\":true,\"ifr_version\":"+std::to_string(s.ifrVersion)+",\"prefix_bytes_preserved\":"+std::to_string(s.prefixBytes)+",\"trailing_bytes_preserved\":"+std::to_string(s.trailingBytes)+",\"images\":[";
     for(const auto& i:s.images){if(out.back()!='[')out+=',';out+="{\"offset\":"+std::to_string(i.offset)+",\"bytes\":"+std::to_string(i.bytes)+",\"vendor\":"+std::to_string(i.vendor)+",\"device\":"+std::to_string(i.device)+",\"code_type\":"+std::to_string(i.codeType)+",\"checksum8\":"+std::to_string(i.checksum)+"}";}
     return out+"]}";
 }
