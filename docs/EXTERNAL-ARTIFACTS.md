@@ -89,7 +89,7 @@ Git содержит исходный код и текстовую докуме�
 | `research/devices/hlyl-wxx9/honor-20261019/oem/PCManager/virtbus.sys` | 1.0.0.8 | `6ace5085abafa2f6092f31aad6feb8801fd6af60e04e77809fb88bf40efda19b` |
 | `research/devices/hydroc-16-g2/oem-5.23.51.56/drivers/AirplaneDriver/vhidmini.sys` | 10.0.10011.16384 | `1372ad8322bf4e0e3d0668c8719b259691c55998fd1cb00340db8882e3e70038` |
 | `research/devices/hydroc-16-g2/oem-5.23.51.56/drivers/UWACPIDriver/UWACPIDriver.sys` | пакет 5.23.51.56 | `e9840521975e9073881a488f9e978a18c93aed44c57fe2382b1d513fd27126e2` |
-| `tests/test_util/runtime/PawnIO/PawnIOLib.dll` | 2.2.0 | `d71f62627d66983bb9f5b1c269f27bcd8c1b8a46e794377a6330f84c198f4443` |
-| `tests/test_util/windows/EcBitTest.exe` | не указана | `a3901a8a5bb1a1505257f109bcf1bd07bb009b5cd1e8907d50ba010084a5c366` |
-| `tests/test_util/windows/PawnIO/PawnIOLib.dll` | 2.2.0 | `d71f62627d66983bb9f5b1c269f27bcd8c1b8a46e794377a6330f84c198f4443` |
-| `tests/test_util/windows/SensorProbe.exe` | не указана | `a2128e2249f6d07f5bd11cbc3ebb46263e8df856d73a0be5a24343997024068f` |
+| `tests/util/runtime/PawnIO/PawnIOLib.dll` | 2.2.0 | `d71f62627d66983bb9f5b1c269f27bcd8c1b8a46e794377a6330f84c198f4443` |
+| `tests/util/windows/EcBitTest.exe` | не указана | `a3901a8a5bb1a1505257f109bcf1bd07bb009b5cd1e8907d50ba010084a5c366` |
+| `tests/util/windows/PawnIO/PawnIOLib.dll` | 2.2.0 | `d71f62627d66983bb9f5b1c269f27bcd8c1b8a46e794377a6330f84c198f4443` |
+| `tests/util/windows/SensorProbe.exe` | не указана | `a2128e2249f6d07f5bd11cbc3ebb46263e8df856d73a0be5a24343997024068f` |

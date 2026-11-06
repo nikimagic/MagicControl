@@ -3,6 +3,9 @@
 #
 # Win32 GUI with a static MSVC runtime; all reviewed driver/runtime payloads are embedded.
 # ---------------------------------------------------------------------------
+set(MAGICCONTROL_PROJECT_LICENSE "${PROJECT_SOURCE_DIR}/packaging/LICENSE.txt")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${MAGICCONTROL_PROJECT_LICENSE}")
+file(SHA256 "${MAGICCONTROL_PROJECT_LICENSE}" MAGICCONTROL_PROJECT_LICENSE_SHA256)
 configure_file(MagicControl.rc.in "${CMAKE_CURRENT_BINARY_DIR}/MagicControl.rc" @ONLY)
 
 add_executable(magiccontrol-gui WIN32

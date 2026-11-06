@@ -1,2 +1,0 @@
-& 'C:\Users\admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' 'C:\Users\admin\Documents\mechrevo_dsh\MagicControl\tests\test_util\analysis\battery-limit-20261016\read_weak_charger.py' --output 'C:\Users\admin\Documents\mechrevo_dsh\MagicControl\tests\test_util\analysis\battery-limit-20261016\live-weak-charger' *> 'C:\Users\admin\Documents\mechrevo_dsh\MagicControl\tests\test_util\analysis\battery-limit-20261016\launch-weak-charger.txt'
-

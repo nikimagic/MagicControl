@@ -40,6 +40,7 @@
 #include "MagicControl/IEcBackend.h"
 #include "MagicControl/Logging.h"
 #include "MagicControl/DeviceOperation.h"
+#include "MagicControl/TelemetryGate.h"
 #include "MagicControl/KeyboardBacklight.h"
 #include "../../platform/windows/FanControlWindows.h"
 #include "../../devices/mechrevo/gm6ir0c/ControlWindows.h"
@@ -664,7 +665,8 @@ LRESULT MainWindow::handleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
             return TRUE;
 
         case kOemEventMessage:
-            handleOemEvent(static_cast<std::uint64_t>(wParam), static_cast<std::uint64_t>(lParam));
+            if(auto observation=mc::admitOemEvent(static_cast<std::uint64_t>(lParam)))
+                handleOemEvent(static_cast<std::uint64_t>(wParam), static_cast<std::uint64_t>(lParam));
             return 0;
         case kNativeProfileFinishedMessage:
             finishNativeProfileCommands();return 0;

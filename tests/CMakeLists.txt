@@ -186,6 +186,7 @@ if(WIN32)
     add_executable(magiccontrol_ec_manual_tests test_ec_manual_windows.cpp)
     target_link_libraries(magiccontrol_ec_manual_tests PRIVATE magiccontrol_core magiccontrol_platform)
     add_test(NAME magiccontrol_ec_manual_tests COMMAND magiccontrol_ec_manual_tests)
+    add_test(NAME magiccontrol_fan_telemetry_barrier_tests COMMAND magiccontrol_ec_manual_tests --barrier-only)
 endif()
 
 # Explicit hardware diagnostic only: never run by ctest.

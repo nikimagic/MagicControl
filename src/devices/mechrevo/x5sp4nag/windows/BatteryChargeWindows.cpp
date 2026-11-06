@@ -27,7 +27,7 @@ namespace batteryContract=mc::uniwill::x5sp4nag;
 // KNOWN SIDE EFFECT (2026-10-16 A/B): platform 7->4 changes DC Office SMU
 // Fast/Slow/STAPM 30/25/25 -> 45/40/40; repeated 4/7/4/7/4, fan flags/tables stable.
 // AC 65W Office/Balanced/Turbo showed no platform effect in this test.
-// 0x7C3 is NOT battery-only. Evidence: tests/test_util/analysis/
+// 0x7C3 is NOT battery-only. Evidence: research/test_util/analysis/
 // battery-platform-smu-20261016/REPORT.md. Do not conceal this with automatic APU
 // override writes or change the platform policy without discussing charge behavior.
 // Full DC sweep: platform 4 collapses Office/Balanced/Turbo to 45/40/40;
@@ -35,7 +35,7 @@ namespace batteryContract=mc::uniwill::x5sp4nag;
 // Manual test 25/20/15 was retained on DC/AC at both platforms; see ALL-MODES.md.
 // AC 100W also affected: platform 4 Office=35/30/30, Balanced/Turbo=55/50/50;
 // platform 7 Office=30/25/25, Balanced=50/45/45, Turbo=70/65/65 (Fast/Slow/STAPM).
-// Evidence: tests/test_util/analysis/charger-rating-smu-20261016/REPORT.md.
+// Evidence: research/test_util/analysis/charger-rating-smu-20261016/REPORT.md.
 // Native Battery Class matrix near 85% (100W): platform4 charge=0W, platform7
 // charge~35W in Office/Balanced/Turbo/Manual; 742.2 clears, 7B9.Reached clears.
 // Historical restart80 was only readback-confirmed. User reported restart at84;

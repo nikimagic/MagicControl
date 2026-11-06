@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MagicControl/DeviceOperation.h"
 #include <exception>
 #include <functional>
 #include <string>
@@ -56,5 +57,16 @@ inline SettingsWorkerResult executeSettingsWorkerLinux(const SettingsWorkerReque
     }catch(const std::exception& e){fail(e.what());}
     catch(...){fail("Неизвестная ошибка подтверждения состояния.");}
     return result;
+}
+
+// A SETs write, including its final observation/readback, is one device
+// operation. An already-admitted owner may be passed without re-acquiring it.
+inline SettingsWorkerResult executeSettingsResourceLinux(const SettingsWorkerRequest& request,
+        const SettingsWorkerActions& actions,std::shared_ptr<DeviceOperation> operation={}) {
+    if(!request.writing())return executeSettingsWorkerLinux(request,actions);
+    if(operation&&!deviceOperations().owns(operation))return {false,"Недействительное владение операцией устройства."};
+    if(!operation)operation=deviceOperations().tryBegin();
+    if(!operation)return {false,"Дождитесь завершения текущей операции устройства."};
+    return executeSettingsWorkerLinux(request,actions);
 }
 }

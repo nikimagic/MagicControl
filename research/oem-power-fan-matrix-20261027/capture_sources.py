@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[2]
 out = Path(__file__).resolve().parent
 reference = Path('C:/Users/admin/Documents/mechrevo/Decompiled/GCUService_Reference_w568w/GCUService')
 g5 = root/'research/devices/gm5hg0a/oem-5.52.49.6/laptop-control/csharp'
-g6 = root/'build/research-gm6ir0c/all-active'
+g6 = root/'../Decompile/GM6IR0C/Control_Center'
 sources = {
  'WUJIE_EXACT_PROTECTED': Path('C:/Users/admin/Documents/mechrevo/Decompiled/FanManager/MyControlCenter.MyFan.MyFanManager_RamFan1p5.decompiled.cs'),
  'REFERENCE_MANAGER': reference/'MyControlCenter/MyFan/MyFanManager_RamFan1p5.cs',

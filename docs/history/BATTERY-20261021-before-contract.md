@@ -618,18 +618,18 @@ transaction; изменение сохранённого порога/конте
 между 4/7 для Office/Balanced/Turbo не обнаружено. `0x7C3` нельзя считать
 исключительно батарейным. Исходное значение 4 после теста восстановлено;
 текущая согласованная политика: 100/95/85%=4, Авто=7. Данные:
-`tests/test_util/analysis/battery-platform-smu-20261016/REPORT.md`.
+`research/test_util/analysis/battery-platform-smu-20261016/REPORT.md`.
 
 Дополнение: все три штатных режима на батарее при 7C3=4 дают Fast/Slow/STAPM
 45/40/40; при 7C3=7: Office 30/25/25, Balanced 40/35/35, Turbo 60/54/54.
 Manual 25/20/15 сохранил задание при обеих платформах и источниках.
-Полная сводка: `tests/test_util/analysis/battery-platform-smu-20261016/ALL-MODES.md`.
+Полная сводка: `research/test_util/analysis/battery-platform-smu-20261016/ALL-MODES.md`.
 
 На 100 Вт эффект также подтверждён: платформа 4 даёт Fast/Slow/STAPM
 Office 35/30/30, Balanced и Turbo 55/50/50; платформа 7 — Office 30/25/25,
 Balanced 50/45/45, Turbo 70/65/65. Вывод «AC не зависит от платформы» верен
 только для проверенного блока 65 Вт. Полный отчёт:
-`tests/test_util/analysis/charger-rating-smu-20261016/REPORT.md`.
+`research/test_util/analysis/charger-rating-smu-20261016/REPORT.md`.
 
 1. Принимать 100%, 95%, 85% и отдельный Авто (100%, automatic=true). Проверять доступ к записи и identity платы.
 2. Читать исходные процент, платформу, ROM ID, флаг включения и WMI-порог.
@@ -661,7 +661,7 @@ Balanced 50/45/45, Turbo 70/65/65. Вывод «AC не зависит от пл
 100 Вт во всех Office/Balanced/Turbo/Manual при платформе 4 заряд=0 Вт,
 при 7 заряд≈35 Вт. 742:26→22, 7B9:D5→55, пороги 85/80 неизменны.
 Источник — native Battery Class IOCTL. Без кабеля при обоих значениях разряд.
-Данные: `tests/test_util/analysis/platform-charge85-matrix-20261016/REPORT.md`.
+Данные: `research/test_util/analysis/platform-charge85-matrix-20261016/REPORT.md`.
 
 По последнему запросу пользователя 17.10.2026: **100%, 95% и 85% выбирают 4**.
 Добавлена отдельная четвёртая кнопка **Авто**, она выбирает **7**, верхний процент

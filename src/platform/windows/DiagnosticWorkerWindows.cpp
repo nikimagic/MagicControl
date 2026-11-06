@@ -1,5 +1,6 @@
 #include "../common/FastDiagnosticWire.h"
 #include "MagicControl/EcAccess.h"
+#include "MagicControl/AsyncReaper.h"
 #include "MagicControl/BoardIdentity.h"
 #include "MagicControl/DeviceProfile.h"
 #include "BackendWindows.h"
@@ -62,12 +63,17 @@ public:
 };
 class Worker final:public FastDiagnosticWorker{
     Handle input_,output_,process_,job_;
+    std::shared_ptr<TelemetryGate::DiagnosticCollection> collection_;
     unsigned failedPasses_{};
     void stop()noexcept{
         // Only the fixed read-only helper belongs to this job. The GUI's active
         // fan controller/probe/cleanup is never terminated on a provider timeout.
         if(job_.value)TerminateJobObject(job_.value,ERROR_CANCELLED);
-        if(process_.value)WaitForSingleObject(process_.value,1000);
+        if(process_.value&&WaitForSingleObject(process_.value,1000)!=WAIT_OBJECT_0&&collection_){
+            const auto child=process_.value;process_.value=nullptr;auto collection=collection_;
+            const auto reap=[child,collection]{while(WaitForSingleObject(child,INFINITE)!=WAIT_OBJECT_0)Sleep(1000);CloseHandle(child);};
+            mc::detail::startReaper(reap);
+        }
         input_.reset();output_.reset();process_.reset();job_.reset();
     }
     void start(){
@@ -112,6 +118,7 @@ class Worker final:public FastDiagnosticWorker{
         }
     }
 public:
+    explicit Worker(std::shared_ptr<TelemetryGate::DiagnosticCollection> collection):collection_(std::move(collection)){}
     ~Worker()override{stop();}
     FirmwareCaptureResult firmware(bool stateOnly,const FirmwareEmitter& emit,std::stop_token cancellation,std::chrono::milliseconds timeout,bool biosRom)override{
         const auto begin=std::chrono::steady_clock::now(),deadline=begin+timeout;FirmwareCaptureResult result;std::size_t count{},total{};
@@ -151,7 +158,7 @@ public:
 };
 }
 std::unique_ptr<ReadOnlyDiagnosticHardware> createReadOnlyDiagnosticHardware(){return std::make_unique<Hardware>();}
-std::unique_ptr<FastDiagnosticWorker> createFastDiagnosticWorker(){return std::make_unique<Worker>();}
+std::unique_ptr<FastDiagnosticWorker> createFastDiagnosticWorker(std::shared_ptr<TelemetryGate::DiagnosticCollection> collection){return std::make_unique<Worker>(std::move(collection));}
 std::optional<int> runFastDiagnosticHelper(const std::vector<std::string>& args){
     helperRegistered.store(true);if(args.size()<2||args[1]!="--diagnostic-fast-worker")return {};
     if(args.size()!=2&&(args.size()!=3||args[2]!="--no-ec"))return 2;

@@ -12,6 +12,9 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME release_staging_cleanup_offline
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/test_release_staging_cleanup.py")
 set_tests_properties(release_staging_cleanup_offline PROPERTIES LABELS "offline;release;filesystem" TIMEOUT 30)
+add_test(NAME release_package_assets_offline
+    COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/test_release_package_assets.py")
+set_tests_properties(release_package_assets_offline PROPERTIES LABELS "offline;release;filesystem" TIMEOUT 30)
 add_executable(dpi_change_trace_offline_tests test_dpi_change_trace.cpp)
 target_compile_features(dpi_change_trace_offline_tests PRIVATE cxx_std_20)
 target_include_directories(dpi_change_trace_offline_tests PRIVATE "${MC_REPO}")

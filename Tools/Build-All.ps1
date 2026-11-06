@@ -25,9 +25,16 @@ function Invoke-Native([string]$Program,[string[]]$Arguments){
 function Get-SourceFingerprint {
     # Conservative input identity, including new/untracked source files and
     # embedded resources. Generated build/portable/log files are excluded.
-    $paths=@(Join-Path $projectRoot 'CMakeLists.txt')
+    $paths=@(
+        (Join-Path $projectRoot 'CMakeLists.txt')
+        (Join-Path $projectRoot 'packaging/LICENSE.txt')
+    )
     foreach($directory in @('src','cmake','Tools')){
-        $paths+=@(Get-ChildItem -LiteralPath (Join-Path $projectRoot $directory) -File -Recurse | ForEach-Object {$_.FullName})
+        $files=@(Get-ChildItem -LiteralPath (Join-Path $projectRoot $directory) -File -Recurse)
+        # Python can refresh bytecode when a release helper is imported; it is
+        # generated cache, not a change to build inputs or packaging sources.
+        if($directory -eq 'Tools'){$files=@($files | Where-Object {$_.FullName -notmatch '(?i)[\\/]__pycache__[\\/]' -and $_.Extension -notin @('.pyc','.pyo')})}
+        $paths+=@($files | ForEach-Object {$_.FullName})
     }
     $rows=@($paths | Sort-Object -Unique | ForEach-Object {
         $relative=$_.Substring($projectRoot.Length+1).Replace('\','/')
@@ -147,7 +154,7 @@ try{
     $dirty=(& git -C $projectRoot status --porcelain --untracked-files=all -- src cmake CMakeLists.txt Tools/Build-All.ps1 | Out-String).Trim()
     # Ignored local binary dependencies are not represented by HEAD.
     $tracked=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-    foreach($path in (& git -c core.quotepath=false -C $projectRoot ls-files -- src cmake CMakeLists.txt Tools/Build-All.ps1 packaging/fan-curves.csv packaging/app-settings.ini)){[void]$tracked.Add($path)}
+    foreach($path in (& git -c core.quotepath=false -C $projectRoot ls-files -- src cmake CMakeLists.txt Tools/Build-All.ps1 packaging/fan-curves.csv packaging/app-settings.ini packaging/LICENSE.txt)){[void]$tracked.Add($path)}
     $untrackedInputs=@($applicationInputs.Keys | Where-Object { !$tracked.Contains($_) })
     $session | Add-Member -Force -NotePropertyName source_dirty -NotePropertyValue ([bool]($dirty -or $untrackedInputs.Count))
     Save-Session

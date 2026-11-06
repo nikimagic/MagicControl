@@ -1,4 +1,5 @@
 #include "../common/NvflashPlatform.h"
+#include "MagicControl/AsyncReaper.h"
 #include "../common/FirmwareEvidence.h"
 #include <sys/stat.h>
 #include <sys/file.h>
@@ -89,7 +90,10 @@ unsigned run(Command command,unsigned index,const fs::path& output,const fs::pat
         if(fcntl(leaseFd,F_SETFD,0)||(leaseFd>3&&syscall(SYS_close_range,3u,static_cast<unsigned>(leaseFd-1),0u))||syscall(SYS_close_range,static_cast<unsigned>(leaseFd+1),~0u,0u)){const char message[]="NVFlash reader descriptor isolation failed\n";write(2,message,sizeof(message)-1);_exit(126);}
         execve(exe.c_str(),argv.data(),env.data());const char message[]="NVFlash reader execve failed\n";write(2,message,sizeof(message)-1);_exit(127);
     }
-    struct Pending {pid_t pid;bool reaped{};std::shared_ptr<void> lease;~Pending(){if(!reaped)std::thread([p=pid,guard=lease]{int status{};while(waitpid(p,&status,0)<0&&errno==EINTR){} }).detach();}} pending{pid,false,lease};
+    struct Pending {pid_t pid;bool reaped{};std::shared_ptr<void> lease;~Pending(){if(!reaped){
+        const auto reap=[p=pid,guard=lease]{for(;;){int status{};const auto result=waitpid(p,&status,0);if(result==p||(result<0&&errno==ECHILD))break;if(result<0&&errno!=EINTR)std::this_thread::sleep_for(std::chrono::seconds(1));}};
+        mc::detail::startReaper(reap);
+    }}} pending{pid,false,lease};
     event("vendor_started","{\"operation\":"+q(commandName(command))+",\"pid\":"+std::to_string(pid)+",\"label\":"+q(label)+"}");bool cancellationLogged{};int status{};
     for(;;){
         const auto waited=waitpid(pid,&status,WNOHANG);if(waited==pid){pending.reaped=true;break;}if(waited<0&&errno!=EINTR)throw std::runtime_error("NVFlash waitpid failed");

@@ -8,7 +8,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[3]
 REF = REPO.parent / 'Reference_Projects'
 OLD = Path(r'C:\Users\admin\Documents\mechrevo')
-OEM = REPO / 'build/research-gm6ir0c/all-active'
+OEM = REPO / '../Decompile/GM6IR0C/Control_Center'
 HYDRO = REPO / 'build/battery-temperature-20261020/hydrocontrol/HydroControl-fc4024ce'
 
 entries = [

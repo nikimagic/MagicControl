@@ -1,4 +1,5 @@
 #include "MagicControl/ResourceControl.h"
+#include "MagicControl/DeferredTelemetry.h"
 #include "OsdSystemMonitor.h"
 #include "WindowsDevices.h"
 
@@ -16,13 +17,14 @@
 #include <optional>
 #include <mutex>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace mc::windows {
 namespace {
 using Microsoft::WRL::ComPtr;
 constexpr UINT kAudio=WM_APP+1,kRebind=WM_APP+2,kTouchpad=WM_APP+3,kVolumeKey=WM_APP+4,kLock=WM_APP+5,kBrightness=WM_APP+6,kCamera=WM_APP+7;
-constexpr UINT_PTR kTouchpadTimer=1,kAudioTimer=2;
+constexpr UINT_PTR kTouchpadTimer=1,kAudioTimer=2,kDeferredTelemetryTimer=3;
 constexpr GUID kBrightnessGuid{0x8ffee2c6,0x2d01,0x46be,{0xad,0xb9,0x39,0x8a,0xdd,0xc5,0xb4,0xff}};
 std::uint64_t now(){return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());}
 struct Dispatch {std::atomic<HWND> window{};};
@@ -82,6 +84,7 @@ struct OsdSystemMonitor::Impl {
     ComPtr<IMMDeviceEnumerator> enumerator;ComPtr<DeviceCallback> deviceCallback;
     struct Endpoint {ComPtr<IAudioEndpointVolume> volume;ComPtr<AudioCallback> callback;std::optional<int> percent;std::optional<bool> muted;};
     std::array<Endpoint,2> endpoints;
+    DeferredTelemetryQueue deferredTelemetry;
     std::array<bool,256> held{};
     std::optional<bool> touchpad;
     std::mutex cameraGate;
@@ -92,7 +95,8 @@ struct OsdSystemMonitor::Impl {
     std::uint64_t lastNativeBrightness{},touchpadAt{},lastTouchpadKey{};
     unsigned touchpadAttempts{};
     bool touchpadFromKey{};
-    int audioKeyIndex{};
+    bool deferredTelemetryTimerArmed{};
+    unsigned audioKeyChannels{};
     static inline thread_local Impl* hookOwner{};
 
     ~Impl(){stop.store(true);cameraChanged.notify_all();if(HWND target=dispatch->window.load())PostMessageW(target,WM_CLOSE,0,0);if(registryEvent)SetEvent(registryEvent);if(thread.joinable())thread.join();if(registryEvent)CloseHandle(registryEvent);}
@@ -100,7 +104,11 @@ struct OsdSystemMonitor::Impl {
     void unbindAudio(){
         for(auto& item:endpoints){if(item.volume&&item.callback)item.volume->UnregisterControlChangeNotify(item.callback.Get());item.callback.Reset();item.volume.Reset();item.percent.reset();item.muted.reset();}
     }
-    void bindAudio(){
+    void deferTelemetry(){if(window&&!deferredTelemetryTimerArmed){
+        if(SetTimer(window,kDeferredTelemetryTimer,250,nullptr))deferredTelemetryTimerArmed=true;
+        else if(log)log("OSD: failed to schedule deferred telemetry");
+    }}
+    void bindAudioNow(){
         unbindAudio();if(!enumerator)return;
         for(int index=0;index<2;++index){
             ComPtr<IMMDevice> device;
@@ -115,24 +123,31 @@ struct OsdSystemMonitor::Impl {
         }
         if(log)log("OSD AUDIO: Windows volume/microphone callbacks connected; no audio recording");
     }
+    void bindAudio(){if(!deferredTelemetry.submit(DeferredTelemetryItem::AudioBind,[this]{bindAudioNow();}))deferTelemetry();}
     void audio(const AudioNotice& notice,bool force=false){
         auto& item=endpoints[notice.index];
         const bool changed=notice.index?item.muted!=notice.muted:(item.percent!=notice.percent||item.muted!=notice.muted);
         item.percent=notice.percent;item.muted=notice.muted;
         if(changed||force)emit(notice.index?SystemEventKind::Microphone:SystemEventKind::Volume,notice.percent,notice.muted,notice.at);
     }
-    void snapshotAudio(int index){
+    void snapshotAudioNow(int index){
         auto& item=endpoints[index];if(!item.volume)return;
         float scalar{};BOOL mute{};
         if(SUCCEEDED(item.volume->GetMasterVolumeLevelScalar(&scalar))&&SUCCEEDED(item.volume->GetMute(&mute)))
             audio({index,static_cast<int>(std::lround(scalar*100)),mute!=FALSE,now()},true);
+    }
+    void snapshotAudio(int index){
+        const auto item=index?DeferredTelemetryItem::AudioCapture:DeferredTelemetryItem::AudioRender;
+        if(!deferredTelemetry.submit(item,[this,index]{snapshotAudioNow(index);}))deferTelemetry();
     }
     void watchTouchpad(){
         if(registryKey){RegCloseKey(registryKey);registryKey=nullptr;}
         if(RegOpenKeyExW(HKEY_CURRENT_USER,L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad",0,KEY_NOTIFY,&registryKey)==ERROR_SUCCESS)
             RegNotifyChangeKeyValue(registryKey,TRUE,REG_NOTIFY_CHANGE_NAME|REG_NOTIFY_CHANGE_LAST_SET,registryEvent,TRUE);
     }
-    void checkTouchpad(bool fromKey){
+    void initializeTouchpadNow(){touchpad=touchpadEnabled();}
+    void initializeTouchpad(){if(!deferredTelemetry.submit(DeferredTelemetryItem::TouchpadInitial,[this]{initializeTouchpadNow();}))deferTelemetry();}
+    void checkTouchpadNow(bool fromKey){
         const auto current=touchpadEnabled();
         if(current&&((fromKey&&(*current!=touchpad||touchpadAttempts>=25))||(!fromKey&&touchpad&&*current!=*touchpad))){
             emit(SystemEventKind::Touchpad,*current?1:0,false,touchpadAt?touchpadAt:now());
@@ -144,12 +159,37 @@ struct OsdSystemMonitor::Impl {
             }
         } else if(!touchpad)touchpad=current;
     }
+    void checkTouchpad(bool fromKey){
+        const auto item=fromKey?DeferredTelemetryItem::TouchpadKeyPoll:DeferredTelemetryItem::TouchpadPoll;
+        if(!deferredTelemetry.submit(item,[this,fromKey]{checkTouchpadNow(fromKey);})){if(fromKey)KillTimer(window,kTouchpadTimer);deferTelemetry();}
+    }
+    void drainDeferredTelemetry(){
+        deferredTelemetry.drain([this](DeferredTelemetryItem item){switch(item){
+        case DeferredTelemetryItem::AudioBind:bindAudioNow();break;
+        case DeferredTelemetryItem::AudioRender:snapshotAudioNow(0);break;
+        case DeferredTelemetryItem::AudioCapture:snapshotAudioNow(1);break;
+        case DeferredTelemetryItem::TouchpadInitial:initializeTouchpadNow();break;
+        case DeferredTelemetryItem::TouchpadPoll:checkTouchpadNow(false);break;
+        case DeferredTelemetryItem::TouchpadKeyPoll:checkTouchpadNow(true);break;
+        }});
+        if(!deferredTelemetry.pending()){
+            KillTimer(window,kDeferredTelemetryTimer);
+            deferredTelemetryTimerArmed=false;
+            if(touchpadFromKey)SetTimer(window,kTouchpadTimer,10,nullptr);
+        }
+    }
     void touchpadKey(){
         const auto at=now();if(at-lastTouchpadKey<70)return;lastTouchpadKey=at;
         touchpadAt=at;touchpadAttempts=0;touchpadFromKey=true;
         emit(SystemEventKind::Touchpad,-1,false,at);SetTimer(window,kTouchpadTimer,10,nullptr);
     }
     std::optional<bool> cameraState() {
+        std::optional<TelemetryGate::Observation> observation;
+        while(!stop.load()&&!observation){
+            observation=telemetryGate().tryObservation();
+            if(!observation)std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        if(!observation)return std::nullopt;
         try {return readDevice(DeviceKind::Camera).enabled;}
         catch(const std::exception& error){if(log)log(std::string("OSD CAMERA: ")+error.what());return std::nullopt;}
     }
@@ -192,7 +232,7 @@ struct OsdSystemMonitor::Impl {
         if(SUCCEEDED(apartment)&&SUCCEEDED(CoCreateInstance(__uuidof(MMDeviceEnumerator),nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&enumerator)))){
             deviceCallback.Attach(new DeviceCallback(dispatch));enumerator->RegisterEndpointNotificationCallback(deviceCallback.Get());bindAudio();
         }
-        touchpad=touchpadEnabled();watchTouchpad();cameraWorker=ResourceActor([this]{watchCamera();});
+        initializeTouchpad();watchTouchpad();cameraWorker=ResourceActor([this]{watchCamera();});
         power=RegisterPowerSettingNotification(window,&kBrightnessGuid,DEVICE_NOTIFY_WINDOW_HANDLE);
         RAWINPUTDEVICE keyboard{1,6,RIDEV_INPUTSINK,window};RegisterRawInputDevices(&keyboard,1,sizeof(keyboard));
         hookOwner=this;hook=SetWindowsHookExW(WH_KEYBOARD_LL,keyboardHook,GetModuleHandleW(nullptr),0);
@@ -249,12 +289,13 @@ struct OsdSystemMonitor::Impl {
             {std::lock_guard lock(self->cameraGate);self->cameraAt=at;++self->cameraRequest;}
             self->emit(SystemEventKind::Camera,-1,false,at);self->cameraChanged.notify_all();return 0;
         }
-        case kVolumeKey:self->audioKeyIndex=wParam?1:0;SetTimer(target,kAudioTimer,20,nullptr);return 0;
+        case kVolumeKey:self->audioKeyChannels|=wParam?2u:1u;SetTimer(target,kAudioTimer,20,nullptr);return 0;
         case kLock:self->emit(wParam==VK_CAPITAL?SystemEventKind::CapsLock:wParam==VK_NUMLOCK?SystemEventKind::NumLock:SystemEventKind::ScrollLock,static_cast<int>(lParam));return 0;
         case kBrightness:{const auto at=now();if(at-self->lastNativeBrightness>1500&&wParam<=100)self->emit(SystemEventKind::Brightness,static_cast<int>(wParam));return 0;}
         case WM_TIMER:
             if(wParam==kTouchpadTimer)self->checkTouchpad(true);
-            else if(wParam==kAudioTimer){KillTimer(target,kAudioTimer);self->snapshotAudio(self->audioKeyIndex);}
+            else if(wParam==kAudioTimer){KillTimer(target,kAudioTimer);const auto channels=std::exchange(self->audioKeyChannels,0u);if(channels&1)self->snapshotAudio(0);if(channels&2)self->snapshotAudio(1);}
+            else if(wParam==kDeferredTelemetryTimer)self->drainDeferredTelemetry();
             return 0;
         case WM_DEVICECHANGE:
             if(wParam==DBT_DEVNODES_CHANGED||wParam==DBT_DEVICEARRIVAL||wParam==DBT_DEVICEREMOVECOMPLETE){
@@ -284,7 +325,7 @@ struct OsdSystemMonitor::Impl {
                         self->lastNativeBrightness=now();self->emit(SystemEventKind::Brightness,static_cast<int>(value));
                     }self->brightness=static_cast<int>(value);}
                 }
-            } else if(wParam==PBT_APMRESUMEAUTOMATIC){self->brightness.reset();self->bindAudio();self->watchTouchpad();self->touchpad=touchpadEnabled();}
+            } else if(wParam==PBT_APMRESUMEAUTOMATIC){self->brightness.reset();self->bindAudio();self->watchTouchpad();self->initializeTouchpad();}
             return TRUE;
         case WM_CLOSE:self->stop.store(true);self->cameraChanged.notify_all();PostQuitMessage(0);return 0;
         }

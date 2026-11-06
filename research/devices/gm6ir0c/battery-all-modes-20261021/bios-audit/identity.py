@@ -46,7 +46,7 @@ result={'scope':'Candidate BIOS identity, not permission to flash or equivalence
  'firmware_dsdt_sha256':sha(new),'firmware_methods':new_methods,'saved_method_comparison':comparisons,
  'candidate_ec_version':version,'saved_live_inventory':{'path':str(inventory.relative_to(root)),'sha256':sha(inventory.read_bytes()),'selected_rows':live_identity}}
 (out/'identity-evidence.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-selected=[];export=root/'build/gm6-bios-static-export'
+selected=[];export=root.parent/'Decompile/GM6IR0C/BIOS_прежний_декомпил_9_модулей'
 choices={'SmbiosBoard':['00000868.c','00000924.c','00000b28.c'],
  'OemUniWillVariableDxe':['00000528.c'],'OemPowerModeDxe':['00000568.c'],
  'OemServiceSmm':['000062f4.c','00006430.c','00006728.c'],'OemACPIDriverSmm':['00001590.c'],'OemHooksSmm':['000012bc.c']}
@@ -56,7 +56,7 @@ for folder in export.iterdir():
   if '_'+marker+'_body.bin' not in folder.name:continue
   for name in names:
    p=folder/name
-   if p.exists():selected.append({'module':folder.name,'function_rva':name[:-2],'path':str(p.relative_to(root)),
+   if p.exists():selected.append({'module':folder.name,'function_rva':name[:-2],'path':str(p),
     'sha256':sha(p.read_bytes()),'lines':[{'line':n,'text':line} for n,line in enumerate(p.read_text().splitlines(),1)]})
 (out/'decompiled-evidence.json').write_text(json.dumps(selected,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 manifest=[]

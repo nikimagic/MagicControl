@@ -1,6 +1,7 @@
 // Explicit vendor READ/SAVE actions only. Original Intel/AMI bytes are embedded in the
 // Windows EXE and extracted into the shared protected runtime cache offline.
 #include "MagicControl/BiosRomDump.h"
+#include "MagicControl/AsyncReaper.h"
 #include "MagicControl/Logging.h"
 #include "MagicControl/OperationMessages.h"
 #include "MagicControl/PortableSettings.h"
@@ -224,7 +225,8 @@ struct InsydeDesktop {
 };
 DWORD runVendor(const VendorTool& spec,const fs::path& directory,const fs::path& output,ReadCommand action,
     unsigned pass,EventLog& log,std::stop_token token,std::atomic<std::uint64_t>* progress,std::uint64_t completedBytes,
-    unsigned adapterIndex=0,const std::string& outputLabel={},const std::shared_ptr<void>& lease={}){
+    unsigned adapterIndex=0,const std::string& outputLabel={},const std::shared_ptr<void>& lease={},
+    const std::shared_ptr<BiosCaptureSession>& biosSession={}){
     const bool info=action!=ReadCommand::Save&&action!=ReadCommand::NvEntire;
     if(!spec.nvidia&&action!=ReadCommand::Information&&action!=ReadCommand::Save)throw std::runtime_error("NVFlash read command cannot be used for another vendor tool");
     if(info&&!spec.intel&&!spec.nvidia)throw std::runtime_error("Information preflight is only defined for FPT/NVFlash");
@@ -292,9 +294,12 @@ DWORD runVendor(const VendorTool& spec,const fs::path& directory,const fs::path&
     if(!CreateProcessW(exe.c_str(),command.data(),nullptr,nullptr,TRUE,creationFlags,nullptr,workingDirectory.c_str(),&start.StartupInfo,&process))throw std::runtime_error("Vendor CreateProcess Win32="+std::to_string(GetLastError()));
     Handle child{process.hProcess},thread{process.hThread};
     struct PendingReader {
-        Handle& child;std::shared_ptr<void> lease;std::shared_ptr<InsydeDesktop> desktop;
-        ~PendingReader(){if((lease||desktop)&&child.h&&WaitForSingleObject(child.h,0)==WAIT_TIMEOUT){const auto h=child.release();std::thread([h,guard=lease,keep=desktop]{WaitForSingleObject(h,INFINITE);CloseHandle(h);}).detach();}}
-    } pendingReader{child,lease,isolated};
+        Handle& child;std::shared_ptr<void> lease;std::shared_ptr<InsydeDesktop> desktop;std::shared_ptr<BiosCaptureSession> biosSession;
+        ~PendingReader(){if((lease||desktop||biosSession)&&child.h&&WaitForSingleObject(child.h,0)!=WAIT_OBJECT_0){
+            const auto h=child.release();const auto reap=[h,guard=lease,keep=desktop,session=biosSession]{while(WaitForSingleObject(h,INFINITE)!=WAIT_OBJECT_0)Sleep(1000);CloseHandle(h);};
+            mc::detail::startReaper(reap);
+        }}
+    } pendingReader{child,lease,isolated,biosSession};
     if(lease){
         if(!SetHandleInformation(lease.get(),HANDLE_FLAG_INHERIT,oldLeaseFlags&HANDLE_FLAG_INHERIT))throw std::runtime_error("Cannot restore vendor lease handle flags");
         restoreInheritance.handle=nullptr;
@@ -431,7 +436,7 @@ bool biosRomDumpAvailable(){return true;} // Every model may request the logged 
 std::uint64_t biosRomExpectedBytes(){
     return declaredSize(); // Unknown until read/validated map; never a model-sized fallback.
 }
-DiagnosticDumpResult createPlatformBiosRomDump(std::stop_token token,std::atomic<std::uint64_t>* progress){
+DiagnosticDumpResult createPlatformBiosRomDump(std::stop_token token,std::atomic<std::uint64_t>* progress,const std::shared_ptr<BiosCaptureSession>& biosSession){
     DiagnosticDumpResult result;std::string error,hash;std::uint64_t expected{};std::array<std::uint64_t,2> counts{};std::array<std::string,2> hashes{};
     diagnostics::bios::Shape shape;std::optional<diagnostics::insyde::Validation> insydeProof;
     bool passesEqual{};std::string phase="precheck";const VendorTool* selected{};
@@ -512,13 +517,13 @@ DiagnosticDumpResult createPlatformBiosRomDump(std::stop_token token,std::atomic
             const auto awake=SetThreadExecutionState(ES_CONTINUOUS|ES_SYSTEM_REQUIRED);struct Awake{bool set;~Awake(){if(set)SetThreadExecutionState(ES_CONTINUOUS);}} restoreAwake{awake!=0};
             if(selected->intel){
                 phase="fpt_information";checkpoint(phase);cancel(token);
-                if(runVendor(*selected,directory,{},ReadCommand::Information,0,log,token,nullptr,0))throw std::runtime_error("FPT -I отклонил систему; информация и ошибка сохранены, чтение SPI не запускалось");
+                if(runVendor(*selected,directory,{},ReadCommand::Information,0,log,token,nullptr,0,0,{}, {},biosSession))throw std::runtime_error("FPT -I отклонил систему; информация и ошибка сохранены, чтение SPI не запускалось");
                 guardDriver(*selected,log);cancel(token);
             }
             for(unsigned pass=1;pass<=2;++pass){
                 cancel(token);guardDriver(*selected,log);phase="read_pass"+std::to_string(pass);checkpoint(phase);const auto output=result.directory/("pass"+std::to_string(pass)+".partial.bin");
                 ULONGLONG before{},after{};const bool clockOk=QueryUnbiasedInterruptTime(&before)!=FALSE;const auto began=Clock::now();
-                const auto code=runVendor(*selected,directory,output,ReadCommand::Save,pass,log,token,progress,pass==1?0:counts[0]);
+                const auto code=runVendor(*selected,directory,output,ReadCommand::Save,pass,log,token,progress,pass==1?0:counts[0],0,{}, {},biosSession);
                 std::error_code ec;const auto count=fs::file_size(output,ec);counts[pass-1]=ec?0:count;checkpoint(phase);
                 std::vector<char> image;if(!ec){image=bytes(output);hashes[pass-1]=windows::detail::binarySha256(image);}
                 log.add("pass_file_observed","{\"pass\":"+std::to_string(pass)+",\"bytes\":"+std::to_string(counts[pass-1])+",\"sha256\":"+(hashes[pass-1].empty()?"null":q(hashes[pass-1]))+"}");checkpoint(phase);

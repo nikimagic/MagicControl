@@ -16,6 +16,7 @@ struct InfoDumpResourceRequest {
     std::shared_ptr<EcAccess> access;
     MaximumFanProbe maximumProbe;
     std::shared_ptr<std::mutex> hardwareGate;
+    std::shared_ptr<TelemetryGate::FirmwarePause> firmwarePause;
     DiagnosticDumpMode mode{DiagnosticDumpMode::ReadOnly};
     FirmwareFanDefault firmwareDefault;
     std::string displaySnapshot;

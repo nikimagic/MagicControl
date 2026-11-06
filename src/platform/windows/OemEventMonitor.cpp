@@ -1,6 +1,8 @@
 #include "OemEventMonitor.h"
 #include "MagicControl/BoardIdentity.h"
 #include "MagicControl/DeviceProfile.h"
+#include "MagicControl/TelemetryGate.h"
+#include "WmiEventTimeWindows.h"
 
 #include <windows.h>
 #include <wbemidl.h>
@@ -35,6 +37,12 @@ OemEventMonitor::~OemEventMonitor() {
 }
 
 void OemEventMonitor::run() {
+    std::optional<TelemetryGate::Observation> initialization;
+    while(!stop_.load(std::memory_order_acquire)&&!initialization){
+        initialization=telemetryGate().tryObservation();
+        if(!initialization)std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    if(!initialization)return;
     Apartment apartment;
     if (FAILED(apartment.result)) { if (log_) log_("OEM events: COM initialization failed"); return; }
     static std::once_flag security;
@@ -49,7 +57,10 @@ void OemEventMonitor::run() {
     if (FAILED(connected)) { if (log_) log_("OEM events: ROOT\\WMI unavailable"); return; }
     CoSetProxyBlanket(service.Get(), RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, nullptr,
                       RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, nullptr, EOAC_NONE);
-    struct Subscription { std::string name; ComPtr<IEnumWbemClassObject> events; };
+    struct Subscription {
+        std::string name;std::wstring query;ComPtr<IEnumWbemClassObject> events;
+        FirmwareEventQueueFilter filter;bool retryLogged{};std::chrono::steady_clock::time_point retryAt{};
+    };
     std::vector<Subscription> subscriptions;
     const auto profileId=deviceProfile(readBoardDescriptor()).id;
     const bool uniwill=profileId=="wu-jie-15-xpro",gm6=gmRamFanProfile(profileId);
@@ -63,7 +74,7 @@ void OemEventMonitor::run() {
         SysFreeString(language); SysFreeString(statement);
         const auto providerName = utf8(provider, static_cast<ULONG>(wcslen(provider)));
         if (SUCCEEDED(result)) {
-            subscriptions.push_back({providerName, std::move(events)});
+            subscriptions.push_back({providerName, std::move(query), std::move(events)});
             if (log_) log_("OEM events: subscribed to "+providerName);
             if(subscribed_)subscribed_(providerName);
         } else if (log_) {
@@ -76,10 +87,41 @@ void OemEventMonitor::run() {
         }
     }
     if (log_) log_(std::format("OEM events: {} WMI providers connected", subscriptions.size()));
+    auto observedGeneration=initialization->generation();
+    initialization.reset();
     while (!stop_.load(std::memory_order_acquire)) {
+        auto observation=telemetryGate().tryObservation();
+        if(!observation){std::this_thread::sleep_for(std::chrono::milliseconds(50));continue;}
+        if(observation->generation()!=observedGeneration){
+            observedGeneration=observation->generation();
+            for(auto& subscription:subscriptions)subscription.filter.captureBoundary();
+        }
         for (auto& subscription : subscriptions) {
+            if(!subscription.events){
+                if(std::chrono::steady_clock::now()<subscription.retryAt)continue;
+                BSTR language=SysAllocString(L"WQL"),statement=SysAllocString(subscription.query.c_str());
+                ComPtr<IEnumWbemClassObject> replacement;
+                const auto result=service->ExecNotificationQuery(language,statement,WBEM_FLAG_FORWARD_ONLY|WBEM_FLAG_RETURN_IMMEDIATELY,nullptr,&replacement);
+                SysFreeString(language);SysFreeString(statement);
+                if(FAILED(result)){
+                    if(!subscription.retryLogged&&log_)log_(std::format("OEM events: provider={} resubscribe failed HRESULT=0x{:08X}",subscription.name,static_cast<unsigned>(result)));
+                    subscription.retryLogged=true;subscription.retryAt=std::chrono::steady_clock::now()+std::chrono::seconds(1);continue;
+                }
+                // A new query has no old queued events. Do not call the
+                // startup subscription callback again: it may write APP.
+                subscription.events=std::move(replacement);subscription.filter.renewed();subscription.retryLogged=false;
+                if(log_)log_("OEM events: provider="+subscription.name+" resubscribed after an unconfirmed event timestamp");
+            }
             ComPtr<IWbemClassObject> item; ULONG returned{};
-            if (subscription.events->Next(0, 1, &item, &returned) != WBEM_S_NO_ERROR || returned == 0) continue;
+            const auto next=subscription.events->Next(0, 1, &item, &returned);
+            if(next!=WBEM_S_NO_ERROR||returned==0){
+                const bool empty=returned==0&&(next==WBEM_S_NO_ERROR||next==WBEM_S_FALSE||next==WBEM_S_TIMEDOUT);
+                if(empty&&subscription.filter.renewAfterEmpty()){
+                    if(log_)log_("OEM events: provider="+subscription.name+" queue empty without confirmed event timestamps; renewing subscription");
+                    subscription.events.Reset();subscription.retryAt={};
+                }
+                continue;
+            }
             VARIANT value{};
             const bool brightness = subscription.name == "WmiMonitorBrightnessEvent";
             if (SUCCEEDED(item->Get(brightness ? L"Brightness" : L"ULong", 0, &value, nullptr, nullptr))) {
@@ -92,6 +134,21 @@ void OemEventMonitor::run() {
                 else if (value.vt == VT_UI2) code = value.uiVal;
                 else if (value.vt == VT_I2 && value.iVal >= 0) code = static_cast<std::uint64_t>(value.iVal);
                 if (code != 0 || brightness) {
+                    if(subscription.filter.active()){
+                        VARIANT created{};CIMTYPE type{};std::optional<std::uint64_t> timestamp;
+                        if(SUCCEEDED(item->Get(L"TIME_CREATED",0,&created,&type,nullptr)))timestamp=wmiEventFiletime(created,type);
+                        VariantClear(&created);
+                        const auto age=classifyFirmwareEvent(timestamp,observation->firmwareEventBoundary(),FirmwareWallClock::now(),FirmwareSteadyClock::now());
+                        // Every OEM event can affect an observer or enqueue a
+                        // later action; an unknown old-queue event is never
+                        // replayed. A fresh subscription resumes all codes.
+                        const auto disposition=subscription.filter.decide(age,true);
+                        if(disposition==FirmwareEventDisposition::DiscardStale){VariantClear(&value);continue;}
+                        if(disposition==FirmwareEventDisposition::ResubscribeUnknown){
+                            if(log_)log_(std::format("OEM events: provider={} code={} suppressed: event time/clock not confirmed; re-subscribing",subscription.name,code));
+                            subscription.events.Reset();subscription.retryAt={};VariantClear(&value);continue;
+                        }
+                    }
                     if (log_) log_(std::format("OEM event: provider={} code={} (0x{:X})",subscription.name,code,code));
                     if (callback_) callback_(subscription.name, code);
                 }

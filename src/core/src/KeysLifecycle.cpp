@@ -301,7 +301,8 @@ struct KeysOperations::Impl {
             if(command)trace.finish(completed.success?"readback_confirmed":"failed",
                 "\"observed\":"+std::to_string(completed.snapshot.value[static_cast<std::size_t>(command->action)])+",\"message\":"+audit::quote(completed.message));
             publish(std::move(completed));
-        },[]{},command?ResourceWorkClass::Interactive:ResourceWorkClass::Observation);}catch(const std::exception& e){publish(failure(command,baseline,e.what()));}
+        },[]{},command?ResourceWorkClass::Interactive:ResourceWorkClass::Telemetry,
+            [this]{done.store(true,std::memory_order_release);notify();});}catch(const std::exception& e){publish(failure(command,baseline,e.what()));}
     }
     void publishFailure(const Request& request,std::string error){publish(failure(request.command,snapshot,std::move(error)));}
     void launch(Request request){
@@ -351,6 +352,15 @@ struct KeysOperations::Impl {
     std::optional<KeyOperationResult> take(){
         if(!done.exchange(false,std::memory_order_acq_rel))return {};
         worker.join();
+        if(worker.telemetrySkipped()){
+            busy=false;refreshing=false;
+            if(queued){
+                auto request=std::move(*queued);queued.reset();const auto row=static_cast<std::size_t>(request.command.action);
+                if(!snapshot.available[row]){operation=request.reservation;busy=true;publishFailure(request,"Устройство недоступно после обновления состояния.");}
+                else launch(std::move(request));
+            }
+            return {};
+        }
         auto completed=std::move(pending);merge(completed.snapshot);
         if(!completed.command){
             if(completed.message.empty()){

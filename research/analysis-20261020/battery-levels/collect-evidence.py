@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).resolve().parent
-GM = ROOT / "build/research-gm6ir0c/all-active"
+GM = ROOT / "../Decompile/GM6IR0C/Control_Center"
 HY = ROOT / "research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019"
 
 

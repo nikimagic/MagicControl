@@ -29,9 +29,12 @@ inline void DisplayRotationOperations::request(std::uint64_t receivedAt){
 inline void DisplayRotationOperations::continueQueued(){
     if(closed_||busy_||!queued_)return;
     queued_=false;busy_=true;pending_={};immediate_=false;token_=begin_?begin_(receivedAt_):0;
-    try{worker_.launch([this,at=receivedAt_,id=audit::capture()]{
+    auto observation=admitOemEvent(receivedAt_);
+    auto reservation=observation?deviceOperations().tryBegin():std::shared_ptr<DeviceOperation>{};
+    if(!reservation){pending_.detail=observation?"Поворот экрана не выполнен: устройство занято другой операцией.":"Поворот экрана отменён: выполняется дамп прошивки или событие устарело.";immediate_=true;if(ready_)ready_();return;}
+    try{worker_.launch([this,at=receivedAt_,id=audit::capture(),reservation=std::move(reservation)]{
         audit::Scope trace("display.rotate","\"received_at_ms\":"+std::to_string(at),id,true);
-        try{pending_.detail=action_();pending_.success=true;}
+        try{auto current=admitOemEvent(at);if(!current)throw std::runtime_error("Поворот экрана отменён: выполняется дамп прошивки или событие устарело.");pending_.detail=action_();pending_.success=true;}
         catch(const std::exception& error){pending_.detail=error.what();}
         catch(...){pending_.detail="Ошибка обработчика поворота экрана.";}
         trace.finish(pending_.success?"readback_confirmed":"failed","\"message\":"+audit::quote(pending_.detail));

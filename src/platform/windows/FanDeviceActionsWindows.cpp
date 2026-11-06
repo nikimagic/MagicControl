@@ -510,6 +510,7 @@ void FansOperationsWindows::toggleCurveLink(){
     }
 void FansOperationsWindows::completeWorker(){
         if(!commandWorker.takeCompletion())return;
+        if(commandWorker.telemetrySkipped()){pendingJob.reset();busy=false;return;}
         auto result=std::move(pendingJob);pendingJob.reset();
         if(commandWorker.failure()){JobResult failed;failed.typedGeneration=typedStateGeneration;failed.message=L"Ошибка операции FANs; состояние не подтверждено.";result=std::move(failed);}
         if((gm6Controller||huawei)&&result&&result->typedGeneration!=typedStateGeneration){
@@ -595,11 +596,12 @@ void FansOperationsWindows::pollSensors(){
         if (!visible && !batteryLoggingEnabled() && !windows::powerDiagnosticBurstActive() && GetTickCount64() < nextBackgroundPoll) return;
         nextBackgroundPoll = GetTickCount64() + 5000;
         const bool readGmTables=!gm6TablesKnown;const auto generation=typedStateGeneration;
-        try{sensorWorker.launch([this,readGmTables,generation]{pendingSensors=readFanMonitoring({ec,*monitoringReader,monitoringSource,hlylController.get(),gm6Controller.get(),deviceProfile(resourceBoard).id=="minisforum-hpbsd",readGmTables,generation});},[this]{if(ready_)ready_(true);});}
+        try{sensorWorker.launch([this,readGmTables,generation]{pendingSensors=readFanMonitoring({ec,*monitoringReader,monitoringSource,hlylController.get(),gm6Controller.get(),deviceProfile(resourceBoard).id=="minisforum-hpbsd",readGmTables,generation});},[this]{if(ready_)ready_(true);},ResourceWorkClass::Telemetry);}
         catch(const std::exception& error){operationStatus=wide(error.what());if(telemetryLog)telemetryLog("FANs observation start failed: "+std::string(error.what()));if(visible)view_.invalidate(View);}
     }
 void FansOperationsWindows::completeSensors(){
         if(!sensorWorker.takeCompletion())return;
+        if(sensorWorker.telemetrySkipped()){pendingSensors.reset();return;}
         const int previousNativeMode=hlylState.mode;
         {
             if(pendingSensors&&(gm6Controller||huawei)&&pendingSensors->typedGeneration!=typedStateGeneration)
@@ -714,7 +716,7 @@ void FansOperationsWindows::beginFanNotice(int mode){
 void FansOperationsWindows::finishFanNotice(bool success,const std::wstring& detail){if(fanNoticeToken){auto value=fanNotice;value.detail=mc::windows::encoding::utf8(detail);value.error=!success;view_.completeNotice(fanNoticeToken,std::move(value));}fanNoticeToken=0;}
 void FansOperationsWindows::launchCommand(FanRequest request){
         commandWorker.join(); // Preserve superseded-generation admission order.
-        const auto workClass=request.writing?ResourceWorkClass::Interactive:ResourceWorkClass::Observation;
+        const auto workClass=request.writing?ResourceWorkClass::Interactive:ResourceWorkClass::Telemetry;
         try{commandWorker.launch([this,request=std::move(request)]{
             JobResult result;result.typedGeneration=request.generation;
             if(request.writing){

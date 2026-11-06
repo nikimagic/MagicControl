@@ -4,7 +4,7 @@
 namespace mc {
 bool biosRomDumpAvailable(){return false;}
 std::uint64_t biosRomExpectedBytes(){return 0;}
-DiagnosticDumpResult createPlatformBiosRomDump(std::stop_token,std::atomic<std::uint64_t>*){
+DiagnosticDumpResult createPlatformBiosRomDump(std::stop_token,std::atomic<std::uint64_t>*,const std::shared_ptr<BiosCaptureSession>&){
     DiagnosticDumpResult r;r.message="AMI AFU BIOS reader доступен только в Windows; Linux backend не подключён.";return r;
 }
 namespace diagnostics {

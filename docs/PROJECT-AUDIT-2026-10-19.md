@@ -427,7 +427,7 @@ Windows-службы MagicControl. Рабочие контроллеры GUI и�
 Гарантию владения конкретной OEM-службой следует проверять отдельно для
 соответствующего аппаратного пути, а не объявлять обеспеченной Global gate.
 
-В отдельном экспериментальном `tests/test_util/src/EcBitTestWindows.cpp`
+В отдельном экспериментальном `tests/util/src/EcBitTestWindows.cpp`
 осталось имя `Local\MagicControl.EcTransactions.v1`; этот инструмент не входит
 в обычный portable. Внутренняя standalone lease Wujie и старые Tools также
 содержат прежнее имя SingleInstance. Это не общий production gate EC и не

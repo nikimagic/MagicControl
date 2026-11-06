@@ -448,6 +448,14 @@ void SettingsOperationsWindows::readState(bool timerTick){
     }
 void SettingsOperationsWindows::complete(){
         if (!operations.takeCompletion()) return;
+        if (operations.telemetrySkipped()) {
+            busy=false;reading=false;operations.finish();operation.reset();
+            if(auto queued=operations.takeQueued()){
+                auto next=std::move(*queued);requestedNotice=std::move(next.notice);requestedCommand=next.command;
+                start(std::move(next.action),next.message.c_str(),next.success.c_str(),false,next.token,std::move(next.reservation));
+            }
+            return;
+        }
         std::wstring message=pendingMessage;
         const bool passive = reading;
         const bool idleOnly=idleObservation;
@@ -638,7 +646,7 @@ void SettingsOperationsWindows::refreshForTray(bool invalidateObservation){
     if (!busy && (!ec||!ec->observationsPaused())) readState();
 
 }
-bool SettingsOperationsWindows::observePowerSupply(){const bool onBattery=windows::apuOnBattery();if(state.onBattery==onBattery)return false;state.onBattery=onBattery;return true;}
+bool SettingsOperationsWindows::observePowerSupply(){auto observation=telemetryGate().tryObservation();if(!observation)return false;const bool onBattery=windows::apuOnBattery();if(state.onBattery==onBattery)return false;state.onBattery=onBattery;return true;}
 bool SettingsOperationsWindows::cancelCustomEditor(){if(!powerEditing||busy)return false;
         if(preview){previewState_.customEditing=false;previewState_.power=-1;powerEditing=false;view_.renderSelection();view_.updateButtons();setStatus(L"Просмотр: изменения только в макете, на устройство не передаются.");return true;}
         powerValues=powerBeforeEdit;powerOptionValues=powerOptionsBeforeEdit;powerEditing=false;pendingPerformance.reset();

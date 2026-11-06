@@ -104,7 +104,7 @@ SettingsWorkerResult executeSettingsOperation(MonitoringReader& reader,LaptopCon
                                               SettingsWorkerRequest request,SettingsReadingOutputs output) {
     // Backend presence is derived here rather than trusted from the caller.
     request.hasBackend=control!=nullptr;
-    return executeSettingsWorkerLinux(request,{
+    return executeSettingsResourceLinux(request,{
         [&]{return mc::executeBatteryResource(*control,BatteryWriteRequest::native(request.upper,request.restart));},
         [&]{const auto result=mc::executeLightingResource(*control,LightingWriteRequest::nativeUpdate(request.keyboardLevel,request.keyboardTimeout));return SettingsWorkerResult{result.success,result.message};},
         [&]{collectSettingsReadings(reader,control,output.battery,output.osBattery,output.ecBattery,output.policy,output.snapshot);},
@@ -139,13 +139,14 @@ bool SettingsOperationsLinux::submit(SettingsWorkerRequest request,std::function
         const auto outcome=executeSettingsOperation(*reader,oem.get(),request,{pending_.battery,pending_.osBattery,pending_.ecBattery,pending_.policy,pending_.oem});
         pending_.success=outcome.success;pending_.message=outcome.message;
         if(request.writing())trace.finish(pending_.success?"completed_with_observation":"failed","\"message\":"+audit::quote(pending_.message)+",\"observed\":"+audit::laptop(pending_.oem));
-    },std::move(ready),request.writing()?ResourceWorkClass::Interactive:ResourceWorkClass::Observation);}
+    },std::move(ready),request.writing()?ResourceWorkClass::Interactive:ResourceWorkClass::Telemetry);}
     catch(...){SettingsPageResult result;result.startFailed=true;result.message="Не удалось запустить обработчик SETs.";result.token=pending_.token;result.notice=pending_.notice;immediate_=std::move(result);return false;}
     return true;
 }
 std::optional<SettingsPageResult> SettingsOperationsLinux::take(){
     if(immediate_){auto result=std::move(immediate_);immediate_.reset();return result;}
     if(!worker_.takeCompletion())return {};
+    if(worker_.telemetrySkipped())return {};
     SettingsPageResult result;result.token=pending_.token;result.notice=pending_.notice;result.success=pending_.success;result.message=pending_.message;
     if(worker_.failure()){
         result.workerEscaped=true;result.success=false;result.message="Ошибка SETs: состояние не подтверждено.";batteryResources.clear();

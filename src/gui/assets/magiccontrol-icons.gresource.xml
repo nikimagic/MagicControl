@@ -5,6 +5,6 @@
   </gresource>
   <gresource prefix="/com/mechrevo/magiccontrol">
     <file alias="donation-wallet.png">donation-wallet.png</file>
-    <file alias="license.txt">../../../GitHub_Releases/LICENSE.txt</file>
+    <file alias="license.txt">../../../packaging/LICENSE.txt</file>
   </gresource>
 </gresources>

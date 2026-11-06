@@ -1,5 +1,6 @@
 #include "MagicControl/ActionLog.h"
 #include "MagicControl/NvidiaGpu.h"
+#include "MagicControl/GpuPresence.h"
 #include "MagicControl/Monitoring.h"
 #include "MagicControl/Logging.h"
 #include "NvflashPlatform.h"
@@ -29,7 +30,7 @@
 
 namespace mc {
 bool nvidiaGpuPresent() noexcept {
-    try {
+    return observeGpuPresence([]()->GpuPresence&{return gpuPresence();},GpuPresenceKind::Nvidia,[] {
 #ifdef _WIN32
         // Also see a disabled/headless adapter absent from DXGI enumeration.
         const auto devices=SetupDiGetClassDevsW(&GUID_DEVCLASS_DISPLAY,nullptr,nullptr,DIGCF_PRESENT);
@@ -48,7 +49,8 @@ bool nvidiaGpuPresent() noexcept {
             std::string vendor,klass;std::ifstream(device.path()/"vendor")>>vendor;std::ifstream(device.path()/"class")>>klass;
             if(vendor=="0x10de"&&klass.rfind("0x03",0)==0)return true;}
 #endif
-    }catch(...){}return false;
+        return false;
+    });
 }
 namespace {
 // Minimal documented NVML C ABI; no NVIDIA binaries/headers are redistributed.

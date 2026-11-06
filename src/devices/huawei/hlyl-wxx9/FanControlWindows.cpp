@@ -42,6 +42,7 @@ const char* autoResultText(HlylAutoResult result){
 }
 struct HlylFanController::Impl {
     std::mutex mutex;std::condition_variable wake;bool stopping{},owned{},releasePending{};
+    std::optional<TelemetryGate::SafetyControl> telemetrySafety;
     std::uint64_t commandGeneration{};
     std::array<int,2> requested{},originalTargets{};std::string message;ResourceActor watchdog;
     Impl():watchdog([this]{watch();}){}
@@ -52,13 +53,13 @@ struct HlylFanController::Impl {
         // Default is a separate explicit user request and may select Auto.
         if(!(current.flags&2)){
             io.finish(); // A no-op still must leave configuration mode safely.
-            owned=false;releasePending=false;
+            owned=false;releasePending=false;telemetrySafety.reset();
             logMessage("huawei_fans","Firmware automatic already active; no cleanup writes");return HlylAutoResult::AlreadyAuto;
         }
         if(!explicitRequest){
             if(!owned||current.target0!=requested[0]*2||current.target1!=requested[1]*2){
                 io.finish();
-                owned=false;releasePending=false;
+                owned=false;releasePending=false;telemetrySafety.reset();
                 logMessage("huawei_fans","Cleanup skipped: manual ownership changed externally; Auto not confirmed");return HlylAutoResult::OwnershipLost;
             }
         }
@@ -70,7 +71,7 @@ struct HlylFanController::Impl {
         }
         // Retain cleanup intent if port exit fails; no more writes on this session.
         try{io.finish();}catch(const HlylI2EcFinishError&){if(owned)releasePending=true;throw;}
-        owned=false;releasePending=false;logMessage("huawei_fans","Firmware automatic confirmed; other flags preserved");return HlylAutoResult::Applied;
+        owned=false;releasePending=false;telemetrySafety.reset();logMessage("huawei_fans","Firmware automatic confirmed; other flags preserved");return HlylAutoResult::Applied;
     }
     ~Impl(){
         {std::lock_guard lock(mutex);stopping=true;wake.notify_all();}
@@ -85,7 +86,7 @@ struct HlylFanController::Impl {
                 if(releasePending){message=std::string("Honor: завершение отката: ")+autoResultText(automatic());logMessage("huawei_fans",message);continue;}
                 bool stillOurs;
                 {HlylI2EcSession io;const auto state=snapshot(io);stillOurs=(state.flags&2)&&state.target0==requested[0]*2&&state.target1==requested[1]*2;io.finish();}
-                if(!stillOurs){owned=false;message="Honor: управление изменено извне";continue;}
+                if(!stillOurs){owned=false;telemetrySafety.reset();message="Honor: управление изменено извне";continue;}
                 const auto temperature=cpuTemperature();
                 if(temperature>=80){message=std::string("Honor: температура>=80°C; ")+autoResultText(automatic());logMessage("huawei_fans",message);}
             }catch(const std::exception& error){
@@ -97,6 +98,8 @@ struct HlylFanController::Impl {
     }
     void fixed(const std::array<int,2>& percent,bool requireAutomatic=false,const Runtime* baseline=nullptr,const std::uint64_t* diagnosticEpoch=nullptr){
         for(const auto value:percent)if(value<0||value>100)throw std::invalid_argument("Honor: PWM должен быть0–100%");
+        if(!telemetrySafety){telemetrySafety=telemetryGate().trySafetyControl();if(!telemetrySafety)throw std::runtime_error("Honor: firmware capture is active; fan control not started");}
+        struct ReleaseUnowned {Impl& self;~ReleaseUnowned(){if(!self.owned)self.telemetrySafety.reset();}} releaseUnowned{*this};
         const auto temperature=cpuTemperature();if(temperature>=80){
             const auto cleanup=automatic();
             throw std::runtime_error(std::string("Honor: ручной PWM запрещён при80°C; ")+autoResultText(cleanup));

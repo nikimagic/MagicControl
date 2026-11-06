@@ -19,6 +19,7 @@ struct LiquidCoolingController::Impl {
     std::unique_ptr<ILiquidCoolingBackend> backend;std::mutex gate;std::condition_variable wake;
     LiquidCoolingState cached;bool closing{};std::atomic<bool> suspendRequested{};Clock::time_point next{},nextMeter{};
     std::uint64_t pumpStartedAt{};ResourceActor worker;
+    std::optional<TelemetryGate::SafetyControl> telemetrySafety;
     explicit Impl(std::unique_ptr<ILiquidCoolingBackend> value):backend(std::move(value)){
         if(!backend)throw std::invalid_argument("LPP: missing platform backend");worker=ResourceActor([this]{run();});
     }
@@ -30,7 +31,7 @@ struct LiquidCoolingController::Impl {
     void status(std::string message){cached.status=std::move(message);logMessage("liquid_cooling",cached.status);}
     void disarm(){
         cached.automatic=false;next={};
-        try{backend->releaseNativePolicy();cached.nativePolicyOwned=backend->nativePolicyOwned();}
+        try{backend->releaseNativePolicy();cached.nativePolicyOwned=backend->nativePolicyOwned();if(!cached.nativePolicyOwned)telemetrySafety.reset();}
         catch(const std::exception& e){cached.commandUncertain=true;cached.nativePolicyOwned=backend->nativePolicyOwned();status(std::string("LPP native policy release failed/uncertain: ")+e.what());throw;}
     }
     void writePump(const LiquidPumpCommand& c,std::stop_token stop){
@@ -48,13 +49,13 @@ struct LiquidCoolingController::Impl {
         cached.automatic=false;cached.suspended=true;cached.commandUncertain=true;
         try{backend->releaseNativePolicy();status("LPP suspended: own native LC policy released; no automatic reconnect/restart; external outputs unmeasured");}
         catch(const std::exception& e){status(std::string("LPP suspend policy cleanup failed: ")+e.what());}
-        cached.nativePolicyOwned=backend->nativePolicyOwned();backend->close();
+        cached.nativePolicyOwned=backend->nativePolicyOwned();if(!cached.nativePolicyOwned)telemetrySafety.reset();backend->close();
     }
     void abortAutomatic(std::string reason){
         cached.automatic=false;cached.commandUncertain=true;
         try{backend->releaseNativePolicy();reason+="; own native LC policy released";}
         catch(const std::exception& e){reason+="; native policy cleanup failed/uncertain: "+std::string(e.what());}
-        cached.nativePolicyOwned=backend->nativePolicyOwned();status(std::move(reason));
+        cached.nativePolicyOwned=backend->nativePolicyOwned();if(!cached.nativePolicyOwned)telemetrySafety.reset();status(std::move(reason));
     }
     void tick(){
         const auto link=backend->link();
@@ -122,6 +123,8 @@ void LiquidCoolingController::setFan(const LiquidFanCommand& c,std::stop_token s
 void LiquidCoolingController::requestMeter(std::stop_token stop){std::lock_guard lock(impl_->gate);impl_->ready();impl_->backend->write(hydroc16g2::lpp::meter,stop);}
 void LiquidCoolingController::enableAutomatic(std::stop_token stop){
     std::lock_guard lock(impl_->gate);impl_->ready();if(impl_->cached.automatic)return;
+    auto safety=telemetryGate().trySafetyControl();
+    if(!safety)throw std::runtime_error("Firmware capture is active; liquid cooling Auto not started");
     impl_->disarm();impl_->backend->prepareAutomatic();
     // Explicit request only. Native OEM default provides flow before allowing
     // firmware to select a liquid-cooling power/thermal policy.
@@ -134,8 +137,8 @@ void LiquidCoolingController::enableAutomatic(std::stop_token stop){
         impl_->status("LPP Auto not enabled: fresh normal flow unavailable; explicit default pump/fan commands accepted, native LC policy unchanged");
         throw std::runtime_error(impl_->cached.status);
     }
-    try{impl_->backend->acquireNativePolicy();}catch(const std::exception& e){impl_->cached.commandUncertain=true;impl_->cached.nativePolicyOwned=impl_->backend->nativePolicyOwned();impl_->status(std::string("LPP Auto policy acquisition failed; cleanup/readback status retained: ")+e.what());throw;}
-    impl_->cached.nativePolicyOwned=true;impl_->cached.automatic=true;
+    try{impl_->backend->acquireNativePolicy();}catch(const std::exception& e){impl_->cached.commandUncertain=true;impl_->cached.nativePolicyOwned=impl_->backend->nativePolicyOwned();if(impl_->cached.nativePolicyOwned)impl_->telemetrySafety=std::move(safety);impl_->status(std::string("LPP Auto policy acquisition failed; cleanup/readback status retained: ")+e.what());throw;}
+    impl_->telemetrySafety=std::move(safety);impl_->cached.nativePolicyOwned=true;impl_->cached.automatic=true;
     impl_->next=Clock::now()+std::chrono::milliseconds(5500);impl_->nextMeter=Clock::now()+std::chrono::seconds(2);impl_->wake.notify_all();
     impl_->status("LPP Auto armed after fresh normal flow; waiting for native EC targets; no CPU PL/FAN-table writes");
 }

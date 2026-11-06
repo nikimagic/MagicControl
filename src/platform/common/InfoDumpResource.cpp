@@ -48,10 +48,10 @@ InfoResourceOperation resourceOperation(InfoDumpKind kind){
 const InfoDumpResourceServices& productionServices(){
     static const InfoDumpResourceServices services{
         [](const auto& r){return createDiagnosticDump(r.access,r.cancellation,r.maximumProbe,r.hardwareGate,r.mode,r.firmwareDefault,r.displaySnapshot,r.outputRoot);},
-        [](const auto& r){return createBiosRomDump(r.cancellation,r.progress);},
+        [](const auto& r){return createBiosRomDump(r.cancellation,r.progress,r.firmwarePause);},
         [](const auto& r){if(!r.powerSession)throw std::runtime_error("Power input diagnostic session unavailable");
             return createPowerInputDump(*r.powerSession,r.prompt,r.cancellation,r.access,r.displaySnapshot);},
-        [](const auto& r){return createVbiosRomDump(r.cancellation,r.progress,r.pci,r.outputRoot);}
+        [](const auto& r){return createVbiosRomDump(r.cancellation,r.progress,r.pci,r.outputRoot,r.firmwarePause);}
     };
     return services;
 }
@@ -64,7 +64,10 @@ InfoInventoryResult executeInfoInventoryResource(std::stop_token token,
         const std::function<bool(const HardwareInventory&,std::string&)>& save){
     InfoInventoryResult result;
     try{
-        if(!token.stop_requested())result.inventory=collect?collect(token):collectInfoInventoryResource(token);
+        if(!token.stop_requested()){
+            if(collect){auto observation=telemetryGate().tryObservation();if(!observation)throw std::runtime_error("INFO inventory unavailable while a firmware capture is active");result.inventory=collect(token);}
+            else result.inventory=collectInfoInventoryResource(token);
+        }
         result.cancelled=token.stop_requested();
         if(!result.cancelled){
             result.saved=save?save(result.inventory,result.error):InventoryCache::save(result.inventory,result.error);
@@ -76,6 +79,8 @@ InfoInventoryResult executeInfoInventoryResource(std::stop_token token,
     return result;
 }
 HardwareInventory collectInfoInventoryResource(std::stop_token cancellation,const IHardwareProvider* provider){
+    auto observation=telemetryGate().tryObservation();
+    if(!observation)throw std::runtime_error("INFO inventory unavailable while a firmware capture is active");
     using InventoryRoutes=ResourceControlTable<std::stop_token,const IHardwareProvider*,HardwareInventory>;
     static const auto inventory=[] {
         const auto key=infoResourceControlKey(InfoResourceOperation::Inventory);
@@ -110,16 +115,19 @@ std::shared_ptr<InfoOperation> InfoOperation::start(InfoOperationRequest request
     job->messages_->append("Сбор данных начался.");
     if(job->dumping()&&!job->firmwareDump()&&job->request_.dump.mode==DiagnosticDumpMode::ReadOnly)
         job->messages_->append("Диагностика только для чтения; пробы вентиляторов отключены.");
+    if(job->firmwareDump())try{job->request_.dump.firmwarePause=telemetryGate().requestFirmwareCapture(job->cancellation_.get_token());}
+    catch(const std::exception& e){job->fail(e.what());return job;}
     // The worker owns the job and all device/session capabilities, never a page.
     // Closing a window cancels without joining a potentially unbounded WMI call.
     try{submitDetachedResource([job]{
         try{job->run();}catch(const std::exception& e){job->fail(e.what());}
         catch(...){job->fail("Неизвестная ошибка INFO");}
-    });}
+    },job->firmwareDump()?ResourceWorkClass::Interactive:ResourceWorkClass::Observation);}
     catch(const std::exception& e){job->fail(e.what());}
     return job;
 }
 void InfoOperation::run(){
+    {std::lock_guard lock(resultGate_);if(done())return;workerStarted_=true;}
     OperationMessages::Binding capture(*messages_);
     audit::Scope trace(operationName(operation()),{},request_.auditId);
     const auto started=std::chrono::steady_clock::now();
@@ -195,6 +203,7 @@ void InfoOperation::publish(){
         ",\"saved\":"+(result_.success?"true":"false")+",\"cancelled\":"+(result_.cancelled?"true":"false")+
         ",\"message\":"+audit::quote(result_.message));
     messages_->finish(result_.message,result_.success,result_.cancelled,result_.dump.hardwareWarningMessage);
+    request_.dump.firmwarePause.reset();
     phase_.store(Phase::Finished,std::memory_order_release);
 }
 bool InfoOperation::done()const noexcept{return phase_.load(std::memory_order_acquire)==Phase::Finished;}
@@ -223,6 +232,12 @@ const InfoOperationResult* InfoOperation::poll(){
 void InfoOperation::releaseHardware(){cancel();if(dumping()){std::lock_guard cleanup(*request_.dump.hardwareGate);}}
 void InfoOperation::cancel(){
     cancellation_.request_stop();
+    if(firmwareDump()){
+        std::lock_guard lock(resultGate_);
+        if(!workerStarted_&&!done()){
+            result_.success=false;result_.message="Операция отменена.";publish();return;
+        }
+    }
     auto phase=Phase::AwaitingUi;
     // No UI pump is guaranteed after the page closes. A prepared-but-unlaunched
     // installer must still finish its transcript and must never launch later.

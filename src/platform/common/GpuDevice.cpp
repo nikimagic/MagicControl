@@ -1,6 +1,7 @@
 #include "MagicControl/ActionLog.h"
 #include "MagicControl/GpuDevice.h"
 #include "MagicControl/NvidiaGpu.h"
+#include "MagicControl/GpuPresence.h"
 #include <stdexcept>
 #include <algorithm>
 #include <map>
@@ -34,7 +35,7 @@ std::vector<GpuReading> physicalGpuReadings(std::vector<GpuReading> readings){
     }
     return result;
 }
-bool radeonDiscretePresent() noexcept {try{for(const auto& r:graphicsAdapters())if(r.vendorId==0x1002&&r.type==GpuType::Discrete&&!r.software)return true;}catch(...){}return false;}
+bool radeonDiscretePresent() noexcept {return observeGpuPresence([]()->GpuPresence&{return gpuPresence();},GpuPresenceKind::Radeon,[]{for(const auto& r:graphicsAdapters())if(r.vendorId==0x1002&&r.type==GpuType::Discrete&&!r.software)return true;return false;});}
 struct DiscreteGpu::Impl {GpuVendor vendor;NvidiaGpu nvidia;RadeonGpu radeon;explicit Impl(GpuVendor v):vendor(v){}};
 DiscreteGpu::DiscreteGpu(GpuVendor v):impl_(std::make_unique<Impl>(v)){}
 DiscreteGpu::~DiscreteGpu()=default;

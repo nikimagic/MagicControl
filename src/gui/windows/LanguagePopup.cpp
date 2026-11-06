@@ -310,7 +310,7 @@ struct Panel {
         fill(dc,toNativeRect(languageGeometry.separators[0]),theme::kDivider);
         // Only the language grid is left-aligned. All sections below share the QR centre.
         constexpr UINT centred = DT_CENTER | DT_VCENTER | DT_SINGLELINE;
-        // Exact attribution from GitHub_Releases/LICENSE.txt; do not invent a name.
+        // Exact attribution from packaging/LICENSE.txt; do not invent a name.
         if(hot==6) fill(dc,hitRect(6),theme::kHoverOverlay);
         label(dc,L"© 2026 NikiMagic",toNativeRect(languageGeometry.copyright),theme::kTextPrimary,true,centred);
         const auto normalBody=body;body=detail;

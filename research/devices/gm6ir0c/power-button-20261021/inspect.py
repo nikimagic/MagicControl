@@ -5,12 +5,12 @@ import hashlib,json,re
 root=Path(__file__).resolve().parents[4]
 out=Path(__file__).resolve().parent
 sources={
- 'oem_wmi':('build/research-gm6ir0c/all-active/0200033E-MyControlCenter.WMIEC.cs',[(59,68),(139,144),(303,311)]),
- 'oem_dispatch':('build/research-gm6ir0c/all-active/020002B9-MyControlCenter.MyFanCtrl.cs',[(190,197)]),
- 'oem_manager':('build/research-gm6ir0c/all-active/020003F0-MyControlCenter.MyFan.MyFanManager_RamFan1p5.cs',[(719,790),(874,943),(2295,2365),(2537,2610),(3331,3405)]),
- 'oem_light':('build/research-gm6ir0c/all-active/0200041C-MyControlCenter.MyFan.FanTable.MyFanTableCtrl.cs',[(139,203)]),
- 'oem_app':('build/research-gm6ir0c/all-active/02000341-MyControlCenter.App.cs',[(434,453),(460,481),(578,583)]),
- 'oem_presence':('build/research-gm6ir0c/all-active/020000EC-MyECIO.MyEcCtrl.cs',[(304,312)]),
+ 'oem_wmi':('../Decompile/GM6IR0C/Control_Center/0200033E-MyControlCenter.WMIEC.cs',[(59,68),(139,144),(303,311)]),
+ 'oem_dispatch':('../Decompile/GM6IR0C/Control_Center/020002B9-MyControlCenter.MyFanCtrl.cs',[(190,197)]),
+ 'oem_manager':('../Decompile/GM6IR0C/Control_Center/020003F0-MyControlCenter.MyFan.MyFanManager_RamFan1p5.cs',[(719,790),(874,943),(2295,2365),(2537,2610),(3331,3405)]),
+ 'oem_light':('../Decompile/GM6IR0C/Control_Center/0200041C-MyControlCenter.MyFan.FanTable.MyFanTableCtrl.cs',[(139,203)]),
+ 'oem_app':('../Decompile/GM6IR0C/Control_Center/02000341-MyControlCenter.App.cs',[(434,453),(460,481),(578,583)]),
+ 'oem_presence':('../Decompile/GM6IR0C/Control_Center/020000EC-MyECIO.MyEcCtrl.cs',[(304,312)]),
  'dsdt':('build/research-gm6ir0c/samples/DSDT.dsl',[(133238,133260),(133272,133292),(134516,134520),(134595,134610),(135173,135183)]),
  'our_subscriptions':('src/platform/windows/OemEventMonitor.cpp',[(50,74)]),
  'our_dispatch':('src/gui/windows/MainWindow.cpp',[(805,819),(1053,1075)]),

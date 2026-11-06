@@ -1,4 +1,4 @@
 {
   "trees": ["src", "cmake"],
-  "files": ["CMakeLists.txt", "Tools/Build-All.ps1", "packaging/fan-curves.csv", "packaging/app-settings.ini"]
+  "files": ["CMakeLists.txt", "Tools/Build-All.ps1", "packaging/fan-curves.csv", "packaging/app-settings.ini", "packaging/LICENSE.txt"]
 }

@@ -84,6 +84,8 @@ void checkpoint(const PowerInputDumpSession& s,std::string_view status){
 }
 bool powerInputDumpSupported(){const auto id=deviceProfile(readBoardDescriptor()).id;return id=="mechrevo-gm6ir0c"||id=="eluktronics-hydroc16g2";}
 DiagnosticDumpResult createPowerInputDump(PowerInputDumpSession& s,const PowerInputPrompt& ask,std::stop_token token,std::shared_ptr<EcAccess> access,std::string displaySnapshot){
+    auto collection=telemetryGate().tryDiagnosticCollection();
+    if(!collection){DiagnosticDumpResult result;result.message="Power input diagnostic unavailable while a firmware capture is active";return result;}
     DiagnosticDumpResult result;
     try{
         const auto board=readBoardDescriptor();const auto id=std::string(deviceProfile(board).id);
@@ -102,7 +104,7 @@ DiagnosticDumpResult createPowerInputDump(PowerInputDumpSession& s,const PowerIn
             if(!ask(instructions[s.nextStage],reason))break;
             if(token.stop_requested())break;
             ++s.attempt;checkpoint(s,"preflight");
-            auto provider=diagnostics::createFastDiagnosticWorker();auto frame=provider->read(token,std::chrono::seconds(10));
+            auto provider=diagnostics::createFastDiagnosticWorker(collection);auto frame=provider->read(token,std::chrono::seconds(10));
             const auto pre=inspect(JsonReader::parse(frame.batteryJson.empty()?"null":frame.batteryJson),s.nextStage);
             write(s.directory/("preflight-"+std::to_string(s.attempt)+".json"),std::format(R"({{"stage":{},"match":{},"reason":{},"owner_acknowledged_instructions":true,"battery":{}}})",s.nextStage,pre.match,quote(pre.reason),frame.batteryJson.empty()?"null":frame.batteryJson)+"\n");
             if(!pre.match){reason=pre.reason;checkpoint(s,"waiting");continue;}

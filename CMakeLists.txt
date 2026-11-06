@@ -116,7 +116,7 @@ elseif(UNIX)
     add_subdirectory(src/platform/linux)
 endif()
 
-add_subdirectory(tests/test_util)
+add_subdirectory(tests/util)
 if(MAGICCONTROL_BUILD_CLI)
     add_subdirectory(src/cli)
     add_dependencies(magiccontrol magiccontrol-build-version)

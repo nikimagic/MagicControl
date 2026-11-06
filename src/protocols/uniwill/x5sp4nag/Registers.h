@@ -108,7 +108,7 @@ inline constexpr std::uint8_t kPerformanceBit5       = 0x20;
 /// SETs profile changes clear only nonzero 0x783..0x785; never fan tables/gates.
 /// Exact-board probe 2026-10-16, PM 0x5D0009: writing 25 changed SMU STAPM
 /// 35->25 W only; zero restored 35 W. Preset TABLE numbers are still not a
-/// one-to-one promise of current SMU limits. Evidence: tests/test_util/analysis/
+/// one-to-one promise of current SMU limits. Evidence: out/test_util/analysis/
 /// ec-smu-limits-20261016/run1/summary.json (Turbo, reported USB-C 65 W, idle).
 inline constexpr std::uint16_t kPowerLimitSustained = 0x783;
 /// Historical PL2/"Short" name. Exact-board probe: writing 26 changed SMU SLOW
@@ -301,7 +301,7 @@ inline constexpr std::uint16_t kBatteryStoredLimitWmi = 0x87F;
 /// WARNING: A/B 2026-10-16 proved a POWER side effect: DC Office changes
 /// Fast/Slow/STAPM 30/25/25 at platform 7 to 45/40/40 at 4. Not battery-only.
 /// AC 65W Office/Balanced/Turbo unchanged in the same test. See battery-platform-
-/// smu-20261016/REPORT.md under tests/test_util/analysis.
+/// smu-20261016/REPORT.md under research/test_util/analysis.
 /// 7 -> 4 enables percentage enforcement when ROM ID=0xFF; 7 disables it again.
 /// User policy 2026-10-17 on verified 4/7 + ROM FF: 100/95/85% select 4;
 /// separate Auto preset selects 7 with upper 100%. Save original platform.
@@ -358,7 +358,7 @@ inline constexpr std::uint16_t kTypeCPowerB = 0x7CE;
 // readback and later samples). Requesting both produced only bit7. No workload.
 // Legacy Intel OEM also uses BIOS profile index 0x7AB with High Power; our
 // readback stayed 0. These are not universal "enable full Turbo" controls.
-// Evidence: tests/test_util/analysis/highpower-overboost-20261016/REPORT.md.
+// Evidence: research/test_util/analysis/highpower-overboost-20261016/REPORT.md.
 // 0x742.5 is an old charging-priority capability in Linux. TUXEDO additionally
 // restricts device support because ODM removed the feature in newer firmware.
 // Our OEM support function returns false; a set capability bit is insufficient.

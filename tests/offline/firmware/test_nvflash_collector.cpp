@@ -9,6 +9,7 @@
 #include "MagicControl/Json.h"
 #include "MagicControl/InfoResourceControl.h"
 #include "MagicControl/OperationMessages.h"
+#include "MagicControl/TelemetryGate.h"
 #include "FirmwareEvidence.h"
 #include "NvflashPlatform.h"
 #include "VbiosImageValidation.h"
@@ -18,6 +19,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <chrono>
+#include <future>
 #include <thread>
 #ifdef _WIN32
 #define NOMINMAX
@@ -31,8 +33,9 @@ using mc::diagnostics::nvflash::Command;
 unsigned fixtureInfoResults();
 unsigned fixtureInfoFinishes();
 namespace {
-enum class Case { Both, Unknown, Large, Truncated, DifferentEntire, SilentCompare, ChipChanged, PendingReader, DifferentVbios, ResolveDomain, AmbiguousDomain, ChangedOs, CleanupFailure, CancelBefore, CancelAfterFirst, HybridIntelPrimary, HybridMissingNvml, ListMismatch, IfrV3Unknown, IfrV3Invalid, IfrV3Different } scenario;
+enum class Case { Both, Unknown, Large, Truncated, DifferentEntire, SilentCompare, ChipChanged, PendingReader, PendingCancelled, DifferentVbios, ResolveDomain, AmbiguousDomain, ChangedOs, CleanupFailure, CancelBefore, CancelAfterFirst, HybridIntelPrimary, HybridMissingNvml, ListMismatch, IfrV3Unknown, IfrV3Invalid, IfrV3Different } scenario;
 unsigned normalReads{},entireReads{},checks{},compares{},calls{},assertions{};
+std::atomic<unsigned> graphicsCalls{};
 bool interrupted{};std::stop_source cancellation;
 std::vector<std::string> teardown;
 std::shared_ptr<void> pendingReaderLease;
@@ -65,6 +68,7 @@ void image(const fs::path& p,bool entire){
 }
 namespace mc {
 std::vector<GraphicsAdapter> graphicsAdapters(){
+    ++graphicsCalls;
     GraphicsAdapter a;a.name="Synthetic NVIDIA";a.id="mock-adapter";a.physicalId="mock-pci";
     a.vendorId=0x10de;a.deviceId=0x28a0;a.subsystemId=0x12731d05;
     a.location={0,1,0,0,"synthetic"};
@@ -84,6 +88,7 @@ struct NvidiaGpu::Impl {};
 NvidiaGpu::NvidiaGpu():impl_(std::make_unique<Impl>()){}
 NvidiaGpu::~NvidiaGpu(){teardown.push_back("provider_destroyed");}
 std::vector<NvidiaGpuReading> NvidiaGpu::read(bool){
+    require(!telemetryGate().tryObservation(),"VBIOS identification must run inside the firmware pause");
     if(scenario!=Case::ResolveDomain&&scenario!=Case::AmbiguousDomain&&scenario!=Case::HybridIntelPrimary)return {};
     NvidiaGpuReading row;row.pci="0000:01:00.0";row.pciDeviceId=0x28a010de;row.pciSubsystemId=0x12731d05;
     if(scenario==Case::AmbiguousDomain)return {row,row};return {row};
@@ -114,6 +119,8 @@ std::string firmwareSha256(std::span<const std::uint8_t> b){
 }
 namespace nvflash {
 std::shared_ptr<void> preflight(const fs::path&,const Event&){
+    require(!telemetryGate().tryObservation(),"native VBIOS preflight must run with background observations paused");
+    require(!telemetryGate().trySafetyControl(),"capture must prevent new online cooling loops");
     return std::shared_ptr<void>(new int(1),[](void* p){teardown.push_back("native_lease_released");delete static_cast<int*>(p);});
 }
 void atomicText(const fs::path& p,const std::string& text){write(p,text);}
@@ -131,7 +138,7 @@ unsigned run(Command c,unsigned index,const fs::path& output,const fs::path& art
             ") : Vendor SyntheticPart 2.7-3.6V "+(scenario==Case::Large?"262144Kx1S":"16384Kx1S")+", page\n";
         break;
     case Command::Save:
-        ++normalReads;if(scenario==Case::PendingReader){pendingReaderLease=lease;interrupted=true;throw std::runtime_error("synthetic pending reader");}
+        ++normalReads;if(scenario==Case::PendingReader||scenario==Case::PendingCancelled){pendingReaderLease=lease;interrupted=true;if(scenario==Case::PendingCancelled)cancellation.request_stop();throw std::runtime_error("synthetic pending reader");}
         image(output,false);
         if(scenario==Case::CleanupFailure){interrupted=true;throw std::runtime_error("synthetic post-reader cleanup failure");}
         if(scenario==Case::CancelAfterFirst)cancellation.request_stop();break;
@@ -146,7 +153,53 @@ unsigned run(Command c,unsigned index,const fs::path& output,const fs::path& art
 int main(int argc,char** argv){try{
     require(argc==2,"explicit synthetic output directory required");
     const fs::path root=fs::absolute(argv[1]);fs::create_directories(root);
-    for(const auto test:{Case::Both,Case::Unknown,Case::Large,Case::Truncated,Case::DifferentEntire,Case::SilentCompare,Case::ChipChanged,Case::PendingReader,Case::DifferentVbios,Case::ResolveDomain,Case::AmbiguousDomain,Case::ChangedOs,Case::CleanupFailure,Case::CancelBefore,Case::CancelAfterFirst,Case::HybridIntelPrimary,Case::HybridMissingNvml,Case::ListMismatch,Case::IfrV3Unknown,Case::IfrV3Invalid,Case::IfrV3Different}){
+    // UI discovery must not touch graphics while a previous reader is still
+    // holding the ticket; the collector's own identification remains allowed.
+    scenario=Case::Unknown;normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};teardown.clear();graphicsCalls=0;
+    require(mc::vbiosRomDumpAvailable(),"fake VBIOS availability must be warmed from the adapter list");
+    const auto beforePause=graphicsCalls.load();auto selectionTicket=mc::telemetryGate().requestFirmwareCapture();
+    require(mc::vbiosRomDumpAvailable()&&graphicsCalls==beforePause,"availability must retain its previous value while paused without querying adapters");
+    bool selectionRefused=false;try{(void)mc::vbiosDumpAdapters();}catch(const std::runtime_error&){selectionRefused=true;}
+    require(selectionRefused&&graphicsCalls==beforePause,"public VBIOS selection must not query adapters while paused");
+    const auto ownIdentification=mc::createVbiosRomDump({},nullptr,"0000:01:00.0",root/"own-identification",selectionTicket);
+    require(ownIdentification.vbiosSaved&&graphicsCalls>beforePause,"VBIOS collector must still make its own admitted adapter identification");
+    selectionTicket.reset();require(bool(mc::telemetryGate().tryObservation()),"selection ticket did not release");
+    // Exercise the actual VBIOS collector while an already-running synthetic
+    // observation finishes. Only the transport and adapters are faked.
+    scenario=Case::Unknown;normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};teardown.clear();
+    auto inflight=mc::telemetryGate().tryObservation();require(bool(inflight),"synthetic in-flight observation admitted");
+    auto waiting=std::async(std::launch::async,[&]{return mc::createVbiosRomDump({},nullptr,"0000:01:00.0",root/"drain-inflight");});
+    const auto waitUntil=std::chrono::steady_clock::now()+std::chrono::seconds(3);
+    bool blockedNew{};while(std::chrono::steady_clock::now()<waitUntil){if(!mc::telemetryGate().tryObservation()){blockedNew=true;break;}std::this_thread::yield();}
+    const bool waited=waiting.wait_for(std::chrono::milliseconds(0))==std::future_status::timeout;
+    inflight.reset();
+    const auto drained=waiting.get();
+    require(blockedNew&&waited&&drained.vbiosSaved,"VBIOS closes admission and waits for an in-flight observation before reading");
+    require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"VBIOS releases ownership after a drained capture");
+
+    normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};teardown.clear();
+    auto supplied=mc::telemetryGate().requestFirmwareCapture();
+    const auto suppliedResult=mc::createVbiosRomDump({},nullptr,"0000:01:00.0",root/"supplied-ticket",supplied);
+    require(suppliedResult.vbiosSaved&&!mc::telemetryGate().tryObservation(),"VBIOS must accept the caller's existing ticket without re-acquiring it");
+    supplied.reset();require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"caller releases the VBIOS ticket after collector completion");
+    mc::TelemetryGate foreignGate;auto foreign=foreignGate.requestFirmwareCapture();calls=0;
+    const auto foreignResult=mc::createVbiosRomDump({},nullptr,"0000:01:00.0",root/"foreign-ticket",foreign);
+    foreign.reset();require(!foreignResult.vbiosSaved&&calls==0&&bool(mc::telemetryGate().tryObservation()),"VBIOS must reject a foreign ticket before native reader");
+
+    scenario=Case::Both;normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};teardown.clear();
+    auto safety=mc::telemetryGate().trySafetyControl();require(bool(safety),"synthetic online cooling admitted");
+    const auto safetyResult=mc::createVbiosRomDump({},nullptr,"0000:01:00.0",root/"active-safety-control");
+    safety.reset();
+    require(!safetyResult.saved&&!safetyResult.vbiosSaved&&calls==0,"VBIOS refuses an active safety-controlled loop before any native reader");
+    require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"safety refusal restores ordinary telemetry admission");
+
+    auto ecDiagnostic=mc::telemetryGate().tryDiagnosticCollection();require(bool(ecDiagnostic),"synthetic EC diagnostic admitted");
+    const auto ecBusyResult=mc::createVbiosRomDump({},nullptr,"0000:01:00.0",root/"active-ec-diagnostic");
+    require(!ecBusyResult.saved&&!ecBusyResult.vbiosSaved&&calls==0&&bool(mc::telemetryGate().tryObservation()),
+        "VBIOS refuses an active EC diagnostic without interrupting its telemetry");
+    ecDiagnostic.reset();
+
+    for(const auto test:{Case::Both,Case::Unknown,Case::Large,Case::Truncated,Case::DifferentEntire,Case::SilentCompare,Case::ChipChanged,Case::PendingReader,Case::PendingCancelled,Case::DifferentVbios,Case::ResolveDomain,Case::AmbiguousDomain,Case::ChangedOs,Case::CleanupFailure,Case::CancelBefore,Case::CancelAfterFirst,Case::HybridIntelPrimary,Case::HybridMissingNvml,Case::ListMismatch,Case::IfrV3Unknown,Case::IfrV3Invalid,Case::IfrV3Different}){
         scenario=test;normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};teardown.clear();if(test==Case::CancelBefore)cancellation.request_stop();
         const auto r=mc::createVbiosRomDump(cancellation.get_token(),nullptr,"0000:01:00.0",root/std::to_string(static_cast<int>(test)));
         require(fs::exists(r.directory/"manifest.json")&&fs::exists(r.directory/"events.jsonl"),"missing forensic report");
@@ -171,12 +224,15 @@ int main(int argc,char** argv){try{
             require(read(r.directory/"pass1.rom")!=read(r.directory/"pass2.rom")&&!fs::exists(r.directory/"vbios.rom"),
                 "both different IFR v3 raw reads are retained without confirmation");
         }
-        else if(test==Case::PendingReader){
+        else if(test==Case::PendingReader||test==Case::PendingCancelled){
             require(!r.saved&&!r.vbiosSaved&&!r.eepromSaved&&normalReads==1&&entireReads==0,"pending reader must stop all subsequent commands");
+            if(test==Case::PendingCancelled)require(r.cancelled,"cancellation after fake reader start is recorded");
             require(pendingReaderLease&&teardown.empty(),"pending reader retains provider and native lease after collector returns");
+            require(!mc::telemetryGate().tryObservation()&&mc::deviceOperations().busy(),"pending fake child retains telemetry pause and device reservation");
             pendingReaderLease.reset();
             require(teardown==std::vector<std::string>({"provider_destroyed","native_lease_released"}),
                 "pending reader releases provider before native lease");
+            require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"fake child exit releases telemetry pause and device reservation");
         }
         else {
             require(!r.saved&&r.vbiosSaved&&!r.eepromSaved&&normalReads==2,"ordinary success must survive full refusal");
@@ -187,6 +243,7 @@ int main(int argc,char** argv){try{
         }
         if(r.vbiosSaved)require(fs::exists(r.directory/"vbios.rom"),"missing ordinary canonical");
         if(r.eepromSaved)require(fs::file_size(r.directory/"eeprom-full.rom")==2097152,"missing exact-capacity full canonical");
+        require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"completed or failed collector leaves no firmware pause or reservation");
         if(test==Case::Unknown||test==Case::IfrV3Unknown)
             require(teardown==std::vector<std::string>({"provider_destroyed","native_lease_released"}),
                 "partial capture releases provider before native lease");
@@ -219,7 +276,7 @@ int main(int argc,char** argv){try{
     mc::InfoOperationServices infoServices;
     infoServices.dump=[](const mc::InfoDumpResourceRequest& request){
         mc::InfoDumpResourceServices services;
-        services.vbios=[](const auto& input){return mc::createVbiosRomDump(input.cancellation,input.progress,input.pci,input.outputRoot);};
+        services.vbios=[](const auto& input){return mc::createVbiosRomDump(input.cancellation,input.progress,input.pci,input.outputRoot,input.firmwarePause);};
         return mc::executeInfoDumpResource(request,&services);
     };
     fs::path firstDirectory;
@@ -248,5 +305,5 @@ int main(int argc,char** argv){try{
         while(fixtureInfoFinishes()==finishesBefore&&std::chrono::steady_clock::now()<deadline)std::this_thread::sleep_for(std::chrono::milliseconds(5));
         require(fixtureInfoFinishes()==finishesBefore+1,"INFO worker finishes after terminal publication");
     }
-    std::cout<<"PASS 21 real-collector synthetic scenarios plus repeats and 2 INFO lifecycles; "<<assertions<<" checks; no native platform/vendor/hardware execution.\n";return 0;
+    std::cout<<"PASS 22 real-collector synthetic scenarios plus repeats and 2 INFO lifecycles; "<<assertions<<" checks; no native platform/vendor/hardware execution.\n";return 0;
 }catch(const std::exception& e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

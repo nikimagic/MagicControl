@@ -72,6 +72,7 @@ void saveReceipt(const std::optional<Lease>& lease){
 struct HpbsdFanController::Impl {
     std::mutex mutex;std::condition_variable wake;bool stopping{},owned{},restorePending{};
     HANDLE owner{};Lease lease;std::string message;ResourceActor watchdog;
+    std::optional<TelemetryGate::SafetyControl> telemetrySafety;
     std::optional<NativeFanCurves> curveDraft;Byte curveSelector{},preferredFactory{};
     Impl():watchdog([this]{watch();}){refreshFactoryPreference();}
     void refreshFactoryPreference(){
@@ -81,11 +82,14 @@ struct HpbsdFanController::Impl {
         catch(const std::exception& e){logMessage("hpbsd_power",e.what());}
     }
     void acquire(){
-        if(owner)return;auto gate=CreateSemaphoreW(nullptr,1,1,L"Global\\MagicControl.HpbsdFansOwner.v1");
+        if(owner)return;
+        auto safety=telemetryGate().trySafetyControl();
+        if(!safety)throw std::runtime_error("HPBSD: firmware capture is active; fan control not started");
+        auto gate=CreateSemaphoreW(nullptr,1,1,L"Global\\MagicControl.HpbsdFansOwner.v1");
         if(!gate)throw std::runtime_error("HPBSD: owner semaphore unavailable");
-        if(WaitForSingleObject(gate,0)!=WAIT_OBJECT_0){CloseHandle(gate);throw std::runtime_error("HPBSD: fans controlled by another MagicControl process");}owner=gate;
+        if(WaitForSingleObject(gate,0)!=WAIT_OBJECT_0){CloseHandle(gate);throw std::runtime_error("HPBSD: fans controlled by another MagicControl process");}owner=gate;telemetrySafety=std::move(safety);
     }
-    void release(){if(owner){ReleaseSemaphore(owner,1,nullptr);CloseHandle(owner);owner=nullptr;}}
+    void release(){if(owner){ReleaseSemaphore(owner,1,nullptr);CloseHandle(owner);owner=nullptr;}telemetrySafety.reset();}
     NativeFanCurves draft(Byte selector){
         if(curveDraft){static_cast<void>(curve(*curveDraft,selector));return *curveDraft;}
         auto recipe=defaultDraft(selector);

@@ -30,7 +30,8 @@ IDI_MAGICCONTROL ICON "@PROJECT_SOURCE_DIR@/src/gui/assets/magiccontrol.ico"
 IDR_DONATION_QR RCDATA "@PROJECT_SOURCE_DIR@/src/gui/assets/donation-wallet.png"
 
 // Embed the canonical project license verbatim; no runtime file dependency.
-IDR_PROJECT_LICENSE RCDATA "@PROJECT_SOURCE_DIR@/GitHub_Releases/LICENSE.txt"
+// License SHA-256: @MAGICCONTROL_PROJECT_LICENSE_SHA256@
+IDR_PROJECT_LICENSE RCDATA "@PROJECT_SOURCE_DIR@/packaging/LICENSE.txt"
 
 // Reviewed driver/module resources are generated once by EmbeddedRuntime.cmake
 // and linked into both the GUI and CLI executables.

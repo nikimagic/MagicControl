@@ -18,7 +18,7 @@ bool InventoryCache::save(const HardwareInventory&,std::string&){forbidden();}
 const IHardwareProvider& defaultHardwareProvider(){forbidden();}
 DiagnosticDumpResult createDiagnosticDump(std::shared_ptr<EcAccess>,std::stop_token,MaximumFanProbe,
     std::shared_ptr<std::mutex>,DiagnosticDumpMode,FirmwareFanDefault,std::string,std::filesystem::path){forbidden();}
-DiagnosticDumpResult createBiosRomDump(std::stop_token,std::atomic<std::uint64_t>*){forbidden();}
+DiagnosticDumpResult createBiosRomDump(std::stop_token,std::atomic<std::uint64_t>*,std::shared_ptr<TelemetryGate::FirmwarePause>){forbidden();}
 DiagnosticDumpResult createPowerInputDump(PowerInputDumpSession&,const PowerInputPrompt&,
     std::stop_token,std::shared_ptr<EcAccess>,std::string){forbidden();}
 namespace audit {

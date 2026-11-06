@@ -64,4 +64,4 @@ Windows Lock, а также 12 поворотов Sc при Default без ош�
 получила OEM-событие 208 и подтверждение чтением ориентации Windows.
 Физическое подтверждение Sc при Max на момент этого снимка ещё отсутствует;
 сохранение `.0=1` при Max проверено на имитаторе EC.
-Данные: `tests/test_util/analysis/keyboard-ec-timeout/keys-runtime-verification-20261013.json`.
+Данные: `out/test_util/analysis/keyboard-ec-timeout/keys-runtime-verification-20261013.json`.

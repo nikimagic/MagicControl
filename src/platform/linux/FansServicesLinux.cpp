@@ -29,11 +29,12 @@ FansOperationsLinux::FansOperationsLinux(BoardDescriptor board,bool viewing,std:
     :resourceBoard(std::move(board)),preview(viewing),monitoringSource(std::move(source)),reader_(viewing?nullptr:std::make_unique<MonitoringReader>(nullptr,false,true)){for(int ch=0;ch<2;++ch)profiles.setActivePointCount(ch,deviceProfile(resourceBoard).fanPointCounts[ch]);if(preview)profiles.linked=deviceProfile(resourceBoard).id=="lenovo-legion-kwcn";}
 bool FansOperationsLinux::poll(std::function<void()> ready){
     if(preview||worker_.busy())return false;
-    try{worker_.launch([this]{try{pending_=monitoringSource?monitoringSource():readMonitoring();}catch(...){pending_={};}},std::move(ready));return true;}
+    try{worker_.launch([this]{try{pending_=monitoringSource?monitoringSource():readMonitoring();}catch(...){pending_={};}},std::move(ready),ResourceWorkClass::Telemetry);return true;}
     catch(const std::exception& error){logMessage("fans",std::string("Observation start failed: ")+error.what());return false;}
 }
 std::optional<bool> FansOperationsLinux::take(){
     if(!worker_.takeCompletion())return {};
+    if(worker_.telemetrySkipped())return {};
     auto shown=presentMonitoring(std::move(pending_));const bool changed=monitoring!=shown;monitoring=std::move(shown);
     resourceState.update(resourceBoard,monitoring);const ResourcePresentationView resources(resourceState);
     auto presentation=audit::presentation(monitoring);presentation.pop_back();

@@ -14,7 +14,7 @@ add_custom_command(OUTPUT "${MAGICCONTROL_ICON_RESOURCES}"
     DEPENDS "${PROJECT_SOURCE_DIR}/src/gui/assets/magiccontrol-icons.gresource.xml"
             "${PROJECT_SOURCE_DIR}/src/gui/assets/magiccontrol-512.png"
             "${PROJECT_SOURCE_DIR}/src/gui/assets/donation-wallet.png"
-            "${PROJECT_SOURCE_DIR}/GitHub_Releases/LICENSE.txt"
+            "${PROJECT_SOURCE_DIR}/packaging/LICENSE.txt"
     VERBATIM)
 
 add_executable(magiccontrol-gui

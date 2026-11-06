@@ -100,7 +100,7 @@ void binaryFile(const std::filesystem::path& p,const std::vector<std::uint8_t>& 
     if(!detail::writeStorageTextAtomically(p,{reinterpret_cast<const char*>(bytes.data()),bytes.size()},error))
         throw std::runtime_error("Не удалось сохранить "+pathText(p)+": "+error);
 }
-std::string captureFirmwareEvidence(const std::filesystem::path& directory,bool stateOnly,std::stop_token token){
+std::string captureFirmwareEvidence(const std::filesystem::path& directory,bool stateOnly,std::stop_token token,const std::shared_ptr<TelemetryGate::DiagnosticCollection>& collection){
     const auto started=utc();const auto board=readBoardDescriptor();std::vector<std::string> rows;
     diagnostics::FirmwareCaptureResult result;std::size_t payloadBytes{},metadataBytes{},failed{};bool owned{};
     const auto q=[](std::string_view text){return diagnostics::firmwareQuote(text);};
@@ -118,7 +118,7 @@ std::string captureFirmwareEvidence(const std::filesystem::path& directory,bool 
         result.status="Collecting read-only OS firmware evidence";textFile(directory/"manifest.json",manifest());
         std::ofstream journal(directory/"records.jsonl",std::ios::binary|std::ios::trunc);
         if(!journal)throw std::runtime_error("Cannot save firmware evidence journal");
-        auto worker=diagnostics::createFastDiagnosticWorker();
+        auto worker=diagnostics::createFastDiagnosticWorker(collection);
         result=worker->firmware(stateOnly,[&](const diagnostics::FirmwareRecord& record){
             if(record.kind.size()>64||record.name.size()>180||record.source.size()>65536||record.status.size()>16384||record.metadataJson.size()>1024*1024)
                 throw std::runtime_error("Firmware metadata budget exceeded");
@@ -390,18 +390,18 @@ class SensorRecorder {
             first<0||last<0?"null":std::to_string(last-first),completedFirst<0||completedLast<0?"null":std::to_string(completedLast-completedFirst),completedProviderPasses_.load(),failedProviderPasses_.load(),fastSamples_.load(),samples_.load(),minimumWindowComplete(),ownerCancellation_.stop_requested()));
     }
 public:
-    SensorRecorder(const std::filesystem::path& path,EcAccess* ec,std::stop_token cancellation):file_(path,std::ios::binary),ownerCancellation_(cancellation),summaryPath_(path.parent_path()/"sensor-summary.json"),samplingPath_(path.parent_path()/"sampling-window.json"){
+    SensorRecorder(const std::filesystem::path& path,EcAccess* ec,std::stop_token cancellation,std::shared_ptr<TelemetryGate::DiagnosticCollection> collection):file_(path,std::ios::binary),ownerCancellation_(cancellation),summaryPath_(path.parent_path()/"sensor-summary.json"),samplingPath_(path.parent_path()/"sampling-window.json"){
         if(!file_)throw std::runtime_error("Не удалось создать sensors.jsonl");
         std::promise<void> first;auto ready=first.get_future();
         // No driver/library is opened on this thread. Both stop sources are
         // connected before the first bounded IPC request, including baseline.
-        fast_=mc::ResourceActor([this,first=std::move(first)](std::stop_token stop)mutable{
+        fast_=mc::ResourceActor([this,first=std::move(first),collection=std::move(collection)](std::stop_token stop)mutable{
             bool firstSample=true;
             try{
                 std::stop_source providers;
                 std::stop_callback threadStop(stop,[&]{providers.request_stop();wake_.notify_all();});
                 std::stop_callback userStop(ownerCancellation_,[&]{providers.request_stop();wake_.notify_all();});
-                auto worker=diagnostics::createFastDiagnosticWorker();
+                auto worker=diagnostics::createFastDiagnosticWorker(collection);
                 while(!stop.stop_requested()){
                     const auto begin=std::chrono::steady_clock::now();const std::string capturedPhase=phase();
                     const bool finalSample=finishing_.load();
@@ -622,6 +622,8 @@ void captureEcBlocks(EcDump& dump,const BlockReader& reader,std::stop_token toke
 }
 }
 DiagnosticDumpResult createDiagnosticDump(std::shared_ptr<EcAccess> access,std::stop_token token,MaximumFanProbe maximumProbe,std::shared_ptr<std::mutex> hardwareGate,DiagnosticDumpMode mode,FirmwareFanDefault firmwareDefault,std::string displaySnapshot,std::filesystem::path outputRoot){
+    auto collection=telemetryGate().tryDiagnosticCollection();
+    if(!collection){DiagnosticDumpResult result;result.message="EC diagnostic unavailable while a firmware capture is active";return result;}
     diagnosticStage("prepare","Подготовка диагностического пакета EC.");
     // Restriction belongs to the collector used by GUI/CLI. In0.1.441 the
     // Lenovo8KiB read completed, then an active Max transaction preceded the
@@ -766,9 +768,9 @@ DiagnosticDumpResult createDiagnosticDump(std::shared_ptr<EcAccess> access,std::
         textFile(result.directory/"keyboard-initial.json",keyboardEvidence(ec,profile.id));
         textFile(result.directory/"report.txt",report+"\nИсходный EC-снимок сохранён; последующие стадии ещё выполняются.\n");
         diagnosticStage("firmware_before","Сбор таблиц ACPI и сведений прошивки.");
-        report+="\nFirmware before: "+captureFirmwareEvidence(result.directory/"firmware-before",false,token)+"\n";
+        report+="\nFirmware before: "+captureFirmwareEvidence(result.directory/"firmware-before",false,token,collection)+"\n";
         diagnosticStage("telemetry_baseline","Запуск наблюдения датчиков; получение первых показаний.");
-        SensorRecorder sensors(result.directory/"sensors.jsonl",access.get(),token);
+        SensorRecorder sensors(result.directory/"sensors.jsonl",access.get(),token,collection);
         const bool telemetryBaseline=sensors.baselineProviderComplete();
         report+="\nТелеметрия после исходного EC-снимка: sensors.jsonl; независимые источники, null/ошибки, временные метки и фазы проб. Показания не атомарные.\n";
         diagnostics::FirmwareFactoryResult factory;
@@ -861,7 +863,7 @@ DiagnosticDumpResult createDiagnosticDump(std::shared_ptr<EcAccess> access,std::
                 (context.empty()?"null,\"status\":\"No additional admitted typed context; see initial EC and native inventory\"":context)+"}\n");
         }catch(const std::exception& e){textFile(result.directory/"keyboard-after.json","{\"schema\":1,\"captured_utc\":"+quote(utc())+",\"error\":"+quote(e.what())+"}\n");}
         diagnosticStage("firmware_after","Сбор итогового состояния прошивки.");
-        report+="Firmware after: "+captureFirmwareEvidence(result.directory/"firmware-after",true,token)+"\n";
+        report+="Firmware after: "+captureFirmwareEvidence(result.directory/"firmware-after",true,token,collection)+"\n";
         const auto snapshot=sensors.providerSnapshot();
         const auto saveProvider=[&](const char* name,const std::string& json){
             if(json.empty())textFile(result.directory/name,"{\"schema\":1,\"status\":\"No completed bounded provider result; see sensors.jsonl\"}\n");

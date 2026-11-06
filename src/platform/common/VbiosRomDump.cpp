@@ -3,6 +3,8 @@
 #include "MagicControl/Logging.h"
 #include "MagicControl/Version.h"
 #include "MagicControl/DeviceOperation.h"
+#include "MagicControl/TelemetryGate.h"
+#include "MagicControl/GpuPresence.h"
 #include "MagicControl/ControlAudit.h"
 #include "MagicControl/BoardIdentity.h"
 #include "MagicControl/DeviceProfile.h"
@@ -93,10 +95,17 @@ std::string structure(const std::vector<std::uint8_t>& image,unsigned device){
     return out+"]}";
 }
 }
-std::vector<GraphicsAdapter> vbiosDumpAdapters(){auto rows=graphicsAdapters();std::erase_if(rows,[](const auto& a){return a.software||a.vendorId!=0x10de;});return rows;}
+namespace {
+std::vector<GraphicsAdapter> captureAdapters(){auto rows=graphicsAdapters();std::erase_if(rows,[](const auto& a){return a.software||a.vendorId!=0x10de;});return rows;}
+}
+std::vector<GraphicsAdapter> vbiosDumpAdapters(){
+    auto observation=telemetryGate().tryObservation();
+    if(!observation)throw std::runtime_error("NVIDIA adapter selection unavailable during firmware capture");
+    return captureAdapters();
+}
 std::string vbiosAdapterPci(const GraphicsAdapter& a){return pci(a);}
-bool vbiosRomDumpAvailable() noexcept{try{return !vbiosDumpAdapters().empty();}catch(...){return false;}}
-VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uint64_t>* progress,std::string selectedPci,fs::path outputRoot){
+bool vbiosRomDumpAvailable() noexcept{return observeGpuPresence([]()->GpuPresence&{return gpuPresence();},GpuPresenceKind::VbiosDump,[]{return !captureAdapters().empty();});}
+VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uint64_t>* progress,std::string selectedPci,fs::path outputRoot,std::shared_ptr<TelemetryGate::FirmwarePause> telemetryPause){
     using namespace diagnostics::nvflash;
     VbiosRomDumpResult result;
     Capture vbios{"vbios","pass","vbios.rom","nvflash_saved_vbios"};
@@ -132,10 +141,13 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
         if(result.directory.empty())throw std::runtime_error("Cannot create unique VBIOS/EEPROM directory");
         events.open(result.directory/"events.jsonl",std::ios::binary);if(!events)throw std::runtime_error("Cannot create VBIOS/EEPROM event log");
         event("capture_started","{\"requested_pci\":"+q(selectedPci)+",\"modes\":[\"vbios\",\"entire_eeprom\"],\"reads_per_mode\":2}");checkpoint();
+        if(telemetryPause&&!telemetryGate().owns(telemetryPause))throw std::invalid_argument("VBIOS: foreign telemetry pause");
+        if(!telemetryPause)telemetryPause=telemetryGate().requestFirmwareCapture(token);
+        telemetryPause->waitForQuiescence(token,std::chrono::seconds(10));
         const auto board=readBoardDescriptor();event("actual_platform","{\"profile\":"+q(deviceProfile(board).id)+",\"manufacturer\":"+q(board.manufacturer)+",\"baseboard\":"+q(board.baseBoard)+",\"product\":"+q(board.productName)+"}");
-        auto operation=deviceOperations().tryBegin();if(!operation)throw std::runtime_error("Device operation busy; NVIDIA reader not started");
+        auto operation=deviceOperations().tryBeginFirmware(telemetryPause);if(!operation)throw std::runtime_error("Device operation busy; NVIDIA reader not started");
         cancelled(token);for(auto& c:selectedPci)c=static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        auto adapters=vbiosDumpAdapters();
+        auto adapters=captureAdapters();
         // SPDRP provides B/D/F but no segment. Corroborate NVML's full address
         // with the unique physical OS node AND both hardware IDs. No domain0
         // default, display-route inference, or adapter-index fallback.
@@ -154,8 +166,8 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
         // semaphore and finally the device operation. Move every local owner
         // into the same lifetime; otherwise a local shared_ptr can still release
         // the semaphore before the provider. Pending readers retain this alias.
-        struct CaptureLifetime {std::shared_ptr<DeviceOperation> operation;std::shared_ptr<void> native;std::shared_ptr<NvidiaGpu> provider;};
-        const auto lifetime=std::make_shared<CaptureLifetime>(CaptureLifetime{std::move(operation),std::move(nativeLease),std::move(provider)});
+        struct CaptureLifetime {std::shared_ptr<TelemetryGate::FirmwarePause> pause;std::shared_ptr<DeviceOperation> operation;std::shared_ptr<void> native;std::shared_ptr<NvidiaGpu> provider;};
+        const auto lifetime=std::make_shared<CaptureLifetime>(CaptureLifetime{std::move(telemetryPause),std::move(operation),std::move(nativeLease),std::move(provider)});
         const std::shared_ptr<void> lease(lifetime,lifetime->native.get());
         const auto rawOutput=[&](const std::string& label){
             std::string raw;for(const auto* suffix:{".stdout.log",".stderr.log"}){
@@ -176,7 +188,7 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
             // Pin only the missing PCI segment from the initial NVML identity.
             // Re-read the actual OS devnode and NVFlash list for every pass;
             // do not repeat unrelated NVML power/thermal queries inside capture.
-            const auto current=bindProviderPci(vbiosDumpAdapters(),providerRows);
+            const auto current=bindProviderPci(captureAdapters(),providerRows);
             if(std::count_if(current.begin(),current.end(),[&](const auto& a){return pci(a)==pci(target)&&a.physicalId==target.physicalId&&a.vendorId==target.vendorId&&a.deviceId==target.deviceId&&a.subsystemId==target.subsystemId;})!=1){
                 fatal=true;throw std::runtime_error("OS NVIDIA identity changed during capture");
             }

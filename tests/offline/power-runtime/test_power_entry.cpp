@@ -53,6 +53,13 @@ int main(){try{
     check(!std::filesystem::exists(absentLibrary),"fixture executable must have no personal settings");
     mc::setCustomPresetActive("wu-jie-15-xpro",false);
     check(!std::filesystem::exists(absentLibrary),"clearing an absent Custom selection created a library");
+    // Current shared Custom initialization requires an existing validated
+    // owner curve. Seed only this isolated fixture's portable directory.
+    const auto commonCurve=mc::portableSettingsPath("fan-curves.csv");
+    check(!std::filesystem::exists(mc::settingsReadPath(commonCurve)),"fixture must not reuse a personal FAN curve");
+    struct CurveCleanup{std::filesystem::path path;~CurveCleanup(){std::error_code error;std::filesystem::remove(path,error);}} curveCleanup{commonCurve};
+    mc::FanCurveProfiles baselineCurve;std::string curveError;
+    check(mc::saveFanCurveProfiles(commonCurve,baselineCurve,curveError),"fixture FAN curve could not be saved");
     FakeCpu backend;int persisted{};CustomModeContext context;
     context.profileId="fixture";context.laptop=&backend;
     context.onBattery=[]()->bool{throw std::runtime_error("generic supply policy reached a native backend");};

@@ -11,10 +11,11 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import tarfile
 import zipfile
+from ReleaseChecksums import apply as apply_checksums, plan as plan_checksums
+from ReleasePackageAssets import canonical_resources, stage_canonical_text
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASES = ROOT / 'GitHub_Releases'
@@ -76,39 +77,23 @@ def package(platform, portable_root=None):
     built = ROOT / ('build/windows/bin/Release/MagicControl.exe' if platform == 'windows' else 'build/linux/bin/MagicControl')
     if sha(built) != sha(portable / binary_name):
         raise RuntimeError('Portable GUI differs from the successful build')
-    template = RELEASES / f'MagicControl-0.1.0-{platform}-x64-portable'
     folder = RELEASES / f'MagicControl-{version}-{platform}-x64-portable'
-    if folder.exists():
-        raise RuntimeError(f'{folder} already exists; retain published versions and create a new build')
+    archive = folder.with_name(folder.name + ('.zip' if platform == 'windows' else '.tar.gz'))
+    if folder.exists() or folder.is_symlink() or archive.exists() or archive.is_symlink():
+        raise RuntimeError(f'{folder} or {archive} already exists; existing releases are never overwritten')
+    # Fail before staging when a required canonical license/default is absent.
+    canonical_resources(ROOT, platform)
     folder.mkdir()
     # User-visible, empty inbox shipped in BOTH platform archives. Never copy
     # live update staging, rollback data or hidden predecessor directories.
     update_inbox = folder / 'magiccontrol-update'
     update_inbox.mkdir()
-    # Only explicitly approved clean defaults and notices, never a live portable tree.
-    names = ['README.txt', 'THIRD-PARTY-NOTICES.txt', 'app-settings.ini', 'fan-curves.csv']
-    if platform == 'windows':
-        names += ['SOURCE_OFFER.txt']
-    else:
-        names += ['start.sh', 'libgtk4-layer-shell.LICENSE.txt']
-    for name in names:
-        # Explicitly approved complete files, common to all models/platforms.
-        # Never reconstruct the curve or take stale settings from an old ZIP.
-        canonical = ROOT / 'packaging' / name if name in ('fan-curves.csv', 'app-settings.ini') else ROOT / 'packaging' / platform / name
-        source = canonical if canonical.exists() else template / name
-        target = folder / 'settings' / name if name in ('fan-curves.csv', 'app-settings.ini') else folder / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-        if platform == 'linux' and name == 'start.sh':
-            # Historical templates may have CRLF; the kernel shebang needs LF.
-            script = folder / name
-            script.write_bytes(script.read_bytes().replace(b'\r\n', b'\n'))
-    shutil.copyfile(RELEASES / 'LICENSE.txt', folder / 'LICENSE.txt')
-    shutil.copytree(template / 'licenses', folder / 'licenses')
-    # Include current platform notices, not just those from the original package.
-    current_licenses = ROOT / 'packaging' / platform / 'licenses'
-    if current_licenses.exists():
-        shutil.copytree(current_licenses, folder / 'licenses', dirs_exist_ok=True)
+    # Explicit canonical defaults and licenses only; never take live settings.
+    stage_canonical_text(ROOT, platform, folder)
+    if platform == 'linux':
+        # Preserve a valid shebang if a Windows checkout converted line endings.
+        script = folder / 'start.sh'
+        script.write_bytes(script.read_bytes().replace(b'\r\n', b'\n'))
     if platform == 'windows':
         subprocess.run([str(CMAKE_WINDOWS), '-DCONFIG=Release', f'-DEXECUTABLE={built}',
                         f'-DDESTINATION={folder}', '-DSTATIC_CRT=TRUE',
@@ -151,7 +136,6 @@ def package(platform, portable_root=None):
                     magiccontrol_source_included=False, files=entries)
     (folder / 'package-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     if platform == 'windows':
-        archive = folder.with_name(folder.name + '.zip')
         with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as packed:
             packed.write(folder, 'MagicControl/')
             packed.write(update_inbox, 'MagicControl/magiccontrol-update/')
@@ -159,7 +143,6 @@ def package(platform, portable_root=None):
                 if path.is_file():
                     packed.write(path, (Path('MagicControl') / path.relative_to(folder)).as_posix())
     else:
-        archive = folder.with_name(folder.name + '.tar.gz')
         def attributes(info):
             info.uid = info.gid = 0
             info.uname = info.gname = ''
@@ -203,14 +186,25 @@ if __name__ == '__main__':
     parser.add_argument('--platform', choices=['windows', 'linux', 'all'], default='all')
     parser.add_argument('--portable-root', type=Path,
                         help='Alternate staging root containing windows/ and/or linux/')
-    parser.add_argument('--prune-verified-staging', choices=['preview', 'apply'],
-                        help='Remove older staging folders only after byte-for-byte archive verification')
+    operations = parser.add_mutually_exclusive_group()
+    operations.add_argument('--prune-verified-staging', choices=['preview', 'apply'],
+                            help='Remove older staging folders only after byte-for-byte archive verification')
+    operations.add_argument('--reconcile-checksums', choices=['preview', 'apply'],
+                            help='Verify retained release archives and audit missing checksum entries')
     args = parser.parse_args()
     if args.prune_verified_staging:
         from ReleaseStagingCleanup import prune
         prune(RELEASES, ROOT / 'build/product-version.txt',
               ROOT / 'build/release-staging-cleanup.csv',
               preview=args.prune_verified_staging == 'preview')
+        raise SystemExit(0)
+    audit_dir=ROOT / 'research' / 'release-checksum-audit'
+    if args.reconcile_checksums:
+        prepared=plan_checksums(RELEASES)
+        print(f"Verified archives: {len(prepared['current'])}; missing historical entries: {len(prepared['missing'])}")
+        if args.reconcile_checksums == 'apply':
+            evidence=apply_checksums(prepared,audit_dir)
+            print('Checksum reconciliation:', evidence if evidence else 'unchanged')
         raise SystemExit(0)
     verified_build()  # No partial release directory before provenance checks.
     selected = ['windows', 'linux'] if args.platform == 'all' else [args.platform]
@@ -232,14 +226,12 @@ if __name__ == '__main__':
                 raise RuntimeError('Portable differs from the verified common build: ' + platform)
     if 'linux' in selected:
         linux_run(['/usr/bin/true'])  # Fail before creating any output when WSL is unavailable.
+    for platform in selected:
+        canonical_resources(ROOT,platform)
+    plan_checksums(RELEASES)  # Reject unexpected/modified archives before staging.
     archives = [package(platform, args.portable_root) for platform in selected]
-    # Keep all currently prepared archives verifiable, including prior versions.
-    existing = {}
-    sums = RELEASES / 'SHA256SUMS.txt'
-    if sums.exists():
-        for line in sums.read_text(encoding='utf-8-sig').splitlines():
-            digest, name = line.split('  ', 1)
-            existing[name] = digest
-    for archive in archives:
-        existing[archive.name] = sha(archive)
-    sums.write_text(''.join(f'{digest}  {name}\n' for name, digest in sorted(existing.items())), encoding='utf-8')
+    # Existing files must match their recorded hashes. Missing historical
+    # entries remain in the append-only audit; only just-created archives may
+    # be added without a prior hash. No archive is deleted or downloaded.
+    prepared=plan_checksums(RELEASES, [archive.name for archive in archives])
+    apply_checksums(prepared,audit_dir)

@@ -1,4 +1,5 @@
 #include "../common/FastDiagnosticWire.h"
+#include "MagicControl/AsyncReaper.h"
 #include <atomic>
 #include <algorithm>
 #include <thread>
@@ -21,6 +22,7 @@ public:EcAccess* access()noexcept override{return nullptr;}FanMaximumSample fans
 };
 class Worker final:public FastDiagnosticWorker{
     Socket socket_;pid_t child_{-1};unsigned failedPasses_{};
+    std::shared_ptr<TelemetryGate::DiagnosticCollection> collection_;
     void stop()noexcept{
         socket_.reset();
         if(child_>0){
@@ -28,14 +30,22 @@ class Worker final:public FastDiagnosticWorker{
             // Never signal the GUI, active fan commands or another user's PID.
             ::kill(-child_,SIGKILL);::kill(child_,SIGKILL);
             const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(1);
+            bool exited=false;
             while(std::chrono::steady_clock::now()<deadline){
                 const auto value=::waitpid(child_,nullptr,WNOHANG);
-                if(value==child_||(value<0&&errno==ECHILD))break;
+                if(value==child_||(value<0&&errno==ECHILD)){exited=true;break;}
                 if(value<0&&errno!=EINTR)break;
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
-            // A kernel D-state cannot be synchronously reaped. The bounded
-            // parent does not retain any child-owned reader or C++ memory.
+            // A kernel D-state can outlive the bounded wait. Retain the
+            // diagnostic admission until a reaper confirms the helper exited.
+            if(!exited&&collection_){
+                const auto child=child_;auto collection=collection_;
+                const auto reap=[child,collection]{for(;;){const auto result=::waitpid(child,nullptr,0);
+                    if(result==child||(result<0&&errno==ECHILD))break;
+                    if(result<0&&errno!=EINTR)std::this_thread::sleep_for(std::chrono::seconds(1));}};
+                mc::detail::startReaper(reap);
+            }
             child_=-1;
         }
     }
@@ -75,6 +85,7 @@ class Worker final:public FastDiagnosticWorker{
         }
     }
 public:
+    explicit Worker(std::shared_ptr<TelemetryGate::DiagnosticCollection> collection):collection_(std::move(collection)){}
     ~Worker()override{stop();}
     FirmwareCaptureResult firmware(bool stateOnly,const FirmwareEmitter& emit,std::stop_token cancellation,std::chrono::milliseconds timeout,bool biosRom)override{
         const auto begin=std::chrono::steady_clock::now(),deadline=begin+timeout;FirmwareCaptureResult result;std::size_t count{},total{};
@@ -108,7 +119,7 @@ public:
 };
 }
 std::unique_ptr<ReadOnlyDiagnosticHardware> createReadOnlyDiagnosticHardware(){return std::make_unique<Hardware>();}
-std::unique_ptr<FastDiagnosticWorker> createFastDiagnosticWorker(){return std::make_unique<Worker>();}
+std::unique_ptr<FastDiagnosticWorker> createFastDiagnosticWorker(std::shared_ptr<TelemetryGate::DiagnosticCollection> collection){return std::make_unique<Worker>(std::move(collection));}
 std::optional<int> runFastDiagnosticHelper(const std::vector<std::string>& args){
     helperRegistered.store(true);if(args.size()<2||args[1]!="--diagnostic-fast-worker")return {};if(args.size()!=2)return 2;
     int type{};socklen_t bytes=sizeof(type);

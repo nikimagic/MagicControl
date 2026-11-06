@@ -412,7 +412,8 @@ readback и откат; не использует EcAccess/override X5SP4NAG. С
 - `src/platform/windows/pawnio/ApuPowerWindows.cpp` — фактическая телеметрия SMU через PawnIO.
 - OEM `Decompiled/GCUService_Reference_w568w/.../MyFanManager.cs`:
   `SetPL1Value`, `SetPL2Value`, `SetPL4Value`, `IsSupportCPUPL4DoubleFlag`.
-- `tests/test_util/analysis/ec-smu-limits-20261016/REPORT.md` и `run1/` — пробы на устройстве.
+- `research/test_util/analysis/ec-smu-limits-20261016/REPORT.md` и
+  `out/test_util/analysis/ec-smu-limits-20261016/run1/` — отчёт и пробы на устройстве.
 
 ## Независимость от FANs
 
@@ -532,7 +533,7 @@ Turbo на DC/AC100 при 7C3=4/7. Overboost 7A5.4 не удержался; о�
 штатный OEM-FAN режим, частоты/токи и нагрузочную динамику не проверено.
 Старая Intel-ветка использует High Power совместно с индексом BIOS 7AB,
 который в наших пробах был 0 и не менялся. Не считать бит универсальным Turbo.
-Данные: `tests/test_util/analysis/highpower-overboost-20261016/REPORT.md`.
+Данные: `research/test_util/analysis/highpower-overboost-20261016/REPORT.md`.
 
 Проверка 0x7C3 16.10.2026: платформа 4 сводит ВСЕ штатные профили на батарее
 к Fast/Slow/STAPM 45/40/40. Платформа 7: Office 30/25/25, Balanced 40/35/35,
@@ -540,13 +541,13 @@ Turbo 60/54/54. От сети USB-C 65 Вт между 4/7 отличий нет
 Balanced 35/30/30, Turbo 40/35/35. Manual с заданием 25/20/15 сохранил значения
 в обоих случаях. Это подтверждённый побочный эффект активации батареи, не
 основание тайно менять FANs или включать постоянную запись APU overrides.
-Данные: `tests/test_util/analysis/battery-platform-smu-20261016/ALL-MODES.md`.
+Данные: `research/test_util/analysis/battery-platform-smu-20261016/ALL-MODES.md`.
 
 Дополнение AC 100 Вт: 7C3=4 — Office 35/30/30, Balanced/Turbo 55/50/50;
 7C3=7 — Office 30/25/25, Balanced 50/45/45, Turbo 70/65/65 (Fast/Slow/STAPM).
 Так что APU-политика зависит и от рейтинга USB-C, и от платформы. Не переносить
 результат AC 65 Вт на все зарядки. HIGH_POWER/OVERBOOST оставались нулевыми.
-Данные: `tests/test_util/analysis/charger-rating-smu-20261016/REPORT.md`.
+Данные: `research/test_util/analysis/charger-rating-smu-20261016/REPORT.md`.
 
 ## Кнопки SETs: фиксированные лимиты (16.10.2026)
 

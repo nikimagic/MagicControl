@@ -17,7 +17,9 @@ compile_commands.json
 vcpkg_installed/
 
 # Local runtime output
-/research/
+/research/*
+!/research/INDEX.md
+!/research/test_util/
 /Users_logs/
 /Diagnostics/
 /Backups/
@@ -104,12 +106,6 @@ commit-message.tmp
 /research/**/*.dsl
 /research/**/*.valid
 /research/**/*.body
-/tests/test_util/analysis/**/*.jsonl
-/tests/test_util/analysis/**/*.json
-/tests/test_util/analysis/**/*.csv
-/tests/test_util/analysis/**/*.tsv
-/tests/test_util/analysis/**/*.wer
-
 /Tools/Запуск Linux.lnk
 /Tools/Запуск Windows.lnk
 /Tools/Общая сборка.lnk
@@ -163,32 +159,4 @@ commit-message.tmp
 /research/wujie-native-idle-20261021/sources/related-tools-ec_functions.tsv
 /research/wujie-native-idle-20261021/sources/related-tools-ec_registers.tsv
 /src/platform/linux/runtime/NvFlash/nvflash
-/tests/test_util/analysis/EC_20261012_073054/acpi/DSDT.dsl
-/tests/test_util/analysis/EC_20261012_073054/all_numeric_candidates.csv
-/tests/test_util/analysis/EC_20261012_073054/dynamic_candidates.csv
-/tests/test_util/analysis/EC_20261012_073054/report.html
-/tests/test_util/analysis/EC_20261012_073054/temperature_candidates.csv
-/tests/test_util/analysis/fan-table-ab-20261015-174412/before.csv
-/tests/test_util/analysis/fan-table-ab-20261015-174412/samples.csv
-/tests/test_util/analysis/firmware_temperatures/DSDT-0171f11732dc.dsl
-/tests/test_util/analysis/firmware_temperatures/SSDT-52e734d4daa9.dsl
-/tests/test_util/analysis/firmware_temperatures/SSDT-5b0e2defe65d.dsl
-/tests/test_util/analysis/firmware_temperatures/dsdt-fields.csv
-/tests/test_util/analysis/firmware_temperatures/dsdt-regions.csv
-/tests/test_util/analysis/firmware_temperatures/ec_temperature_candidates.csv
-/tests/test_util/analysis/firmware_temperatures/ec_temperature_sparse_candidates.csv
-/tests/test_util/analysis/gpu-freeze-20261014T115532Z/app-settings.ini
-/tests/test_util/analysis/gpu-freeze-20261014T115532Z/fan-curves.csv
-/tests/test_util/analysis/hibernate-20261015T044843Z/device-settings.ini
-/tests/test_util/analysis/keyboard-ec-timeout/bit-tests.csv
-/tests/test_util/analysis/keyboard-ec-timeout/native-timeline.csv
-/tests/test_util/analysis/keyboard-ec-timeout/stock-differences.csv
-/tests/test_util/analysis/power-ab-20261015-run1/after.csv
-/tests/test_util/analysis/power-ab-20261015-run1/before.csv
-/tests/test_util/analysis/power-ab-20261015-run1/samples.csv
-/tests/test_util/analysis/presence-battery-20261015-1633-msr/samples.csv
-/tests/test_util/analysis/presence-power-ab-20261015-run1/STOP
-/tests/test_util/analysis/presence-power-ab-20261015-run1/samples.csv
-/tests/test_util/analysis/smu-read-20261015-run1/pm-table.csv
-/tests/test_util/analysis/windows-power-ab-20261015-run1/samples.csv
-/tests/test_util/linux/SensorProbe
+/tests/util/linux/SensorProbe

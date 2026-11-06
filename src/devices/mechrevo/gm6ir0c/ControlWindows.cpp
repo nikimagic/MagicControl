@@ -234,11 +234,12 @@ struct Gm6Controller::Impl {
     std::array<bool,2> onlineControlled{};
     std::array<int,2> onlineLevels{},onlineLast{-1,-1};
     bool online{},onlineLinked{},needsRestore{},onlineProtection{},probeActive{};std::string onlineStatus;
+    std::optional<TelemetryGate::SafetyControl> onlineSafety;
     std::uint64_t onlineGeneration{};
     using Clock=std::chrono::steady_clock;
     NativeDefaultFanCache defaultFanCache;
     NativeDefaultFanFailureLog defaultFanFailureLog;
-    struct NativeRequest {std::uint64_t receivedAt{},epoch{};Clock::time_point queued;std::function<void(Gm6NativeProfileResult)> complete;};
+    struct NativeRequest {std::uint64_t receivedAt{},epoch{},firmwareGeneration{};Clock::time_point queued;std::function<void(Gm6NativeProfileResult)> complete;};
     std::mutex nativeQueueGate;
     std::atomic<std::uint64_t> nativeEpoch{};
     std::atomic<bool> nativeSubscription{},nativeArmPending{};
@@ -286,6 +287,8 @@ struct Gm6Controller::Impl {
     }
     void restoreConfigurationTick(std::unique_lock<std::mutex>& lock){
         if(configurationWaitingForAc&&!keyboardSuspended){
+            auto observation=telemetryGate().tryObservation();
+            if(!observation)return;
             SYSTEM_POWER_STATUS supply{};
             if(GetSystemPowerStatus(&supply)&&supply.ACLineStatus==1){
                 configurationWaitingForAc=false;configurationPending=true;configurationAttempts=0;
@@ -395,7 +398,7 @@ struct Gm6Controller::Impl {
         try{stopOnline();}catch(const OwnershipChanged&){online=false;onlineFields.clear();logMessage("gm6ir0c","Explicit Default after lost online ownership; old snapshot is not restored");}
         EcAccess::Transaction transaction(*ec);Journal j{*ec};j.put(gm6::commit,0,4);
         j.put(gm6::custom,0,128);j.put(gm6::light,0,64);j.put(gm6::mode,0,64);
-        j.done=true;readbackConfirmed=true;needsRestore=false;onlineStatus="GM6IR0C: штатное управление EC";
+        j.done=true;readbackConfirmed=true;needsRestore=false;onlineSafety.reset();onlineStatus="GM6IR0C: штатное управление EC";
         ownedFanFields.clear();ownedFanMode.clear();
         logMessage("gm6ir0c","Default: RAM/custom/override/boost disabled and verified; tables, mode and power overrides preserved");
     }
@@ -403,7 +406,7 @@ struct Gm6Controller::Impl {
         // Invalidate in-flight temperature reads before changing ownership,
         // including an unsuccessful stop or a new session from Default.
         ++onlineGeneration;
-        if(onlineFields.empty()){online=false;return;}
+        if(onlineFields.empty()){online=false;onlineSafety.reset();return;}
         online=false;needsRestore=true;guard(DeviceFeature::Fans,true);EcAccess::Transaction transaction(*ec);
         checkOnline(); // A mismatch/read error preserves the snapshot and needsRestore.
 
@@ -419,7 +422,7 @@ struct Gm6Controller::Impl {
             const auto rollback=journal.rollback(admission);
             throw std::runtime_error(std::string(error.what())+(rollback.empty()?"":"; online restore rollback: "+rollback));
         }
-        onlineFields.clear();needsRestore=false;onlineStatus="GM6IR0C: Manual online завершён; исходное управление возвращено";
+        onlineFields.clear();needsRestore=false;onlineSafety.reset();onlineStatus="GM6IR0C: Manual online завершён; исходное управление возвращено";
         logMessage("gm6ir0c",onlineStatus);
     }
     void driveOnline(const MonitoringSnapshot& sample){
@@ -485,8 +488,10 @@ struct Gm6Controller::Impl {
                 NativeRequest request;
                 {std::lock_guard queueLock(nativeQueueGate);if(nativeRequests.empty())continue;request=nativeRequests.front();}
                 const bool expired=Clock::now()-request.queued>std::chrono::seconds(10);
-                auto operation=Clock::now()>=nextNativeCycle?deviceOperations().tryBegin():nullptr;
-                if(!operation&&!expired&&request.epoch==nativeEpoch.load()&&!keyboardSuspended&&!probeActive){
+                auto observation=telemetryGate().tryObservation();
+                const bool firmwareSuperseded=!observation||observation->generation()!=request.firmwareGeneration;
+                auto operation=!firmwareSuperseded&&Clock::now()>=nextNativeCycle?deviceOperations().tryBegin():nullptr;
+                if(!firmwareSuperseded&&!operation&&!expired&&request.epoch==nativeEpoch.load()&&!keyboardSuspended&&!probeActive){
                     wake.wait_for(lock,std::chrono::milliseconds(100),[&]{return token.stop_requested();});
                     if(token.stop_requested())break;
                     if(Clock::now()<nextMaintenance)continue;
@@ -496,6 +501,7 @@ struct Gm6Controller::Impl {
                 {std::lock_guard queueLock(nativeQueueGate);if(nativeRequests.empty()||nativeRequests.front().epoch!=request.epoch||nativeRequests.front().receivedAt!=request.receivedAt)continue;nativeRequests.pop_front();}
                 Gm6NativeProfileResult result;result.receivedAt=request.receivedAt;
                 try{
+                    if(firmwareSuperseded)throw std::runtime_error("GM6 native profile: нажатие отменено из-за дампа прошивки");
                     if(request.epoch!=nativeEpoch.load())throw std::runtime_error("GM6 native profile: устаревшее нажатие отменено");
                     if(keyboardSuspended||probeActive)throw std::runtime_error("GM6 native profile: сон/диагностика; нажатие отменено");
                     if(!operation)throw std::runtime_error("GM6 native profile: очередь занята более10с; нажатие отменено");
@@ -630,7 +636,7 @@ struct Gm6Controller::Impl {
             if(epoch!=nativeEpoch.load())throw std::runtime_error("GM6 native online restore: power/close epoch changed");
             nativeAdmission();
         };
-        try{stopOnline(nativeRestoreAdmission);}catch(const OwnershipChanged&){online=false;onlineFields.clear();needsRestore=false;}
+        try{stopOnline(nativeRestoreAdmission);}catch(const OwnershipChanged&){online=false;onlineFields.clear();needsRestore=false;onlineSafety.reset();}
         ++fanCommandGeneration;ownedFanFields.clear();ownedFanMode.clear();
         Journal journal{*ec};
         journal.admission=[&]{if(epoch!=nativeEpoch.load())throw std::runtime_error("GM6 native profile: power/close epoch changed during apply");};
@@ -1336,6 +1342,8 @@ FanDiagnosticSession Gm6Controller::prepareDiagnostic(){
         if(!operation){result.status="GM6: diagnostic restore deferred/refused; another operation owns hardware";return result;}
         *consumed=true;++state.fanCommandGeneration;result.attempted=true;
         try{
+            std::optional<TelemetryGate::SafetyControl> restoredSafety;
+            if(wasOnline){restoredSafety=telemetryGate().trySafetyControl();if(!restoredSafety)throw std::runtime_error("GM6: firmware capture is active; online restore not started");}
             // GPU/provider telemetry can be slow. Never hold the shared EC
             // transaction while waiting for DLL reads; re-admit afterwards.
             MonitoringSnapshot sample;
@@ -1367,7 +1375,7 @@ FanDiagnosticSession Gm6Controller::prepareDiagnostic(){
             if(wasOnline){
                 state.confirmOnline(journal);state.onlineCurves=curves;state.onlineTemplate=table;state.onlinePoints=points;
                 state.onlineControlled=controlled;state.onlineLevels=levels;state.onlineLast=last;
-                state.onlineLinked=linked;state.onlineProtection=protection;state.online=true;
+                state.onlineLinked=linked;state.onlineProtection=protection;state.onlineSafety=std::move(restoredSafety);state.online=true;
                 try{state.driveOnline(sample);state.wake.notify_all();}
                 catch(...){state.stopOnline();throw;}
             }else{state.ownedFanFields=saved;state.ownedFanMode=saved.size()==1?"Max":"Manual";}
@@ -1463,6 +1471,8 @@ void Gm6Controller::setCurves(const gm6::Curves& curves,std::optional<std::array
 }
 void Gm6Controller::setOnlineCurves(const gm6::Curves& curves,std::array<bool,2> controlled,bool linked){
     validate(curves);if(linked)controlled={true,true};if(!controlled[0]&&!controlled[1])throw std::invalid_argument("Online requires a selected fan channel");
+    auto safety=telemetryGate().trySafetyControl();
+    if(!safety)throw std::runtime_error("Firmware capture is active; Manual online not started");
     const auto sample=Impl::temperatures();Impl::requireTemperatures(sample);
     std::lock_guard lock(impl_->gate);impl_->cancelConfigurationRestore();++impl_->fanCommandGeneration;impl_->ownedFanFields.clear();impl_->ownedFanMode.clear();impl_->stopOnline();impl_->guard(DeviceFeature::Fans,true);
     auto& ec=*impl_->ec;EcAccess::Transaction transaction(ec);
@@ -1480,7 +1490,7 @@ void Gm6Controller::setOnlineCurves(const gm6::Curves& curves,std::array<bool,2>
         impl_->onlinePoints[ch].clear();for(const auto& point:curves[ch])if(point.up!=255)impl_->onlinePoints[ch].push_back({point.up,point.duty});
         if(controlled[ch]&&impl_->onlinePoints[linked?0:ch].empty()){impl_->onlineFields.clear();throw std::invalid_argument("Online curve is empty");}
     }
-    impl_->online=true;
+    impl_->onlineSafety=std::move(safety);impl_->online=true;
     try{impl_->driveOnline(sample);impl_->nativeCustomCurves=curves;impl_->nativeCustomRespective=true;impl_->wake.notify_all();}
     catch(...){impl_->online=false;try{impl_->stopOnline();}catch(const std::exception& e){impl_->needsRestore=!impl_->onlineFields.empty();logMessage("gm6ir0c",e.what());}throw;}
     impl_->remember([&](Configuration& c){c.fan=3;c.fanCurves=curves;c.controlled=controlled;c.linked=linked;
@@ -1663,10 +1673,12 @@ void Gm6Controller::suspendKeyboard(){
     impl_->wake.notify_all();
 }
 void Gm6Controller::enqueueNativeProfileCycle(std::uint64_t receivedAt,std::function<void(Gm6NativeProfileResult)> complete){
+    auto observation=telemetryGate().tryObservation();
+    if(!observation||!observation->acceptsEvent(receivedAt)){Gm6NativeProfileResult result;result.receivedAt=receivedAt;result.status="GM6 native profile: нажатие отменено из-за дампа прошивки";if(complete)complete(std::move(result));return;}
     bool full{};
     {std::lock_guard queueLock(impl_->nativeQueueGate);
         full=impl_->nativeRequests.size()>=32;
-        if(!full)impl_->nativeRequests.push_back({receivedAt,impl_->nativeEpoch.load(),Impl::Clock::now(),std::move(complete)});}
+        if(!full)impl_->nativeRequests.push_back({receivedAt,impl_->nativeEpoch.load(),observation->generation(),Impl::Clock::now(),std::move(complete)});}
     if(full){Gm6NativeProfileResult result;result.receivedAt=receivedAt;result.status="GM6 native profile: очередь нажатий заполнена";if(complete)complete(std::move(result));}
     else impl_->wake.notify_all();
 }

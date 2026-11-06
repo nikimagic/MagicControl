@@ -19,6 +19,8 @@ CMakeLists.txt text
 # Owner-provided ready CSV is shipped byte-for-byte to both platforms.
 /packaging/fan-curves.csv -text whitespace=cr-at-eol
 /packaging/app-settings.ini -text whitespace=cr-at-eol
+# Preserve the upstream Debian copyright notice byte-for-byte, including spaces.
+/packaging/linux/libgtk4-layer-shell.LICENSE.txt -text -whitespace
 *.xml    text
 *.manifest text
 

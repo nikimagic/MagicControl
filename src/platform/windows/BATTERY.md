@@ -488,7 +488,7 @@ bounded worker при startup/resume. Исходные thresholds/native protect
 после возвратаFF ток возобновился. FAN config/tables/APU по трём снимкам
 совпали. Долгая работа,сон/AC reconnect,влияниеROM04 на другие ветви и
 физическая остановкаGM6/HYDROC не измерены; readback не объявляется этим proof.
-Отчёт: tests/test_util/analysis/battery-romid-ram-20261022/REPORT.md.
+Отчёт: research/test_util/analysis/battery-romid-ram-20261022/REPORT.md.
 Нижний гистерезис95/90 этим изменением не реализован.
 
 ## Wujie: платформа и верхний предел разделены,22.10.2026
@@ -659,7 +659,7 @@ Read-only каталог кандидатов не расширяет этот a
 0x7C3 имеет измеренный побочный эффект: на батарее Office при7→4 лимиты SMU
 Fast/Slow/STAPM менялись30/25/25→45/40/40. Сетевые результаты зависели от БП;
 не компенсировать их скрытой записью APU/FAN. Исходный отчёт:
-tests/test_util/analysis/battery-platform-smu-20261016/REPORT.md.
+research/test_util/analysis/battery-platform-smu-20261016/REPORT.md.
 
 ### Предварительные проверки
 

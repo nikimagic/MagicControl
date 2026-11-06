@@ -3,6 +3,7 @@
 #include "MagicControl/DiagnosticDump.h"
 #include "MagicControl/EcAccess.h"
 #include "MagicControl/Monitoring.h"
+#include "MagicControl/TelemetryGate.h"
 #include "MagicControl/PawnIoInstall.h"
 #include "FirmwareEvidence.h"
 #include <cstdint>
@@ -95,7 +96,7 @@ public:virtual ~FastDiagnosticWorker()=default;
     virtual FastDiagnosticFrame read(std::stop_token,std::chrono::milliseconds timeout)=0;
     virtual FirmwareCaptureResult firmware(bool stateOnly,const FirmwareEmitter&,std::stop_token,std::chrono::milliseconds timeout,bool biosRom=false)=0;
 };
-std::unique_ptr<FastDiagnosticWorker> createFastDiagnosticWorker();
+std::unique_ptr<FastDiagnosticWorker> createFastDiagnosticWorker(std::shared_ptr<TelemetryGate::DiagnosticCollection> collection = {});
 std::optional<int> runFastDiagnosticHelper(const std::vector<std::string>& args);
 // No live controller/watchdog may be constructed here. Platform implementations
 // supply only verified getter access with writes hard-denied at the transport.

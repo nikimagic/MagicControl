@@ -80,6 +80,7 @@ private:
     std::shared_ptr<OperationMessages> messages_;
     std::stop_source cancellation_;
     std::mutex resultGate_;
+    bool workerStarted_{}; // Guarded by resultGate_; pending cancellation may release the ticket.
     std::atomic<Phase> phase_{Phase::Running};
     std::atomic<std::uint64_t> progress_{};
 };

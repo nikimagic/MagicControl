@@ -587,7 +587,7 @@ GPU останавливался. Пользователь предполага�
 - ../../gui/windows/FansPage.cpp — кнопки, редакторы, немедленная подсветка.
 - ../../../MagicControl/windows/fan-curves.csv — portable-конфиг (EcManual/EcCurve).
 - ../../../MagicControl/windows/logs/ — журналы; временные метки UTC, Москва = UTC+3.
-- ../../../tests/test_util/analysis/ — сохранённые аппаратные опыты.
+- ../../../research/test_util/analysis/ — отчёты; ../../../out/test_util/analysis/ — исходные данные аппаратных опытов.
 
 Сборка не доказывает работу на железе. В отчёте разделять: изменено в коде,
 собрано, скопировано в portable, подтверждено новым аппаратным логом.

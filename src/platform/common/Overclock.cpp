@@ -92,8 +92,8 @@ OverclockRows overclockRows(const OverclockFirmware& s){
 }
 bool OverclockOperations::refresh(std::function<void()> ready){
     if(worker_.busy())return false;
-    try{worker_.launch([this]{try{pending_=readOverclockFirmware(readBoardDescriptor());}catch(const std::exception& e){pending_={};pending_.status=e.what();}catch(...){pending_={};pending_.status="Ошибка чтения";}},std::move(ready));return true;}
+    try{worker_.launch([this]{try{pending_=readOverclockFirmware(readBoardDescriptor());}catch(const std::exception& e){pending_={};pending_.status=e.what();}catch(...){pending_={};pending_.status="Ошибка чтения";}},std::move(ready),ResourceWorkClass::Telemetry);return true;}
     catch(const std::exception& e){current_={};current_.status=e.what();return false;}
 }
-bool OverclockOperations::take(){if(!worker_.takeCompletion())return false;current_=std::move(pending_);return true;}
+bool OverclockOperations::take(){if(!worker_.takeCompletion()||worker_.telemetrySkipped())return false;current_=std::move(pending_);return true;}
 }

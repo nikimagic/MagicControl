@@ -43,7 +43,7 @@ bool GpuOperations::submit(GpuOperationRequest request,bool viewOnly,std::option
     GpuOperationContext context{audit::capture(),viewOnly,std::move(preview),{}};
     try{
         reservation_=admit(request,context);context.reservation=reservation_;
-        worker_.launch([this,request,context=std::move(context)]()mutable{pending_=executeGpuOperation(gpu_,request,std::move(context));},ready_,request.writing()?ResourceWorkClass::Interactive:ResourceWorkClass::Observation);
+        worker_.launch([this,request,context=std::move(context)]()mutable{pending_=executeGpuOperation(gpu_,request,std::move(context));},ready_,request.writing()?ResourceWorkClass::Interactive:ResourceWorkClass::Telemetry);
     }catch(const std::exception& e){reservation_.reset();pending_=rejected(request,e.what());immediate_=true;}
     catch(...){reservation_.reset();pending_=rejected(request,"Не удалось запустить обработчик GPU.");immediate_=true;}
     if(immediate_){audit::event("gpu.command_rejected","\"uuid\":"+audit::quote(request.providerId)+",\"message\":"+audit::quote(pending_->message));if(ready_)ready_();}
@@ -51,6 +51,7 @@ bool GpuOperations::submit(GpuOperationRequest request,bool viewOnly,std::option
 }
 std::optional<DiscreteGpuOperationResult> GpuOperations::take(std::optional<std::vector<GpuReading>> currentPreview){
     if(!immediate_&&!worker_.takeCompletion())return {};
+    if(!immediate_&&worker_.telemetrySkipped()){busy=false;applying=false;reservation_.reset();return {};}
     immediate_=false;
     if(worker_.failure()&&!pending_)pending_=rejected(active_,"Ошибка обработчика GPU: состояние не подтверждено.");
     auto result=std::move(pending_);pending_.reset();busy=false;applying=false;reservation_.reset();

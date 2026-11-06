@@ -19,9 +19,10 @@
 #include <memory>
 #include <mutex>
 #include "DeviceOperation.h"
+#include "TelemetryGate.h"
 
 namespace mc {
-enum class ResourceWorkClass {Interactive,Observation};
+enum class ResourceWorkClass {Interactive,Observation,Telemetry};
 // One process-owned executor. Page/model clients own lanes and results, never
 // threads. Adapters must submit finite operations, not permanent cooling loops.
 namespace resource_work {
@@ -125,13 +126,19 @@ public:
     ~ResourceWorker(){join();}
     ResourceWorker(const ResourceWorker&)=delete;
     ResourceWorker& operator=(const ResourceWorker&)=delete;
-    void launch(std::function<void()> work,std::function<void()> ready,ResourceWorkClass kind=ResourceWorkClass::Observation){
+    void launch(std::function<void()> work,std::function<void()> ready,ResourceWorkClass kind=ResourceWorkClass::Observation,
+                std::function<void()> onTelemetrySkipped={}){
         if(busy_)throw std::logic_error("Resource lane already running");
-        join();busy_=true;failure_={};done_.store(false,std::memory_order_release);
+        join();busy_=true;failure_={};skipped_.store(false,std::memory_order_relaxed);done_.store(false,std::memory_order_release);
         try{
             job_=std::make_shared<resource_work::Job>();
-            job_->body=[this,work=std::move(work),ready=std::move(ready)]{
-                try{work();}catch(...){failure_=std::current_exception();}
+            job_->body=[this,work=std::move(work),ready=std::move(ready),kind,onTelemetrySkipped=std::move(onTelemetrySkipped)]{
+                try{
+                    if(kind==ResourceWorkClass::Telemetry){
+                        if(auto permit=telemetryGate().tryObservation())work();
+                        else{skipped_.store(true,std::memory_order_relaxed);if(onTelemetrySkipped)onTelemetrySkipped();}
+                    }else work();
+                }catch(...){failure_=std::current_exception();}
                 done_.store(true,std::memory_order_release);
                 try{if(ready)ready();}catch(...){}
             };
@@ -141,6 +148,8 @@ public:
     }
     bool takeCompletion(){if(!done_.exchange(false,std::memory_order_acq_rel))return false;join();busy_=false;return true;}
     bool busy()const noexcept{return busy_;}
+    // Read after completion; skipped samples must not replace the last value.
+    bool telemetrySkipped()const noexcept{return skipped_.load(std::memory_order_relaxed);}
     std::exception_ptr failure()const noexcept{return failure_;} // After take/join.
     void join(){
         if(injected_.joinable())injected_.join();
@@ -151,7 +160,7 @@ public:
 private:
     ThreadFactory factory_;
     std::shared_ptr<resource_work::Job> job_;std::thread injected_;
-    std::atomic<bool> done_{};bool busy_{};std::exception_ptr failure_;
+    std::atomic<bool> done_{},skipped_{};bool busy_{};std::exception_ptr failure_;
 };
 // The queue owns admitted reservations and the resource lane. Request is domain
 // data (not a GUI callback). One interactive request may follow a passive read.
@@ -178,11 +187,12 @@ public:
     void begin(bool passive){if(busy_)throw std::logic_error("Resource operation already active");busy_=true;reading_=passive;if(!passive)priority_.store(false,std::memory_order_release);}
     void launch(std::function<void()> work,std::function<void()> ready){
         if(!busy_)throw std::logic_error("Resource operation not admitted");
-        try{worker_.launch(std::move(work),std::move(ready),reading_?ResourceWorkClass::Observation:ResourceWorkClass::Interactive);}
+        try{worker_.launch(std::move(work),std::move(ready),reading_?ResourceWorkClass::Telemetry:ResourceWorkClass::Interactive);}
         catch(...){busy_=false;reading_=false;throw;}
     }
     bool takeCompletion(){return worker_.takeCompletion();}
     std::exception_ptr unhandledFailure()const noexcept{return worker_.failure();}
+    bool telemetrySkipped()const noexcept{return worker_.telemetrySkipped();}
     void finish()noexcept{busy_=false;reading_=false;}
     void join(){worker_.join();}
     bool busy()const noexcept{return busy_;}

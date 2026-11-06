@@ -1,6 +1,7 @@
 #pragma once
 #include "DiagnosticDump.h"
 #include "GpuDevice.h"
+#include "TelemetryGate.h"
 #include <atomic>
 #include <string_view>
 namespace mc {
@@ -28,5 +29,5 @@ struct VbiosRomDumpResult:DiagnosticDumpResult {
 };
 VbiosRomDumpResult createVbiosRomDump(std::stop_token cancellation={},
     std::atomic<std::uint64_t>* progress=nullptr,std::string pci={},
-    std::filesystem::path outputRoot={});
+    std::filesystem::path outputRoot={},std::shared_ptr<TelemetryGate::FirmwarePause> pause={});
 }

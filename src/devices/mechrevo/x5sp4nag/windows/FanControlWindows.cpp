@@ -404,6 +404,7 @@ struct FanController::Impl {
 
     void run(std::stop_token token) {
         std::unique_ptr<FanOwnership> lease;
+        std::optional<TelemetryGate::SafetyControl> ownershipSafety;
         // A failed service restart must not remain an active FAN lease, but
         // its original restart intent/handles must survive an explicit retry.
         std::unique_ptr<FanOwnership> pendingServiceRestore;
@@ -415,7 +416,7 @@ struct FanController::Impl {
         std::array<int, 2> level{}, lastRaw{-1,-1};
         std::array<bool,2> tableCacheValid{};
         bool linked{}, maximum{}, ecManual{}, touched{}, reload{}, startupConfirmationPending{};
-        bool ownershipUnknown{},automaticRestoreWrites{};
+        bool ownershipUnknown{},automaticRestoreWrites{},deferredPresence{};
         std::uint64_t revision{};
         auto nextIdleObservation=Clock::time_point{};
         std::optional<Intent> confirmed;
@@ -514,15 +515,21 @@ struct FanController::Impl {
         const auto check = [&](bool) {
             if (!flagsMatch()) throw ExternalChange("Флаги управления вентиляторами EC изменились.");
         };
-        const auto begin = [&](bool flagsOnly = false,bool allowServicePause = true) {
+        const auto begin = [&](bool flagsOnly = false,bool allowServicePause = true,bool requiresCoolingSafety = false) {
             if (lease && !flagsOnly && flagsOnlyLease) {
                 lease->restoreService(); lease.reset();
             }
+            const bool newSafety=requiresCoolingSafety&&!ownershipSafety;
+            if(newSafety){ownershipSafety=telemetryGate().trySafetyControl();
+                if(!ownershipSafety)throw std::runtime_error("Firmware capture is active; fan control not started");}
             if (lease) return;
-            checkPower();
-            ec.ensureCapability(DeviceFeature::Fans, "uniwill-x5sp4nag");
-            logical = {}; curves = {}; lastRaw = {-1,-1}; level = {}; maximum = false; ecManual = false; reload = false;
-            lease = environment->acquireOwnership(!flagsOnly&&allowServicePause);
+            try{
+                checkPower();
+                ec.ensureCapability(DeviceFeature::Fans, "uniwill-x5sp4nag");
+                logical = {}; curves = {}; lastRaw = {-1,-1}; level = {}; maximum = false; ecManual = false; reload = false;
+                lease = environment->acquireOwnership(!flagsOnly&&allowServicePause);
+            }
+            catch(...){if(newSafety)ownershipSafety.reset();throw;}
             flagsOnlyLease = flagsOnly||!allowServicePause;
             checkPower();
             EcAccess::ObservationPause pause(ec); const EcAccess::Transaction transaction(ec);
@@ -577,6 +584,7 @@ struct FanController::Impl {
                 {std::lock_guard lock(mutex);state.needsRestore=true;}
                 throw;
             }
+            ownershipSafety.reset();
         };
         const auto diagnosticDefaultCheck = [&](const DiagnosticPlan& plan,bool requireOwner = true) {
             checkPower();
@@ -720,9 +728,15 @@ struct FanController::Impl {
                 recovering = true; recoveryStarted = Clock::now();
             }
             cycleEpoch = powerEpoch.load();
-            if (!recovering && presencePending.exchange(false)) restorePresence();
+            if (!recovering && (presencePending.exchange(false)||deferredPresence)) {
+                if(auto observation=telemetryGate().tryObservation()){deferredPresence=false;restorePresence();}
+                else deferredPresence=true;
+            }
             auto due = keyboardDue.load();
-            if (!recovering && due && GetTickCount64() >= due && keyboardDue.compare_exchange_strong(due,0)) wakeKeyboard();
+            if (!recovering && due && GetTickCount64() >= due && keyboardDue.compare_exchange_strong(due,0)) {
+                if(auto observation=telemetryGate().tryObservation())wakeKeyboard();
+                else keyboardDue.store(GetTickCount64()+1000);
+            }
             if (!command && !lease && !recovering) {
                 // На старте Default может уже совпадать с сохранённым: restorer
                 // правильно пропускает применение, а command revision остаётся0.
@@ -731,6 +745,8 @@ struct FanController::Impl {
                 // лимитов APU или таблиц. На время сна/чужой операции чтение ждёт.
                 if(Clock::now()>=nextIdleObservation&&!deviceOperations().busy()&&!ec.observationsPaused()){
                     nextIdleObservation=Clock::now()+1s;
+                    auto observation=telemetryGate().tryObservation();
+                    if(!observation)continue;
                     try{
                         checkPower();const auto actual=readNativeFanFlags(ec);checkPower();
                         std::lock_guard lock(mutex);
@@ -748,6 +764,14 @@ struct FanController::Impl {
                     }
                 }
                 continue;
+            }
+            // A lease used only for autonomous EC modes is not a temperature
+            // control loop. Its optional periodic check is paused with other
+            // observations; a real online loop instead holds ownershipSafety.
+            std::optional<TelemetryGate::Observation> passiveObservation;
+            if(!command&&!ownershipSafety&&!recovering){
+                passiveObservation=telemetryGate().tryObservation();
+                if(!passiveObservation)continue;
             }
             bool external{};
             automaticRestoreWrites=false;
@@ -1185,7 +1209,10 @@ struct FanController::Impl {
                             std::this_thread::sleep_for(250ms);
                         }
                     }
-                    begin(command->kind == Kind::Maximum || command->kind == Kind::Native || savedMaximum,!command->diagnosticRestored);
+                    const bool onlineRequested=command->kind==Kind::Curve||command->kind==Kind::Link||
+                        (command->kind==Kind::SavedProfiles&&!savedMaximum&&command->savedProfiles&&
+                         (command->savedProfiles->currentPreset(0)!=FanCurvePreset::Default||command->savedProfiles->currentPreset(1)!=FanCurvePreset::Default));
+                    begin(command->kind == Kind::Maximum || command->kind == Kind::Native || savedMaximum,!command->diagnosticRestored,onlineRequested);
                     // Recheck after taking our process/channel lease, still
                     // before any writer. Automatic replay never pauses OEM.
                     if(command->diagnosticRestored)diagnosticDefaultCheck(*command->diagnosticPlan);
@@ -1339,7 +1366,7 @@ struct FanController::Impl {
                     }
                     }
                 }
-                if (!maximum && logical[0].empty() && logical[1].empty()) continue;
+                if (!maximum && logical[0].empty() && logical[1].empty()) {if(!ecManual)ownershipSafety.reset();continue;}
                 MonitoringSnapshot sample;
                 std::array<int,2> target{};
                 if (ecManual) {
@@ -1493,6 +1520,7 @@ struct FanController::Impl {
                     else log(std::format("FAN STATUS superseded: observed_revision={} requested_revision={}; newer applying state retained",revision,sequence));
                     activeOperation.reset();
                 }
+                if(ecManual||maximum)ownershipSafety.reset();
                 // Serialise EC application, not the physical fan ramp. Default
                 // and the other presets remain usable while feedback settles.
                 finishPowerOperation();
