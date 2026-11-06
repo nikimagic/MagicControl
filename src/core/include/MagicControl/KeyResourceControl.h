@@ -6,10 +6,10 @@
 namespace mc {
 enum class KeyCommandPlan { UnsupportedRoute, Unavailable, Busy, LocalPreference, Queue, Start };
 inline KeyCommandPlan planKeyCommand(std::string_view profile,int index,bool preview,bool available,
-        bool busy,bool refreshing,bool queued,bool linuxHost=false) noexcept{
+        bool busy,bool refreshing,bool queued,bool linuxHost=false,bool present=true) noexcept{
     if(index<0||index>=static_cast<int>(kKeyCount))return KeyCommandPlan::Unavailable;
     const auto action=static_cast<KeyAction>(index);
-    if(keysBackend(profile,action,linuxHost,preview)==KeysBackend::Unavailable)return KeyCommandPlan::UnsupportedRoute;
+    if(keysBackend(profile,action,linuxHost,preview,present)==KeysBackend::Unavailable)return KeyCommandPlan::UnsupportedRoute;
     if(!available)return KeyCommandPlan::Unavailable;
     if(busy&&(!refreshing||queued))return KeyCommandPlan::Busy;
     if(action==KeyAction::Osd)return KeyCommandPlan::LocalPreference;
@@ -71,6 +71,8 @@ public:
     void suspend();
     void powerSleep(bool sleeping);
     bool disabled(int row)const noexcept;
+    bool visible(int row)const noexcept;
+    const std::array<bool,kKeyCount>& visibleRows()const noexcept;
     const KeySnapshot& snapshot()const noexcept;
 private:
     struct Impl;

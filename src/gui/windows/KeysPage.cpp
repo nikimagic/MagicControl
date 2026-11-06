@@ -131,7 +131,7 @@ struct KeysPage::Impl {
     // DPI применяется ко всем размерам; layout/paint/scroll не меняют настройки EC.
     void arrange() {
         if (!visible || width < scale(240) || height < scale(100)) return;
-        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)});
+        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)},operations->visibleRows());
         buttonWidth = g.buttonWidth; rowHeight = g.rowHeight;
         titleLeft = g.titleLeft; titleWidth = g.titleWidth;
         offLeft = g.offLeft; onLeft = g.onLeft;
@@ -252,11 +252,11 @@ struct KeysPage::Impl {
         InvalidateRect(page, nullptr, FALSE);
     }
     int rowTop(int index) const {
-        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)});
+        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)},operations->visibleRows());
         return g.rows[index].top;
     }
     RECT segmentRect(int index, bool on) const {
-        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)});
+        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)},operations->visibleRows());
         RECT rect = toNativeRect(on ? g.on[index] : g.off[index]);
         OffsetRect(&rect, 0, -scroll.position());
         return rect;
@@ -264,8 +264,9 @@ struct KeysPage::Impl {
     bool hitToggle(int x, int y, int& index, bool& on) const {
         if (x < offLeft || x >= onLeft + buttonWidth) return false;
         const int contentY = y + scroll.position();
-        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)});
+        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)},operations->visibleRows());
         for (int i = 0; i < static_cast<int>(rows.size()); ++i) {
+            if(!operations->visible(i))continue;
             if (contentY < g.off[i].top || contentY >= g.off[i].bottom) continue;
             index = i; on = x >= onLeft; return true;
         }
@@ -306,7 +307,7 @@ struct KeysPage::Impl {
         const auto& ps = painting.info();
         fill(dc, client, theme::kBackground);
         const int offset = scroll.position();
-        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)});
+        const auto g = ui::keysGeometry(width, height, {static_cast<int>(dpi)},operations->visibleRows());
         const auto shifted = [offset](ui::Rect r) {
             RECT rect = toNativeRect(r); OffsetRect(&rect, 0, -offset); return rect;
         };
@@ -316,6 +317,7 @@ struct KeysPage::Impl {
         text(dc, L"Быстрое переключение", quickTitle, bold, theme::kTextPrimary);
         text(dc, L"Устройства Windows", devicesTitle, bold, theme::kTextPrimary);
         for (int i = 0; i < static_cast<int>(rows.size()); ++i) {
+            if(!operations->visible(i))continue;
             const int naturalTop = rowTop(i);
             const int top = naturalTop - offset;
             if (top + rowHeight < ps.rcPaint.top || top > ps.rcPaint.bottom) continue;
@@ -485,6 +487,8 @@ bool KeysPage::preTranslate(MSG& message) {
             const bool backwards = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
             page.focusRow = page.focusRow < 0 ? (backwards ? static_cast<int>(ui::keyRowCount)-1 : 0)
                 : (page.focusRow + (backwards ? static_cast<int>(ui::keyRowCount)-1 : 1)) % static_cast<int>(ui::keyRowCount);
+            while(!page.operations->visible(page.focusRow))
+                page.focusRow=(page.focusRow+(backwards?static_cast<int>(ui::keyRowCount)-1:1))%static_cast<int>(ui::keyRowCount);
             page.focusOn = page.rows[static_cast<std::size_t>(page.focusRow)].value == 1;
             page.ensureFocusedRowVisible(); InvalidateRect(page.page, nullptr, FALSE);
             return true;

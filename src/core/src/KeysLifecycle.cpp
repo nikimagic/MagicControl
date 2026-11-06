@@ -133,6 +133,7 @@ bool rememberKeyPreference(KeyAction action,bool enabled,std::string& error){
     return saveKeysPreferences(saved,error);
 }
 struct KeysLifecycle::Impl {
+    std::string profile;
     Reader read;Setter set;Observer synchronizeObserved;
     std::array<bool,kKeyCount> observedPending{};
     std::mutex gate;std::condition_variable changed;
@@ -140,7 +141,7 @@ struct KeysLifecycle::Impl {
     std::function<void()> preparation;
     std::chrono::steady_clock::time_point requested{};
     mc::ResourceActor worker;
-    Impl(Reader r,Setter s,Observer o):read(std::move(r)),set(std::move(s)),synchronizeObserved(std::move(o)),worker([this](std::stop_token stop){run(stop);}){}
+    Impl(std::string id,Reader r,Setter s,Observer o):profile(std::move(id)),read(std::move(r)),set(std::move(s)),synchronizeObserved(std::move(o)),worker([this](std::stop_token stop){run(stop);}){}
     ~Impl(){worker.request_stop();changed.notify_all();worker.join();}
     bool interrupted(std::stop_token stop,std::uint64_t generation){
         std::lock_guard lock(gate);return stop.stop_requested()||suspended||generation!=epoch;
@@ -168,6 +169,7 @@ struct KeysLifecycle::Impl {
                 bool retry=false;
                 for(std::size_t row=0;row<kKeyCount&&!interrupted(stop,generation);++row){
                     if(!remaining[row])continue;const auto action=static_cast<KeyAction>(row);
+                    if(!keyActionVisible(profile,action)){remaining[row]=false;continue;}
                     if(action==KeyAction::Osd){log(reason,row,"application_preference");remaining[row]=false;continue;}
                     if(!restoreKeyPreferenceOnLifecycle(action)){log(reason,row,"preserved","OS Bluetooth state");remaining[row]=false;continue;}
                     auto reservation=deviceOperations().tryBegin(DeviceOperationKind::Background);
@@ -210,7 +212,7 @@ struct KeysLifecycle::Impl {
 };
 KeysLifecycle::KeysLifecycle(std::string profile,Reader read,Setter set,Observer synchronizeObserved){
     try{migrateKeysPreferences(profile);}catch(const std::exception& e){logMessage("keys_restore",e.what());}
-    impl_=std::make_unique<Impl>(std::move(read),std::move(set),std::move(synchronizeObserved));
+    impl_=std::make_unique<Impl>(std::move(profile),std::move(read),std::move(set),std::move(synchronizeObserved));
 }
 KeysLifecycle::~KeysLifecycle()=default;
 void KeysLifecycle::request(std::string reason,std::function<void()> preparation){
@@ -233,6 +235,7 @@ struct KeysOperations::Impl {
     KeyOperationServices services;std::function<void()> ready;
     std::unique_ptr<KeysLifecycle> lifecycle;
     KeySnapshot snapshot;
+    std::array<bool,kKeyCount> visible{};
     std::array<std::optional<int>,kKeyCount> observed{};
     bool busy{},refreshing{},loaded{},lifecyclePaused{};
     std::optional<Request> queued;
@@ -242,6 +245,7 @@ struct KeysOperations::Impl {
 
     Impl(std::string id,bool viewing,bool linuxPlatform,KeyOperationServices adapters,std::function<void()> notify)
         :profile(std::move(id)),preview(viewing),linuxHost(linuxPlatform),services(std::move(adapters)),ready(std::move(notify)){
+        for(std::size_t i=0;i<kKeyCount;++i)visible[i]=keyActionVisible(profile,static_cast<KeyAction>(i));
         localState();
         if(services.lifecycleRead&&services.lifecycleSet)
             lifecycle=std::make_unique<KeysLifecycle>(profile,services.lifecycleRead,services.lifecycleSet,services.lifecycleObserve);
@@ -310,7 +314,8 @@ struct KeysOperations::Impl {
     KeySubmission submit(int row,bool on){
         audit::Scope dispatch("keys.dispatch","\"row\":"+std::to_string(row)+",\"enabled\":"+(on?"true":"false"),{},true);
         const bool available=row>=0&&row<static_cast<int>(kKeyCount)&&snapshot.available[static_cast<std::size_t>(row)];
-        const auto plan=planKeyCommand(profile,row,preview,available,busy,refreshing,queued.has_value(),linuxHost);
+        const bool present=row>=0&&row<static_cast<int>(kKeyCount)&&visible[static_cast<std::size_t>(row)];
+        const auto plan=planKeyCommand(profile,row,preview,available,busy,refreshing,queued.has_value(),linuxHost,present);
         if(plan==KeyCommandPlan::UnsupportedRoute||plan==KeyCommandPlan::Unavailable||plan==KeyCommandPlan::Busy){
             dispatch.finish("rejected","\"reason\":"+audit::quote(plan==KeyCommandPlan::Busy?"busy":"unsupported_or_unavailable"));return {};
         }
@@ -366,9 +371,11 @@ KeySubmission KeysOperations::submit(int row,bool on){return impl_->submit(row,o
 bool KeysOperations::refresh(){return impl_->refresh();}
 std::optional<KeyOperationResult> KeysOperations::take(){return impl_->take();}
 const KeySnapshot& KeysOperations::snapshot()const noexcept{return impl_->snapshot;}
+bool KeysOperations::visible(int row)const noexcept{return row>=0&&row<static_cast<int>(kKeyCount)&&impl_->visible[static_cast<std::size_t>(row)];}
+const std::array<bool,kKeyCount>& KeysOperations::visibleRows()const noexcept{return impl_->visible;}
 bool KeysOperations::disabled(int row)const noexcept{
     return row<0||row>=static_cast<int>(kKeyCount)||deviceOperations().interactiveBusy()||
-        keysBackend(impl_->profile,static_cast<KeyAction>(row),impl_->linuxHost,impl_->preview)==KeysBackend::Unavailable||
+        keysBackend(impl_->profile,static_cast<KeyAction>(row),impl_->linuxHost,impl_->preview,impl_->visible[static_cast<std::size_t>(row)])==KeysBackend::Unavailable||
         (impl_->busy&&(!impl_->refreshing||impl_->queued)&&row!=1)||!impl_->snapshot.available[static_cast<std::size_t>(row)];
 }
 void KeysOperations::observe(int row,bool on){

@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <span>
 
 #include "Layout.h"
 #include "Fonts.h"
@@ -398,17 +399,22 @@ struct KeysGeometry {
     int extent{}, rowHeight{}, buttonWidth{}, titleLeft{}, titleWidth{}, offLeft{}, onLeft{};
 };
 
-inline KeysGeometry keysGeometry(int width, int height, Scale s = {}) {
+inline KeysGeometry keysGeometry(int width, int height, Scale s = {}, std::span<const bool> visible = {}) {
     KeysGeometry g;
+    const auto shown=[&](std::size_t i){return visible.size()!=keyRowCount||visible[i];};
+    int quickCount{},deviceCount{};
+    for(std::size_t i=0;i<keyRowCount;++i)if(shown(i)){
+        if(i<keyQuickRowCount)++quickCount;else ++deviceCount;
+    }
     const int pad = s(kContentPadding);
     const int top = s(kPageTopPadding);
     g.rowHeight = s(40); g.buttonWidth = s(64); g.titleLeft = pad * 2;
     g.offLeft = width - pad * 2 - g.buttonWidth * 2;
     g.onLeft = g.offLeft + g.buttonWidth;
     g.titleWidth = g.offLeft - g.titleLeft - s(12);
-    const int quickBottom = top + s(34) + g.rowHeight * static_cast<int>(keyQuickRowCount) + s(4);
+    const int quickBottom = top + s(34) + g.rowHeight * quickCount + s(4);
     const int devicesTop = quickBottom + s(kCardGap);
-    const int devicesBottom = devicesTop + s(34) + g.rowHeight * static_cast<int>(keyRowCount-keyQuickRowCount) + s(4);
+    const int devicesBottom = devicesTop + s(34) + g.rowHeight * deviceCount + s(4);
     g.quickCard = {pad, top, width - pad, quickBottom};
     g.devicesCard = {pad, devicesTop, width - pad, devicesBottom};
     g.quickHeading = {g.titleLeft, top + s(10), width - s(24), top + s(38)};
@@ -417,9 +423,11 @@ inline KeysGeometry keysGeometry(int width, int height, Scale s = {}) {
     const int detailHeight = textMetrics(FontRole::KeyDetail, s.dpi).height;
     const int textTop = (g.rowHeight - titleHeight - detailHeight) / 2;
     const int buttonTop = (g.rowHeight - s(kButtonHeight)) / 2;
+    int quickIndex{},deviceIndex{};
     for (int i = 0; i < static_cast<int>(keyRowCount); ++i) {
+        if(!shown(static_cast<std::size_t>(i)))continue;
         const int y = (i < static_cast<int>(keyQuickRowCount) ? top : devicesTop) + s(34)
-            + (i < static_cast<int>(keyQuickRowCount) ? i : i - static_cast<int>(keyQuickRowCount)) * g.rowHeight;
+            + (i < static_cast<int>(keyQuickRowCount) ? quickIndex++ : deviceIndex++) * g.rowHeight;
         g.rows[i] = {0, y, width, y + g.rowHeight};
         g.titles[i] = {g.titleLeft, y + textTop, g.titleLeft + g.titleWidth, y + textTop + titleHeight};
         g.details[i] = {g.titleLeft, g.titles[i].bottom, g.titleLeft + g.titleWidth, g.titles[i].bottom + detailHeight};

@@ -72,15 +72,18 @@ GtkWidget* createKeysPage(OsdService* osd){
     auto* state=new KeysState();state->osd=osd;
     if(state->preview)state->result="Системные функции текущего компьютера; EC профиля не используется.";
     auto* canvas=Canvas::create([state](Canvas& c,int width,int height){
-        const auto g=ui::keysGeometry(width,height,{c.dpi()});
+        const auto rows=state->operations?std::span<const bool>(state->operations->visibleRows()):std::span<const bool>{};
+        const auto g=ui::keysGeometry(width,height,{c.dpi()},rows);
         for(std::size_t i=0;i<ui::keyRowCount;++i){c.place(state->off[i],g.off[i]);c.place(state->on[i],g.on[i]);}
         return g.extent;
     },[state](Canvas& c,cairo_t* cr,int width,int height){
-        const int dpi=c.dpi();const auto g=ui::keysGeometry(width,height,{dpi});
+        const auto rows=state->operations?std::span<const bool>(state->operations->visibleRows()):std::span<const bool>{};
+        const int dpi=c.dpi();const auto g=ui::keysGeometry(width,height,{dpi},rows);
         fill(cr,{0,0,width,height},theme::kBackground);fill(cr,g.quickCard,theme::kSurface);fill(cr,g.devicesCard,theme::kSurface);
         text(cr,"Быстрое переключение",g.quickHeading,Font::ClassicHeading,theme::kTextPrimary,dpi);
         text(cr,"Устройства Linux",g.devicesHeading,Font::ClassicHeading,theme::kTextPrimary,dpi);
         for(std::size_t i=0;i<ui::keyRowCount;++i){
+            if(state->operations&&!state->operations->visible(static_cast<int>(i)))continue;
             text(cr,i==0?"Блокировка клавиши Super":ui::keyTitles[i],g.titles[i],Font::KeyTitle,theme::kTextPrimary,dpi);
             text(cr,i==ui::microphoneRow?state->microphoneDetail:details[i],g.details[i],Font::KeyDetail,theme::kTextSecondary,dpi);
         }
@@ -107,6 +110,10 @@ GtkWidget* createKeysPage(OsdService* osd){
                 return G_SOURCE_REMOVE;
             },delivery,+[](gpointer data){delete static_cast<std::shared_ptr<KeysState::Life>*>(data);});
         });
+    for(int i=0;i<static_cast<int>(ui::keyRowCount);++i){
+        gtk_widget_set_visible(state->off[i],state->operations->visible(i));
+        gtk_widget_set_visible(state->on[i],state->operations->visible(i));
+    }
     g_signal_connect(canvas->widget(),"map",G_CALLBACK(+[](GtkWidget*,gpointer p){auto* state=static_cast<KeysState*>(p);pollKeys(*state);if(!state->timer)state->timer=g_timeout_add(3000,+[](gpointer p)->gboolean{pollKeys(*static_cast<KeysState*>(p));return G_SOURCE_CONTINUE;},state);}),state);
     g_signal_connect(canvas->widget(),"unmap",G_CALLBACK(+[](GtkWidget*,gpointer p){auto* state=static_cast<KeysState*>(p);if(state->timer){g_source_remove(state->timer);state->timer=0;}}),state);
     state->operations->restore("startup");

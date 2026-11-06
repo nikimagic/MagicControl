@@ -65,7 +65,7 @@ DeviceState readKeySystemDevice(const KeysHardwareContext& c,KeyAction action){
     return index==8&&keysCameraEcAvailable(c)?readCamera(*c.ec):readDevice(deviceKinds[index-6]);
 }
 KeyObservation observeKeyHardware(const KeysHardwareContext& c,KeyAction action){
-    const auto route=keysBackend(c.profile,action,false,c.preview);
+    const auto route=keysBackend(c.profile,action,false,c.preview,keyActionVisible(c.profile,action));
     if(route==KeysBackend::Unavailable)return {{},false,false,"No confirmed hardware adapter"};
     if(action==KeyAction::Copilot)return observeCopilotFirmware(c);
     if(action==KeyAction::Microphone)return observeMicrophoneKey(c);
@@ -82,7 +82,7 @@ KeyObservation observeKeyHardware(const KeysHardwareContext& c,KeyAction action)
 }
 void applyKeyHardware(const KeysHardwareContext& c,KeyAction action,bool on,KeyApplyMode mode){
     const auto resourceKey=keyResourceControlKey(action);
-    const auto backend=keysBackend(c.profile,action,false,c.preview);
+    const auto backend=keysBackend(c.profile,action,false,c.preview,keyActionVisible(c.profile,action));
     if(backend==KeysBackend::Unavailable)throw std::runtime_error("Для этой модели нет подтверждённого аппаратного обработчика.");
     if(mode==KeyApplyMode::Observe&&action!=KeyAction::Microphone)throw std::invalid_argument("KEYs observation has no matching native indication handler");
     // Shared EC bytes: Fn owns 74E.4, USB owns 767.4, AC recovery owns 726.3.

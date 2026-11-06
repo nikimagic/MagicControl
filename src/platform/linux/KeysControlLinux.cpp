@@ -37,13 +37,14 @@ const KeyRoutes& keyRoutes(){
 }
 }
 KeyObservation observeKeyForRestore(std::string_view profile,bool preview,LaptopControl* control,std::mutex& gate,KeyAction key) {
-    const auto route=keysBackend(profile,key,true,preview);
+    const auto route=keysBackend(profile,key,true,preview,keyActionVisible(profile,key));
     if(route==KeysBackend::Unavailable)return {{},false,false,"No Linux adapter"};
     if(key==KeyAction::Microphone){const auto s=readDefaultMicrophone();return {s.enabled,true,s.available,s.detail};}
     if(key==KeyAction::Fn&&control){std::lock_guard lock(gate);const auto s=control->read();return {s.fnLock,true,s.fnWritable,s.status};}
     return {{},false,false,"No Linux adapter"};
 }
 void applyKey(std::string_view profile,bool preview,LaptopControl* control,std::mutex& gate,KeyAction key,bool on) {
+    if(!keyActionVisible(profile,key))throw std::runtime_error("Для этого устройства функция отсутствует.");
     const auto resourceKey=keyResourceControlKey(key);
     if(!keyRoutes().hasRoute(resourceKey))throw std::runtime_error("Для этой функции нет подтверждённого Linux-адаптера.");
     keyRoutes().execute(resourceKey,KeyRequest{key,on},KeyContext{profile,preview,control,gate});
