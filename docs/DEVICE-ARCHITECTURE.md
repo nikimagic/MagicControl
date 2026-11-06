@@ -1,5 +1,25 @@
 # Профили устройств, протоколы и транспорт
 
+Подробные подтверждённые и неподтверждённые границы I2EC по BIOS/EC Юрия:
+[GM6-I2EC-20261106](GM6-I2EC-20261106.md).
+
+## Intel QCLK: исправление удвоения Gear, 06.11.2026
+
+В новом архиве GM6IR0C 0.1.488 диагностический снимок 61 раз сообщил отказ
+декодера. Пример `5918=2C000484`: ratio33 и опора100 МГц. По Intel
+[SA_PERF_STATUS](https://edc.intel.com/content/www/vn/vi/design/publications/13th-generation-core-processors-datasheet-volume-2-of-2/system-agent-performance-status-sa-perf-status-0-0-0-mchbar-pcu-offset-5918/)
+QCLK — ratio × BCLK/ref; сохранённый CoreFreq независимо показывает DDR rate
+как удвоенный QCLK. Старый код ещё умножал QCLK на BIOS Gear, ошибочно
+получал 6600 МГц и отбрасывал число как больше5000. Теперь общий decoder для
+допущенных Intel считает 3300 МГц и ResourceCatalog отдельно выводит примерно
+6600 MT/s. BIOS register5E04 доступен только в диагностике и не может
+заблокировать QCLK. Используется номинальная частота BCLK; физическая сверка
+с независимым измерителем и показание программы на GM6 ещё не проведены.
+Отдельные скриншоты AIDA/ASRock от Юрия показывают разные моменты: около
+2394,1 МГц / 4800 MT/s и около3291,9 МГц / 6600 MT/s при FSB около99,8 МГц.
+Они согласуются с разными состояниями ratio24 и ratio33, но не являются
+одновременной сверкой с показанием этого исправления. Значок ≈ сохраняется.
+
 ## PawnIO: доступ и диагностика частоты памяти, 06.11.2026
 
 Выбор просмотрщика частоты зависит от проверенного CPU family/model и типа
@@ -58,9 +78,8 @@ manufacturer/device, затем читается температура с пе�
 
 Windows collector для Intel family 6 models B7/BA/BF и ordinary DDR5 читает
 под общим Access_PCI текущий QCLK через IntelMCHBAR 0.2.11: два согласованных
-чтения 5918 и поле Gear последнего запроса BIOS 5E04. Скорость DDR вычисляется
-из номинального BCLK 100 МГц и BIOS Gear; это приближение, помеченное ≈,
-поскольку актуальность Gear и фактический BCLK не подтверждены. Lenovo не
+чтения 5918. Скорость DDR вычисляется из QCLK и номинального BCLK; это
+приближение, помеченное ≈, поскольку фактический BCLK не измерен. Lenovo не
 проверен физически. Сырые значения и отказ не превращаются в нулевую частоту;
 адреса фиксированы typed API, записи и отдельные GUI-pollers отсутствуют.
 Источник Intel: https://edc.intel.com/content/www/kr/ko/design/publications/13th-generation-core-processor-datasheet-volume-2-of-2/system-agent-performance-status-sa-perf-status-0-0-0-mchbar-pcu-offset-5918/

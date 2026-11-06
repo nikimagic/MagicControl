@@ -176,7 +176,7 @@ struct IntelTelemetryReader::Impl {
     }
     void readMemoryClock(MonitoringSnapshot& sample){
         sample.memoryClockSource="PawnIO · Intel MCHBAR QCLK";
-        const auto now=GetTickCount64();IntelMemoryCapture captured;
+        const auto now=GetTickCount64();IntelMemoryCapture captured;std::string biosDiagnosticError;
         const auto publish=[&]{if(!sample.diagnostic)return;
             sample.additionalSensors.push_back({"Intel memory controller","frequency","MHz",sample.memoryClockSource,
                 sample.memoryClockStatus,sample.memoryClockMhz,{},now});
@@ -184,6 +184,8 @@ struct IntelTelemetryReader::Impl {
                 sample.additionalSensors.push_back({"Intel memory controller",name,"raw",sample.memoryClockSource,
                     sample.memoryClockStatus,double(*value),double(*value),now});};
             raw("qclk_status_before",captured.before);raw("bios_data",captured.bios);raw("qclk_status_after",captured.after);
+            if(!biosDiagnosticError.empty())sample.additionalSensors.push_back({"Intel memory controller","bios_data","raw",sample.memoryClockSource,
+                biosDiagnosticError,{},{},now});
         };
         if(!memorySupported){sample.memoryClockStatus="Intel CPU memory register layout not reviewed";publish();return;}
         if(sample.ordinaryDdr5==sample.ordinaryDdr4){sample.memoryClockStatus="DDR4/DDR5 memory type unavailable or ambiguous";publish();return;}
@@ -195,13 +197,17 @@ struct IntelTelemetryReader::Impl {
         if(acquired!=WAIT_OBJECT_0&&acquired!=WAIT_ABANDONED){sample.memoryClockStatus="PCI mutex busy or unavailable";publish();return;}
         try{
             if(!mchbar.ready())mchbar.open(L"IntelMCHBAR.bin","3f82b832d99b4aac37d2a20fdb7c9baa2a3bc0488612c9019c9484eb0e8a6eae");
-            captured=captureIntelMemoryClock(true,[&]{return mchbar.intelMemoryStatus();},[&]{return mchbar.intelMemoryBiosData();});
+            captured=captureIntelMemoryClock(true,[&]{return mchbar.intelMemoryStatus();});
+            // BIOS request is diagnostic evidence only. Actual QCLK is read
+            // independently, even if this optional register is unavailable.
+            if(sample.diagnostic)try{captured.bios=mchbar.intelMemoryBiosData();}
+            catch(const std::exception& error){biosDiagnosticError=error.what();}
             if(captured.mhz){
                 sample.memoryClockMhz=*captured.mhz;sample.memoryClockSampledAtMs=GetTickCount64();
-                sample.memoryClockStatus="approximate: current QCLK, last BIOS-requested Gear, nominal BCLK; not hardware validated";
+                sample.memoryClockStatus="approximate: current QCLK, nominal BCLK; not independently hardware validated";
                 memoryFailure.clear();memoryRetry=0;
             }else sample.memoryClockStatus=captured.status==IntelMemoryClockStatus::Transition?
-                "QCLK changed during all three reads":"QCLK ratio or requested Gear unavailable/invalid";
+                "QCLK changed during all three reads":"QCLK ratio unavailable/invalid";
         }catch(const std::exception& error){sample.memoryClockStatus=error.what();memoryFailure=error.what();mchbar.reset();memoryRetry=now+5000;}
         ReleaseMutex(pciMutex);
         publish();

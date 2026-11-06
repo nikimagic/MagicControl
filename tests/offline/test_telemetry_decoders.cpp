@@ -35,17 +35,21 @@ int main(){
     config[1]=3000;check(!zenMemoryChannelsClock(true,state,config,state),"disagreeing channels");
     config={48,48};check(near(zenMemoryChannelsClock(false,state,config,state),1600),"two DDR4 channels");
     auto after=state;after[1]=0x31;check(!zenMemoryChannelsClock(false,state,config,after),"channel transition");
-    const auto intel=[](unsigned ratio,unsigned gear,bool ref100){
+    const auto intel=[](unsigned ratio,bool ref100){
         const unsigned status=(ratio<<2)|(ref100?0x400:0);
-        return intelMemoryClock(status,gear<<12,status);
+        return intelMemoryClock(status,status);
     };
-    check(intel(16,1,true).status==IntelMemoryClockStatus::Valid&&std::abs(intel(16,1,true).mhz-3200)<.001,"Intel 100 MHz reference");
-    check(intel(12,1,false).status==IntelMemoryClockStatus::Valid&&std::abs(intel(12,1,false).mhz-3200)<.001,"Intel 133 MHz reference");
-    check(intel(4,0,true).mhz==400&&intel(50,0,true).mhz==5000,"Intel clock limits");
-    check(intel(3,0,true).status==IntelMemoryClockStatus::Unavailable&&intel(51,0,true).status==IntelMemoryClockStatus::Unavailable,"Intel outside limits");
-    check(intel(2,0,true).status==IntelMemoryClockStatus::Unavailable&&intel(16,3,true).status==IntelMemoryClockStatus::Unavailable,"Intel invalid ratio or gear");
-    check(intelMemoryClock(0x440,0x1000,0x444).status==IntelMemoryClockStatus::Transition,"Intel transition requires retry");
-    check(intelMemoryClock(0x440,0x1000,0xc40).status==IntelMemoryClockStatus::Valid,"Intel unrelated status bit");
+    check(intel(32,true).status==IntelMemoryClockStatus::Valid&&std::abs(intel(32,true).mhz-3200)<.001,"Intel 100 MHz reference");
+    check(intel(24,false).status==IntelMemoryClockStatus::Valid&&std::abs(intel(24,false).mhz-3200)<.001,"Intel 133 MHz reference");
+    check(intel(4,true).mhz==400&&intel(50,true).mhz==5000,"Intel clock limits");
+    check(intel(3,true).status==IntelMemoryClockStatus::Unavailable&&intel(51,true).status==IntelMemoryClockStatus::Unavailable,"Intel outside limits");
+    check(intel(2,true).status==IntelMemoryClockStatus::Unavailable,"Intel invalid ratio");
+    check(intelMemoryClock(0x480,0x484).status==IntelMemoryClockStatus::Transition,"Intel transition requires retry");
+    check(intelMemoryClock(0x480,0xc80).status==IntelMemoryClockStatus::Valid,"Intel unrelated status bit");
+    const auto gm6=intelMemoryClock(0x2c000484,0x1c000484);
+    check(gm6.status==IntelMemoryClockStatus::Valid&&gm6.mhz==3300,"GM6 live QCLK ratio33 is 3300 MHz before DDR x2");
+    const auto gm6Low=intelMemoryClock(0x460,0x460);
+    check(gm6Low.status==IntelMemoryClockStatus::Valid&&gm6Low.mhz==2400,"Intel QCLK ratio24 is 2400 MHz before DDR x2");
     check(!lenovoBatteryCurrent(std::nullopt),"current unavailable");
     check(lenovoBatteryCurrent(0)==0&&lenovoBatteryCurrent(1)==1&&lenovoBatteryCurrent(0xffff)==-1,"signed current direction");
     check(lenovoBatteryCurrent(30000)==30000&&lenovoBatteryCurrent(35536)==-30000,"current boundaries");

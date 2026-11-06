@@ -337,9 +337,17 @@ private:
         if(writing&&requireBattery&&!gm6::agingExternalPower(hostReady))throw std::runtime_error("GM6 aging: подключите питание для подтверждения и отката");
         const auto internalCapability=uniwillI2ecByte(0x78e);
         const auto internalReady=requireBattery?uniwillI2ecByte(0x490):std::uint8_t{0};
-        if(!gm6::agingEcIdentity(uniwillI2ecByte(0x454),uniwillI2ecByte(0x740),internalCapability,internalReady,requireBattery)||
-           !gm6::agingI2ecConfiguration(uniwillI2ecByte(0x2014),uniwillI2ecByte(0x2015),uniwillI2ecByte(0x2012)))
-            throw std::runtime_error("GM6 aging: I2EC identity/configuration not confirmed");
+        const auto internalVersion=uniwillI2ecByte(0x454),internalProject=uniwillI2ecByte(0x740);
+        if(!gm6::agingEcIdentity(internalVersion,internalProject,internalCapability,internalReady,requireBattery))
+            throw std::runtime_error("GM6 I2EC identity rejected: version454=0x"+toHex(internalVersion)+
+                " project740=0x"+toHex(internalProject)+" capability78E=0x"+toHex(internalCapability)+
+                (requireBattery?" ready490=0x"+toHex(internalReady):" ready490=not-read"));
+        // Preserve the identity short-circuit: an unconfirmed private window
+        // never reaches the configuration reads or grants access to a writer.
+        const auto baseHigh=uniwillI2ecByte(0x2014),baseLow=uniwillI2ecByte(0x2015),enabled=uniwillI2ecByte(0x2012);
+        if(!gm6::agingI2ecConfiguration(baseHigh,baseLow,enabled))
+            throw std::runtime_error("GM6 I2EC configuration rejected: base2014=0x"+toHex(baseHigh)+
+                " base2015=0x"+toHex(baseLow)+" enable2012=0x"+toHex(enabled));
         if(requireBattery){
             const auto sample=[&]{return std::array<std::uint8_t,3>{uniwillI2ecByte(0x8e6),uniwillI2ecByte(0x8e7),uniwillI2ecByte(0x8b8)};};
             const auto first=sample(),second=sample();

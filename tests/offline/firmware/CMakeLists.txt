@@ -33,13 +33,13 @@ add_test(NAME firmware_real_files COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRE
 set_tests_properties(firmware_real_files PROPERTIES LABELS "offline;firmware;private-fixtures" SKIP_RETURN_CODE 77 TIMEOUT 120)
 # No platform, core, GUI, NVML, driver, vendor payload or hardware API linkage.
 
-# Reuse the prior NVIDIA contracts and the real shared collector simulation;
-# do not duplicate them or replace the vendor stub with a native adapter.
-set(NV_TEST_SOURCES "${MC_REPO}/research/nvflash-dual-capture-20261025/offline")
-add_executable(nvflash_contract_offline_tests "${NV_TEST_SOURCES}/checks.cpp")
+# These fixtures live with the tracked tests: a fresh source checkout must not
+# depend on an ignored research directory or link the native NVFlash adapter.
+add_executable(nvflash_contract_offline_tests test_nvflash_contract.cpp)
 add_executable(nvflash_state_offline_tests test_nvflash_state.cpp)
-add_executable(nvidia_collector_offline_tests "${NV_TEST_SOURCES}/simulation.cpp" "${MC_REPO}/src/platform/common/VbiosRomDump.cpp")
-target_sources(nvidia_collector_offline_tests PRIVATE nvidia_logging_stub.cpp)
+add_executable(nvidia_collector_offline_tests test_nvflash_collector.cpp
+    "${MC_REPO}/src/platform/common/VbiosRomDump.cpp" "${MC_REPO}/src/platform/common/InfoDumpResource.cpp")
+target_sources(nvidia_collector_offline_tests PRIVATE nvidia_logging_stub.cpp nvidia_info_stub.cpp)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/MagicControl")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated/MagicControl/Version.h" "#pragma once\n#define MAGICCONTROL_VERSION_STRING \"offline-firmware-tests\"\n")
 foreach(target nvflash_contract_offline_tests nvidia_collector_offline_tests nvflash_state_offline_tests)

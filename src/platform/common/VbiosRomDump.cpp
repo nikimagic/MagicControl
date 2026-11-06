@@ -148,10 +148,15 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
         chosen=identity(target);event("target_selected",chosen);checkpoint();
         try{for(const auto& row:providerRows)event("provider_before","{\"name\":"+q(row.name)+",\"uuid\":"+q(row.uuid)+",\"pci\":"+q(row.pci)+",\"vbios\":"+q(row.vbios)+",\"driver\":"+q(row.driver)+",\"status\":"+q(row.status)+"}");}
         catch(const std::exception& e){event("provider_unavailable","{\"error\":"+q(e.what())+"}");}
-        const auto nativeLease=preflight(result.directory,event);
-        struct CaptureLifetime {std::shared_ptr<DeviceOperation> operation;std::shared_ptr<NvidiaGpu> provider;std::shared_ptr<void> native;};
-        const auto lifetime=std::make_shared<CaptureLifetime>(CaptureLifetime{operation,provider,nativeLease});
-        const std::shared_ptr<void> lease(lifetime,nativeLease.get());
+        auto nativeLease=preflight(result.directory,event);
+        // Destruction is reverse declaration order: tear down the NVML/NVAPI
+        // provider while the capture semaphore is still held, then release the
+        // semaphore and finally the device operation. Move every local owner
+        // into the same lifetime; otherwise a local shared_ptr can still release
+        // the semaphore before the provider. Pending readers retain this alias.
+        struct CaptureLifetime {std::shared_ptr<DeviceOperation> operation;std::shared_ptr<void> native;std::shared_ptr<NvidiaGpu> provider;};
+        const auto lifetime=std::make_shared<CaptureLifetime>(CaptureLifetime{std::move(operation),std::move(nativeLease),std::move(provider)});
+        const std::shared_ptr<void> lease(lifetime,lifetime->native.get());
         const auto rawOutput=[&](const std::string& label){
             std::string raw;for(const auto* suffix:{".stdout.log",".stderr.log"}){
                 const auto p=result.directory/(label+suffix);const auto data=bytes(p,32*1024*1024);

@@ -1,6 +1,8 @@
 #pragma once
 #include "NativeDefaultFan.h"
 #include <cstdint>
+#include <string>
+#include <string_view>
 #include <utility>
 
 namespace mc {
@@ -25,5 +27,25 @@ private:
     NativeDefaultFanReading reading_;
     std::uint64_t checkedAt_{};
     NativeDefaultFanCacheKey key_{};
+};
+
+// This is only log deduplication, never a FAN observation or admission flag.
+// A muted failure remains unreported until a later poll with AllLogs enabled.
+// Similarly, recovery stays pending while muted so the next available sample
+// can close the previously logged failure without a misleading repeat.
+class NativeDefaultFanFailureLog {
+public:
+    template<class Emit>
+    void failure(bool enabled,std::string_view reason,Emit&& emit) noexcept {
+        if(!enabled||reported_)return;
+        try{emit(std::string("Default FAN firmware view unavailable: ")+std::string(reason));reported_=true;}catch(...){}
+    }
+    template<class Emit>
+    void recovered(bool enabled,Emit&& emit) noexcept {
+        if(!enabled||!reported_)return;
+        try{emit("Default FAN firmware view recovered");reported_=false;}catch(...){}
+    }
+private:
+    bool reported_{};
 };
 }

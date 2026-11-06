@@ -16,9 +16,8 @@ unsigned checks{};
 void check(bool ok,const char* what){++checks;if(!ok)throw std::runtime_error(what);}
 struct FakeIntel {
     std::vector<std::uint32_t> status;
-    std::uint32_t bios{0x1000};std::size_t position{};unsigned biosReads{};
+    std::size_t position{};
     std::uint32_t readStatus(){if(position>=status.size())throw std::runtime_error("unexpected I/O");return status[position++];}
-    std::uint32_t readBios(){++biosReads;return bios;}
 };
 }
 int main(){try{
@@ -42,12 +41,15 @@ int main(){try{
         check(memoryClockBackend(MemoryCpuVendor::Intel,6,0xb7,false,false)==MemoryClockBackend::Unavailable,"unknown type");
         check(memoryClockBackend(MemoryCpuVendor::Intel,6,0xb7,true,true)==MemoryClockBackend::Unavailable,"ambiguous type");
         check(memoryClockBackend(MemoryCpuVendor::Other,6,0xb7,false,true)==MemoryClockBackend::Unavailable,"unknown vendor");
+        FakeIntel gm6Sample{{0x2c000484,0x1c000484}};
+        const auto gm6Clock=captureIntelMemoryClock(true,[&]{return gm6Sample.readStatus();});
+        check(gm6Clock.mhz&&*gm6Clock.mhz==3300.,"GM6 real QCLK sample decodes independently of laptop profile");
         const auto temperature=spd5118TemperatureCelsius(0x0280);
         check(temperature&&std::abs(*temperature-40.)<.001,"SPD5118 temperature works independently of device profile");
         check(!spd5118TemperatureCelsius(0x07e0),"invalid SPD5118 temperature stays unavailable");
-        FakeIntel io{{0x440,0x440}};
-        const auto reading=captureIntelMemoryClock(true,[&]{return io.readStatus();},[&]{return io.readBios();});
-        check(reading.mhz&&std::abs(*reading.mhz-3200.)<.001&&reading.attempts==1&&io.position==2&&io.biosReads==1,
+        FakeIntel io{{0x480,0x480}};
+        const auto reading=captureIntelMemoryClock(true,[&]{return io.readStatus();});
+        check(reading.mhz&&std::abs(*reading.mhz-3200.)<.001&&reading.attempts==1&&io.position==2,
             "confirmed current QCLK published for device");
 #if defined(MC_MEMORY_TEST_RESOURCES)
         MonitoringSnapshot sample;sample.memory[0].present=true;sample.memory[0].model="fixture DIMM";sample.memory[0].celsius=temperature;
@@ -66,29 +68,34 @@ int main(){try{
         const auto secondRate=resourceDisplayValue(&view,ResourceKind::Memory,1,"data_rate");
         const auto secondTemp=resourceDisplayValue(&view,ResourceKind::Memory,1,"temperature");
         check(secondRate&&*secondRate==6400.&&secondTemp&&*secondTemp==37.,"second DIMM retains its own temperature and common clock");
+        sample.memoryClockMhz=gm6Clock.mhz;state.update(descriptor,sample);
+        ResourcePresentationView gm6View(state);
+        check(resourceDisplayValue(&gm6View,ResourceKind::Memory,0,"data_rate")==6600.&&
+              resourceDisplayValue(&gm6View,ResourceKind::Memory,1,"data_rate")==6600.,
+              "both memory cards publish the real GM6 QCLK sample times two");
         sample.memoryClockMhz.reset();sample.memoryClockSampledAtMs=0;state.update(descriptor,sample);
         ResourcePresentationView unavailable(state);
         check(!resourceDisplayValue(&unavailable,ResourceKind::Memory,0,"data_rate"),"unknown current rate remains unknown in core");
 #endif
     }
     check(gm6&&wujie&&unknownProfile.id.empty(),"required GM6, Wujie and unknown profile coverage");
-    FakeIntel retry{{0x440,0x444,0x440,0x440}};
-    const auto good=captureIntelMemoryClock(true,[&]{return retry.readStatus();},[&]{return retry.readBios();});
-    check(good.mhz&&good.attempts==2&&retry.position==4&&retry.biosReads==2,"transition retry recovers fresh value");
-    FakeIntel busy{{0x440,0x444,0x440,0x444,0x440,0x444}};
-    const auto uncertain=captureIntelMemoryClock(true,[&]{return busy.readStatus();},[&]{return busy.readBios();});
+    FakeIntel retry{{0x480,0x484,0x480,0x480}};
+    const auto good=captureIntelMemoryClock(true,[&]{return retry.readStatus();});
+    check(good.mhz&&good.attempts==2&&retry.position==4,"transition retry recovers fresh value");
+    FakeIntel busy{{0x480,0x484,0x480,0x484,0x480,0x484}};
+    const auto uncertain=captureIntelMemoryClock(true,[&]{return busy.readStatus();});
     check(!uncertain.mhz&&uncertain.status==IntelMemoryClockStatus::Transition&&uncertain.attempts==3,
         "unstable source never fabricates speed");
     FakeIntel bad{{0x400,0x400}};
-    const auto invalid=captureIntelMemoryClock(true,[&]{return bad.readStatus();},[&]{return bad.readBios();});
+    const auto invalid=captureIntelMemoryClock(true,[&]{return bad.readStatus();});
     check(!invalid.mhz&&invalid.status==IntelMemoryClockStatus::Unavailable,"invalid registers remain unknown");
     FakeIntel denied{};
-    const auto noIo=captureIntelMemoryClock(false,[&]{return denied.readStatus();},[&]{return denied.readBios();});
-    check(!noIo.mhz&&noIo.attempts==0&&denied.position==0&&denied.biosReads==0,"unsupported CPU performs no register reads");
+    const auto noIo=captureIntelMemoryClock(false,[&]{return denied.readStatus();});
+    check(!noIo.mhz&&noIo.attempts==0&&denied.position==0,"unsupported CPU performs no register reads");
     check(!memoryRetryDue(1000,6000,false)&&memoryRetryDue(1000,6000,true)&&memoryRetryDue(6000,6000,false),
         "retry is bounded and a diagnostic does not hide the failure");
     FakeIntel allOnes{{UINT32_MAX,UINT32_MAX}};
-    const auto ff=captureIntelMemoryClock(true,[&]{return allOnes.readStatus();},[&]{return allOnes.readBios();});
+    const auto ff=captureIntelMemoryClock(true,[&]{return allOnes.readStatus();});
     check(!ff.mhz&&ff.status==IntelMemoryClockStatus::Unavailable,"all-ones registers never become frequency");
     std::array<std::uint32_t,2> state{0x30,0x30},goodConfig{2800,2800},different{2800,2400};
     check(zenMemoryChannelsClock(true,state,goodConfig,state)==2800.,"two AMD channels confirmed");

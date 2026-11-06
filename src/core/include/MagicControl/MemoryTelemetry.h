@@ -36,14 +36,14 @@ struct IntelMemoryCapture {
 }
 // One bounded request from the existing monitoring owner; callers provide the
 // admitted I/O. This helper cannot discover/open a backend or write hardware.
-template<class ReadStatus,class ReadBios>
-[[nodiscard]] IntelMemoryCapture captureIntelMemoryClock(bool admitted,ReadStatus&& readStatus,ReadBios&& readBios){
+template<class ReadStatus>
+[[nodiscard]] IntelMemoryCapture captureIntelMemoryClock(bool admitted,ReadStatus&& readStatus){
     IntelMemoryCapture out;
     if(!admitted)return out;
     for(unsigned attempt=0;attempt<3;++attempt){
         ++out.attempts;
-        out.before=readStatus();out.bios=readBios();out.after=readStatus();
-        const auto decoded=intelMemoryClock(*out.before,*out.bios,*out.after);
+        out.before=readStatus();out.after=readStatus();
+        const auto decoded=intelMemoryClock(*out.before,*out.after);
         out.status=decoded.status;
         if(decoded.status==IntelMemoryClockStatus::Transition)continue;
         if(decoded.status==IntelMemoryClockStatus::Valid)out.mhz=decoded.mhz;

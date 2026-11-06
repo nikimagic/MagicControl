@@ -203,7 +203,15 @@ if __name__ == '__main__':
     parser.add_argument('--platform', choices=['windows', 'linux', 'all'], default='all')
     parser.add_argument('--portable-root', type=Path,
                         help='Alternate staging root containing windows/ and/or linux/')
+    parser.add_argument('--prune-verified-staging', choices=['preview', 'apply'],
+                        help='Remove older staging folders only after byte-for-byte archive verification')
     args = parser.parse_args()
+    if args.prune_verified_staging:
+        from ReleaseStagingCleanup import prune
+        prune(RELEASES, ROOT / 'build/product-version.txt',
+              ROOT / 'build/release-staging-cleanup.csv',
+              preview=args.prune_verified_staging == 'preview')
+        raise SystemExit(0)
     verified_build()  # No partial release directory before provenance checks.
     selected = ['windows', 'linux'] if args.platform == 'all' else [args.platform]
     product_version = ROOT / 'build/product-version.txt'

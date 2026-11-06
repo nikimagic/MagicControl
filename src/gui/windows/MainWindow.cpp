@@ -3,6 +3,7 @@
 #include "../common/FooterStatus.h"
 #include "../common/CpuPowerLabels.h"
 #include "../common/KeysPolicy.h"
+#include "../common/DpiChangeTrace.h"
 #include "LocalizationWindows.h"
 #include "MainWindow.h"
 #include "MagicControl/KeysLifecycle.h"
@@ -65,6 +66,19 @@ struct MainWindow::NativeProfileInbox {
     std::deque<std::pair<std::uint64_t,windows::Gm6NativeProfileResult>> results;
 };
 namespace {
+
+// Existing action logging only; no UI callbacks, polling or hardware access.
+// These breadcrumbs are emitted solely while handling a native DPI change.
+void logDpiChange(void*,const ui::DpiTraceRecord& row) noexcept {
+    try{
+        std::string fields="\"trace_id\":"+std::to_string(row.id)+",\"parent_trace_id\":"+std::to_string(row.parent)+
+            ",\"stage\":"+audit::quote(ui::dpiTraceStageName(row.stage))+
+            ",\"phase\":"+audit::quote(row.phase==ui::DpiTracePhase::Position?"position":"relayout")+
+            ",\"old_dpi\":"+std::to_string(row.previousDpi)+",\"new_dpi\":"+std::to_string(row.requestedDpi);
+        if(!row.page.empty())fields+=",\"page\":"+audit::quote(row.page)+",\"show_requested\":"+(row.showRequested?"true":"false");
+        audit::event("ui.dpi",fields);
+    }catch(...){} // Diagnostics never change window handling.
+}
 
 constexpr wchar_t kWindowClassName[] = L"MagicControlMainWindow";
 constexpr wchar_t kWindowTitle[] = L"MagicControl";
@@ -550,10 +564,12 @@ LRESULT MainWindow::handleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
 
         case WM_DPICHANGED: {
             const int newDpi = HIWORD(wParam);
+            ui::DpiChangeTrace trace(loggingEnabled()?logDpiChange:nullptr,nullptr,static_cast<int>(dpi_),newDpi);
             const auto* suggested = reinterpret_cast<const RECT*>(lParam);
             SetWindowPos(window_, nullptr, suggested->left, suggested->top,
                          suggested->right - suggested->left,
                          suggested->bottom - suggested->top, SWP_NOZORDER | SWP_NOACTIVATE);
+            trace.positioned();
             onDpiChanged(newDpi);
             return 0;
         }
@@ -961,18 +977,21 @@ void MainWindow::onDestroy() {
 void MainWindow::updatePageVisibility(bool visible) {
     const auto arrange = [this](Tab tab, bool show) {
         const auto area = contentRect();
+        std::string_view pageName;bool invoked=true;
         switch (tab) {
-        case Tab::Bios: if (biosPage_) biosPage_->arrange(area, dpi_, show); break;
-        case Tab::Sets: if (settingsPage_) settingsPage_->arrange(area, dpi_, show); break;
-        case Tab::Keys: if (keysPage_) keysPage_->arrange(area, dpi_, show); break;
-        case Tab::Fans: if (fansPage_) fansPage_->arrange(area, dpi_, show); break;
-        case Tab::Nvidia: if (nvidiaPage_) nvidiaPage_->arrange(area, dpi_, show && ui::showNvidiaTab(nvidiaPresent_)); break;
-        case Tab::Radeon: if(radeonPage_)radeonPage_->arrange(area,dpi_,show&&ui::showRadeonTab(radeonPresent_));break;
+        case Tab::Bios: pageName="INFO";if (biosPage_) biosPage_->arrange(area, dpi_, show);else invoked=false;break;
+        case Tab::Sets: pageName="SETs";if (settingsPage_) settingsPage_->arrange(area, dpi_, show);else invoked=false;break;
+        case Tab::Keys: pageName="KEYs";if (keysPage_) keysPage_->arrange(area, dpi_, show);else invoked=false;break;
+        case Tab::Fans: pageName="FANs";if (fansPage_) fansPage_->arrange(area, dpi_, show);else invoked=false;break;
+        case Tab::Nvidia: pageName="NVIDIA";if (nvidiaPage_) nvidiaPage_->arrange(area, dpi_, show && ui::showNvidiaTab(nvidiaPresent_));else invoked=false;break;
+        case Tab::Radeon: pageName="Radeon";if(radeonPage_)radeonPage_->arrange(area,dpi_,show&&ui::showRadeonTab(radeonPresent_));else invoked=false;break;
         case Tab::OvClock: {
+            pageName="OvClock";
             arrangeOverclock(show);
             break;
         }
         }
+        if(invoked)ui::DpiChangeTrace::pageDone(pageName,show);
     };
     // Prepare and paint the destination above the outgoing page before hiding it.
     if (visible) arrange(activeTab_, true);
@@ -1223,7 +1242,9 @@ void MainWindow::onDpiChanged(int newDpi) {
     dpi_ = newDpi != 0 ? static_cast<UINT>(newDpi) : 96;
     destroyFonts();
     createFonts();
+    ui::DpiChangeTrace::mark(ui::DpiTraceStage::FontsReady);
     applyApplicationIcons();
+    ui::DpiChangeTrace::mark(ui::DpiTraceStage::IconsReady);
     updatePageVisibility(!hiddenToTray_ && !IsIconic(window_) && IsWindowVisible(window_));
     repaint(window_);
 }

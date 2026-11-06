@@ -32,12 +32,14 @@ struct Fake final:mc::IEcBackend {
     mc::BackendInfo metadata{"windows-acpi-driver","fake",mc::EcTransport::WindowsAcpiDriver,65535,true,false};
     std::array<std::uint8_t,65536> ram{};
     std::array<std::uint8_t,4> selector{0x5d,0x48,0,0};
-    bool selectorUnavailable{},changeSelector{};int selectorReads{},writes{};
+    bool selectorUnavailable{},changeSelector{},selectorThrows{};int selectorReads{},writes{};
     const mc::BackendInfo& info()const noexcept override{return metadata;}
     std::uint8_t read(std::uint16_t address)override{return ram[address];}
     void write(std::uint16_t,std::uint8_t)override{++writes;throw std::runtime_error("no writes allowed");}
     std::optional<std::array<std::uint8_t,4>> readNativeFanFirmwareSelectors()override{
-        ++selectorReads;if(selectorUnavailable)return {};auto value=selector;
+        ++selectorReads;if(selectorThrows)throw std::runtime_error("synthetic I2EC identity rejected");
+        if(selectorUnavailable)return {};
+        auto value=selector;
         if(changeSelector&&selectorReads>1)value[1]=0x60;
         return value;
     }
@@ -150,5 +152,30 @@ int main(){try{
           "three-second cache keeps original firmware observation time");
     check(cache.needsRefresh(1001,{2,2})&&cache.needsRefresh(1001,{1,0}),"profile or power-gate change refreshes immediately");
     cache.clearInactive();check(!cache.reading().fans&&cache.needsRefresh(1002,key),"Manual/Max clears cached Default immediately");
+    // Exercise the real collector with a fake EC and the same deduplicating
+    // log policy as the Windows owner. No actual driver or EC is opened.
+    mc::tests::setTestBoard(board);
+    auto logBackend=std::make_unique<Fake>();auto* logFake=logBackend.get();put(*logFake,baseline());
+    mc::EcAccess logEc(std::move(logBackend));check(logEc.verifyBoard().verified,"fake logging fixture verified");
+    mc::NativeDefaultFanFailureLog failureLog;std::vector<std::string> lines;
+    const auto emit=[&](std::string_view message){lines.emplace_back(message);};
+    const auto poll=[&](bool enabled){
+        try{const auto result=mc::gm6::readFirmwareDefaultFans(logEc);
+            if(result.observation==O::Available)failureLog.recovered(enabled,emit);
+        }catch(const std::exception& e){failureLog.failure(enabled,e.what(),emit);}
+    };
+    logFake->selectorThrows=true;poll(false);poll(false);
+    check(lines.empty(),"muted failure is not marked as logged");
+    poll(true);poll(true);poll(true);
+    check(lines.size()==1&&lines[0].find("synthetic I2EC identity rejected")!=std::string::npos,
+          "active failure appears once when general logging is enabled");
+    logFake->selectorThrows=false;poll(false);
+    check(lines.size()==1,"muted recovery does not emit or discard pending recovery");
+    poll(true);poll(true);
+    check(lines.size()==2&&lines[1]=="Default FAN firmware view recovered",
+          "recovery is logged once when logging becomes available");
+    logFake->selectorThrows=true;poll(true);poll(true);
+    check(lines.size()==3&&logFake->writes==0,"new failure is reported once and never writes EC");
+    mc::tests::resetTestBoard();
     std::cout<<"GM6 Default FAN: "<<profiles<<" profiles + unknown; selectors, modes, EC sensors, no writes passed\n";return 0;
 }catch(const std::exception& e){mc::tests::resetTestBoard();std::cerr<<e.what()<<'\n';return 1;}}

@@ -237,6 +237,7 @@ struct Gm6Controller::Impl {
     std::uint64_t onlineGeneration{};
     using Clock=std::chrono::steady_clock;
     NativeDefaultFanCache defaultFanCache;
+    NativeDefaultFanFailureLog defaultFanFailureLog;
     struct NativeRequest {std::uint64_t receivedAt{},epoch{};Clock::time_point queued;std::function<void(Gm6NativeProfileResult)> complete;};
     std::mutex nativeQueueGate;
     std::atomic<std::uint64_t> nativeEpoch{};
@@ -1154,9 +1155,14 @@ Gm6State Gm6Controller::read(bool tables) {
                     const auto tick=[] {return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(Impl::Clock::now().time_since_epoch()).count());};
                     if(impl_->defaultFanCache.needsRefresh(tick(),key)){
                         auto observed=gm6::readFirmwareDefaultFans(ec);
+                        if(observed.observation==NativeDefaultFanObservation::Available)
+                            impl_->defaultFanFailureLog.recovered(loggingEnabled(),[](std::string_view message){logMessage("gm6ir0c",message);});
                         impl_->defaultFanCache.store(std::move(observed),tick(),key);
                     }
-                }catch(const std::exception&){impl_->defaultFanCache.clearUnavailable();}
+                }catch(const std::exception& error){
+                    impl_->defaultFanCache.clearUnavailable();
+                    impl_->defaultFanFailureLog.failure(loggingEnabled(),error.what(),[](std::string_view message){logMessage("gm6ir0c",message);});
+                }
             }
             s.defaultFans=impl_->defaultFanCache.reading();
         }

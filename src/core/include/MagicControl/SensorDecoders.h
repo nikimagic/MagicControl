@@ -46,11 +46,14 @@ inline std::optional<double> zenMemoryChannelsClock(bool ddr5,const std::array<s
 }
 enum class IntelMemoryClockStatus { Transition, Unavailable, Valid };
 struct IntelMemoryClock { IntelMemoryClockStatus status; double mhz{}; };
-inline IntelMemoryClock intelMemoryClock(std::uint32_t before,std::uint32_t bios,std::uint32_t after){
+inline IntelMemoryClock intelMemoryClock(std::uint32_t before,std::uint32_t after){
     if((before&0x7fc)!=(after&0x7fc))return {IntelMemoryClockStatus::Transition};
-    const auto ratio=(after>>2)&0xff,gear=(bios>>12)&3;
-    if(ratio<3||gear>2)return {IntelMemoryClockStatus::Unavailable};
-    const double clock=ratio*((after&0x400)?100.0:400.0/3.0)*(1u<<gear);
+    // SA_PERF_STATUS.QCLK_RATIO is already the DDR QCLK multiplier. BIOS
+    // Gear describes the controller relationship and must not multiply QCLK
+    // again; ResourceCatalog separately converts QCLK to DDR transfers/s.
+    const auto ratio=(after>>2)&0xff;
+    if(ratio<3)return {IntelMemoryClockStatus::Unavailable};
+    const double clock=ratio*((after&0x400)?100.0:400.0/3.0);
     if(clock<400||clock>5000)return {IntelMemoryClockStatus::Unavailable};
     return {IntelMemoryClockStatus::Valid,clock};
 }
