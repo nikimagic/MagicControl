@@ -66,7 +66,7 @@ std::string nativeCurve(const NativeDefaultFanChannel& c){
         ",\"requested_percent\":"+number(c.requestedPercent)+",\"request_source\":"+quote(c.requestSource)+
         ",\"graph_unit\":"+quote(c.rpm?"rpm":"percent")+",\"requested_rpm\":"+number(c.requestedRpm)+",\"actual_rpm\":"+number(c.actualRpm)+
         ",\"stage\":"+std::to_string(c.stage)+",\"demand_stage\":"+std::to_string(c.demandStage)+
-        ",\"request_derived\":"+(c.requestDerived?"true":"false")+",\"forced\":"+(c.forced?"true":"false")+
+        ",\"request_derived\":"+(c.requestDerived?"true":"false")+",\"request_pre_override\":"+(c.requestPreOverride?"true":"false")+",\"graph_caption\":"+quote(c.graphCaption)+",\"forced\":"+(c.forced?"true":"false")+
         ",\"retained\":"+(c.retained?"true":"false")+
         ",\"sampled_at_monotonic_ms\":"+std::to_string(c.sampledAtMs)+",\"points\":[";
     for(std::size_t i=0;i<c.points.size();++i){if(i)out+=',';

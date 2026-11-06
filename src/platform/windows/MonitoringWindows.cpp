@@ -11,6 +11,7 @@
 #include "XrtNpuReport.h"
 #include "IntelTelemetryWindows.h"
 #include "IntelMemoryWindows.h"
+#include "NativeBatteryWindows.h"
 #include "MagicControl/NvidiaGpu.h"
 #include "MagicControl/IntelGpu.h"
 #include "GpuDisplayRoutesWindows.h"
@@ -366,7 +367,7 @@ struct MonitoringReader::Impl {
     void readBatteryEc(BatteryReading& result) {
         // Exact GM6 supplemental read-only telemetry uses the existing global
         // transport gate, never the Wujie map or a controller/restore worker.
-        windows::readGm6BatteryTelemetry(result,batteries.complete&&lastBatteries.size()==1);
+        windows::readGm6BatteryTelemetry(result,batteries.complete&&lastBatteries.size()==1,!diagnostic);
         windows::readHydrocBatteryTelemetry(result,batteries.complete&&lastBatteries.size()==1);
         if(result.present!=false&&batteries.complete&&lastBatteries.size()==1){
             const auto lenovo=windows::readLegionEcBatteryOnly();
@@ -688,7 +689,13 @@ EcBatteryReading MonitoringReader::readEcBatteryOnly(){
         return lenovo;
     }
     if(auto gm6=windows::readGm6EcBatteryOnly();gm6.supported){
-        if(gm6.coherent){journalBattery(gm6.battery,"EC",gm6.battery.powerStatus);journalBatteryRegisters(gm6);}
+        if(gm6.coherent){
+            if(!impl_->diagnostic&&gm6.profileId=="mechrevo-gm6ir0c"&&gm6.battery.present==true&&gm6.readyRaw&&*gm6.readyRaw!=0xff&&(*gm6.readyRaw&6)==6)
+                gm6.aging=windows::observeNativeBatteryAging();
+            if(!impl_->diagnostic&&!gm6.battery.manufactured.empty())
+                observeBatteryIdentity(gm6.battery.manufactured,"EC GM6IR0C 0x314/315",true,gm6.aging.realHistory);
+            journalBattery(gm6.battery,"EC",gm6.battery.powerStatus);journalBatteryRegisters(gm6);
+        }
         return gm6;
     }
     EcBatteryReading result;

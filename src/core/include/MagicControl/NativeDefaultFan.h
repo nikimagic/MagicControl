@@ -24,9 +24,9 @@ struct NativeDefaultFanInput {
 // It is never a Manual draft, setter, active-table receipt or applied-PWM claim.
 struct NativeDefaultFanChannel {
     std::vector<NativeFanGraphPoint> points;
-    std::string profile,temperatureSource,requestSource,curveSource;
+    std::string profile,temperatureSource,requestSource,curveSource,graphCaption;
     std::optional<double> temperatureCelsius,requestedPercent;
-    bool requestDerived{},forced{},retained{};
+    bool requestDerived{},requestPreOverride{},forced{},retained{};
     int startCelsius{48},offBelowCelsius{47};
     std::uint16_t table{},temperatureAddress{};
     std::uint64_t sampledAtMs{};
@@ -49,7 +49,13 @@ enum class NativeDefaultFanObservation { Unavailable, Inactive, Available };
 struct NativeDefaultFanReading {
     NativeDefaultFanObservation observation{NativeDefaultFanObservation::Unavailable};
     std::optional<NativeDefaultFans> fans;
+    friend bool operator==(const NativeDefaultFanReading&,const NativeDefaultFanReading&)=default;
 };
+// A real EC-owned mode uses only the confirmed state and accepted resource.
+// Local Manual draft selection is intentionally not an input to this decision.
+inline bool showObservedDefaultFan(bool preview,bool confirmedDefault,bool manual,bool boost,bool online,bool pending,const NativeDefaultFanChannel* curve) noexcept {
+    return !preview&&confirmedDefault&&!manual&&!boost&&!online&&!pending&&curve;
+}
 inline bool nativeDefaultFanFresh(const NativeDefaultFanChannel& value,std::uint64_t maxAgeMs=10000){
     const auto now=static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
     // Display grace must exceed the real 2-3s collector cadence. Never renew

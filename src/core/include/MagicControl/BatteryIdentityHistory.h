@@ -13,6 +13,12 @@ void beginBatteryIdentityHistory(bool preferEc) noexcept;
 // Collect metadata through the existing monitoring owner even when detailed
 // battery logging is disabled. Stops requesting it after the startup row.
 bool batteryIdentityHistoryNeedsEcSample() noexcept;
+// A source may provide a combined identity/exposure observation before the
+// fallback OS-only startup row is appended.
+bool batteryIdentityHistoryPending() noexcept;
+// A confirmed EC-capable collector may opt into the existing bounded wait
+// before any startup row was written; this does not perform device access.
+void preferBatteryIdentityEc() noexcept;
 void observeBatteryIdentity(std::string_view date,std::string_view source,bool ec,
                             std::optional<std::uint64_t> thermalHistory={}) noexcept;
 }

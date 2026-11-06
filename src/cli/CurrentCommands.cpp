@@ -382,6 +382,17 @@ void batteryCommand(Runtime& r,const Options& o){
     if(action=="status"){arity(o,1,2);MonitoringReader reader;emit("battery","\"battery\":"+battery(reader.readBatteryOnly()));return;}
     if(o.noEc)unsupported();
 #if defined(_WIN32)
+    if(action=="aging"){
+        arity(o,3,3);const auto& value=o.words[2];
+        if(value!="on"&&value!="off")throw std::invalid_argument("Battery aging: on or off required");
+        windows::BatterySettingsContext context{};std::shared_ptr<windows::NativeBatteryController> native;
+        if(r.profile.id==kReferenceModelId)context.ec=&r.wujie(o);
+        else{native=windows::nativeBatteryController();context.native=native.get();}
+        context.profile=std::string(r.profile.id);
+        BatteryWriteRequest request{BatteryWrite::Aging};request.enabled=value=="on";
+        const auto result=windows::executeBatteryResource(context,request);
+        emit("battery","\"configuration_result\":"+quote(result)+",\"physical_enforcement_measured\":false");return;
+    }
     if(r.profile.id=="lenovo-legion-kwcn"&&action=="mode"){
         arity(o,3,3);const auto& name=o.words[2];const int value=name=="normal"?0:name=="conservation"?1:name=="rapid"?2:throw std::invalid_argument("Lenovo battery mode: normal, conservation or rapid");
         auto c=auditedLaptopControl(createLaptopControl());if(!c)unsupported();windows::BatterySettingsContext context{};context.laptop=c.get();context.profile=std::string(r.profile.id);
@@ -423,13 +434,6 @@ void batteryCommand(Runtime& r,const Options& o){
             windows::BatterySettingsContext context{};context.ec=&ec;context.profile=std::string(r.profile.id);
             windows::executeBatteryResource(context,{BatteryWrite::UsbPriority,value});result="USB-C priority confirmed through I2EC; physical watt response unverified";
             if(o.watch){r.repeat(o,show);return;}
-        }
-        else if(action=="aging"){
-            arity(o,3,3);const auto& value=o.words[2];
-            if(value!="on"&&value!="off")throw std::invalid_argument("Battery aging: on or off required");
-            windows::BatterySettingsContext context{};context.ec=&r.wujie(o);
-            BatteryWriteRequest request{BatteryWrite::Aging};request.enabled=value=="on";
-            result=windows::executeBatteryResource(context,request);
         }
         else if(action=="protection"){
             arity(o,3,3);auto voltage=windows::nativeBatteryVoltageController();if(!voltage)unsupported();

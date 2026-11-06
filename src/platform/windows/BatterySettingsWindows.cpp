@@ -143,8 +143,12 @@ const BatteryRoutes& batteryRoutes(){
         add(BatteryWrite::UsbPriority,writeUsbPriority);
         add(BatteryWrite::View,[](const BatteryWriteRequest& r,const BatterySettingsContext& c){return writeView(r,c);});add(BatteryWrite::Pair,writePair);
         add(BatteryWrite::Aging,[](const BatteryWriteRequest& r,const BatterySettingsContext& c){
-            if(!c.ec)throw std::runtime_error("Battery aging backend unavailable");
-            setBatteryAgingOverride(*c.ec,r.enabled,r.lifecycle);return std::string{};
+            if(c.ec){setBatteryAgingOverride(*c.ec,r.enabled,r.lifecycle);return std::string{};}
+            const auto native=c.native?nativeBatteryAgingAccess():nullptr;
+            if(!native)throw std::runtime_error("Battery aging backend unavailable");
+            try{setBatteryAgingOverride(*native,r.enabled,r.lifecycle);}
+            catch(...){invalidateNativeBatteryAgingObservation();throw;}
+            invalidateNativeBatteryAgingObservation();return std::string{};
         });
         return BatteryRoutes(bindings);
     }();return routes;

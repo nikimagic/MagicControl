@@ -75,6 +75,12 @@ bool batteryIdentityHistoryNeedsEcSample() noexcept {try{
     auto& h=history();std::lock_guard lock(h.mutex);
     return h.active&&!h.written&&h.preferEc;
 }catch(...){return false;}}
+bool batteryIdentityHistoryPending() noexcept {try{
+    auto& h=history();std::lock_guard lock(h.mutex);return h.active&&!h.written;
+}catch(...){return false;}}
+void preferBatteryIdentityEc() noexcept {try{
+    auto& h=history();std::lock_guard lock(h.mutex);if(h.active&&!h.written)h.preferEc=true;
+}catch(...) {}}
 void observeBatteryIdentity(std::string_view date,std::string_view source,bool ec,std::optional<std::uint64_t> thermalHistory) noexcept {try{
     auto& h=history();std::lock_guard lock(h.mutex);if(!h.active||h.written)return;
     if(!date.empty()&&(ec||h.date.empty())){h.date=std::string(date);h.source=std::string(source);}

@@ -1,9 +1,11 @@
 #include "MagicControl/ActionLog.h"
 #include "BackendWindows.h"
 #include "../LightingOwnershipWindows.h"
+#include "../UniwillControlOwnerWindows.h"
 #include "ReviewedDriverWindows.h"
 #include "../../../protocols/uniwill/BatteryProtection.h"
 #include "../../../protocols/uniwill/hydroc16g2/Battery.h"
+#include "../../../protocols/uniwill/gm6ir0c/BatteryAgingGuard.h"
 
 #include <cstddef>
 #include <optional>
@@ -220,7 +222,7 @@ public:
     std::optional<UsbPowerPriorityStatus> readUsbPriorityStatus() override {
         if(diagnosticOnly_||batteryOnly_||factoryOnly_||thresholdsOnly_)return {};
         wujieI2ecAdmission();
-        const auto a=wujieByte(0x7cc),b=wujieByte(0x7cc);
+        const auto a=uniwillI2ecByte(0x7cc),b=uniwillI2ecByte(0x7cc);
         if(a==0xff||a!=b)throw std::runtime_error("USB-C priority: unstable I2EC status");
         // N.1.20MRO15: bank2 A3F6 -> A3A3 -> 98F8 calls D8F6;
         // 9934..9937 forces7CC.7 whenever Type-C and AC are present.
@@ -229,47 +231,123 @@ public:
         return UsbPowerPriorityStatus{b,false,
             "Приоритет USB-C недоступен в этой прошивке: EC возвращает бит 0x7CC.7 при подключённом USB-C."};
     }
+    BatteryAgingAccess batteryAgingAccess(const BoardDescriptor& board) const noexcept override {
+        const auto id=deviceProfile(board).id;
+        return !diagnosticOnly_&&!batteryOnly_&&!factoryOnly_&&!thresholdsOnly_&&
+            ((board.baseBoard=="WUJIE Series-X5SP4NAG"&&id=="wu-jie-15-xpro")||
+             (board.manufacturer=="MECHREVO"&&board.baseBoard=="GM6IR0C"&&
+              board.productName=="JiguangX Series GM6IR0C"&&id=="mechrevo-gm6ir0c"))?
+            BatteryAgingAccess::ReadWrite:BatteryAgingAccess::Unavailable;
+    }
+    void checkBatteryAgingWriteAccess() override {agingI2ecAdmission(true);}
     std::optional<BatteryAgingReading> readBatteryAging() override {
         if(diagnosticOnly_||batteryOnly_||factoryOnly_||thresholdsOnly_)return {};
-        wujieI2ecAdmission();
+        agingI2ecAdmission(false);
         const auto sample=[&]{
-            const auto be=[&](std::uint16_t a){return static_cast<std::uint16_t>((wujieByte(a)<<8)|wujieByte(a+1));};
-            const auto le=[&](std::uint16_t a){const auto low=wujieByte(a);return static_cast<std::uint16_t>(low|(wujieByte(a+1)<<8));};
-            return BatteryAgingReading{wujieHost_,be(0x314),le(0x402),le(0x4a6),be(0x7f2),be(0x9c9),
-                wujieByte(0x36c),wujieByte(0x39d),wujieByte(0x726),wujieByte(0x3a1),wujieByte(0x72d),wujieByte(0x72e)};
+            const auto be=[&](std::uint16_t a){return static_cast<std::uint16_t>((uniwillI2ecByte(a)<<8)|uniwillI2ecByte(a+1));};
+            const auto le=[&](std::uint16_t a){const auto low=uniwillI2ecByte(a);return static_cast<std::uint16_t>(low|(uniwillI2ecByte(a+1)<<8));};
+            BatteryAgingReading reading{uniwillI2ecHost_,be(0x314),le(0x402),le(0x4a6),be(0x7f2),be(0x9c9),
+                uniwillI2ecByte(0x36c),uniwillI2ecByte(0x39d),uniwillI2ecByte(0x726),uniwillI2ecByte(0x3a1),uniwillI2ecByte(0x72d),uniwillI2ecByte(0x72e)};
+            reading.serviceBusy=(reading.service&7)!=0;reading.savePending=(reading.pending&8)!=0;
+            reading.preservedContext=reading.service&0x80;return reading;
         };
-        for(int i=0;i<3;++i){const auto a=sample(),b=sample();if(a==b)return b;}
+        for(int i=0;i<3;++i){const auto a=sample(),b=sample();if(a==b){
+            if(gm6Aging_){
+                // The ordinary host window returns FF across 0800–0BFF.
+                // These two internal dividers are reset below60 by the same
+                // EC1.12 routine; all-FF cannot become a false baseline.
+                const auto low=uniwillI2ecByte(0x9c7),high=uniwillI2ecByte(0x9c8);
+                if(!gm6::agingExposureDividers(low,high))throw std::runtime_error("GM6 aging: internal exposure context unavailable");
+            }
+            return b;
+        }}
         throw std::runtime_error("Battery aging: unstable EC snapshot");
     }
-    void writeBatteryAgingByte(std::uint16_t address,std::uint8_t value) override {
+    std::optional<std::array<std::uint8_t,4>> readNativeFanFirmwareSelectors() override {
+        if(diagnosticOnly_||batteryOnly_||factoryOnly_||thresholdsOnly_||
+           deviceProfile(readBoardDescriptor()).id!="mechrevo-gm6ir0c")return {};
+        agingI2ecAdmission(false,false);
+        const auto sample=[&]{return std::array<std::uint8_t,4>{uniwillI2ecByte(0x8e6),uniwillI2ecByte(0x8e7),uniwillI2ecByte(0x8b8),uniwillI2ecByte(0x8eb)};};
+        for(int i=0;i<3;++i){const auto a=sample(),b=sample();if(a==b)return b;}
+        throw std::runtime_error("GM6 FAN: unstable firmware selectors");
+    }
+    void writeBatteryAgingField(BatteryAgingField field,std::uint8_t value) override {
         if(diagnosticOnly_||batteryOnly_||factoryOnly_||thresholdsOnly_)throw std::runtime_error("Restricted transport has no aging writer");
-        wujieI2ecAdmission();
+        agingI2ecAdmission(true);
+        std::uint16_t address{};
+        switch(field){
+        case BatteryAgingField::AlternativeDateHigh:address=0x7f2;break;
+        case BatteryAgingField::AlternativeDateLow:address=0x7f3;break;
+        case BatteryAgingField::ExposureHigh:address=0x9c9;break;
+        case BatteryAgingField::ExposureLow:address=0x9ca;break;
+        case BatteryAgingField::Save:address=0x726;break;
+        default:throw std::runtime_error("Battery aging field denied");
+        }
         if(address==0x9c9||address==0x9ca){
-            wujiePort(0x681,address>>8);wujiePort(0x682,address&255);
+            uniwillI2ecPort(0x681,address>>8);uniwillI2ecPort(0x682,address&255);
             // RIOP writes683, then reads684; its return is discarded.
-            wujiePort(0x683,value);
-            if(wujieByte(address)!=value)throw std::runtime_error("Battery history write not confirmed");
+            uniwillI2ecPort(0x683,value);
+            if(uniwillI2ecByte(address)!=value)throw std::runtime_error("Battery history write not confirmed");
         }else if(address==0x7f2||address==0x7f3){
             exchange(address,value);
-            if(wujieByte(address)!=value)throw std::runtime_error("Battery age date write not confirmed");
+            if(uniwillI2ecByte(address)!=value)throw std::runtime_error("Battery age date write not confirmed");
         }else if(address==0x726&&value==1){
             // bit7 is owned by FANs. Only the native save strobe may change.
-            const auto before=wujieByte(address);
+            const auto before=uniwillI2ecByte(address);
             if(before&7)throw std::runtime_error("Battery service request busy");
             exchange(address,static_cast<std::uint8_t>(before|1));
-            if((wujieByte(address)&0xfe)!=(before&0xfe))throw std::runtime_error("Battery service context changed");
+            if((uniwillI2ecByte(address)&0xfe)!=(before&0xfe))throw std::runtime_error("Battery service context changed");
         }else throw std::runtime_error("Battery aging address/value denied");
     }
 
 private:
-    std::uint8_t wujiePort(std::uint16_t port,std::uint8_t value){
+    std::uint8_t uniwillI2ecPort(std::uint16_t port,std::uint8_t value){
         if(port<0x681||port>0x683)throw std::runtime_error("I2EC port denied");
         const std::uint32_t input[]{port,value};std::byte output[16]{};DWORD n{};
         if(!DeviceIoControl(device_,0x9c40a4c8,const_cast<std::uint32_t*>(input),8,output,16,&n,nullptr)||!n||n>16)
             throw std::runtime_error("Wujie I2EC RIOP failed");
         return std::to_integer<std::uint8_t>(output[0]);
     }
-    std::uint8_t wujieByte(std::uint16_t address){wujiePort(0x681,address>>8);return wujiePort(0x682,address&255);}
+    std::uint8_t uniwillI2ecByte(std::uint16_t address){uniwillI2ecPort(0x681,address>>8);return uniwillI2ecPort(0x682,address&255);}
+    void agingI2ecAdmission(bool writing,bool requireBattery=true){
+        if(deviceProfile(readBoardDescriptor()).id!="mechrevo-gm6ir0c"){wujieI2ecAdmission();return;}
+        using namespace windows::reviewed_uniwill;
+        const auto board=readBoardDescriptor();
+        if(board.manufacturer!="MECHREVO"||board.baseBoard!="GM6IR0C"||board.productName!="JiguangX Series GM6IR0C"||
+           registry(HKEY_LOCAL_MACHINE,L"HARDWARE\\DESCRIPTION\\System\\BIOS",L"BIOSVersion")!=L"N.1.05MRO09")
+            throw std::runtime_error("GM6 aging: exact board/BIOS required");
+        if(!gm6Aging_||writing){
+            std::string notes;verifyReviewedUniwillDriver(notes,"6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235");
+        }
+        if(requireBattery&&uniwillI2ecHost_.empty()){
+            uniwillI2ecHost_=text(registry(HKEY_LOCAL_MACHINE,L"SOFTWARE\\Microsoft\\Cryptography",L"MachineGuid"));
+            if(uniwillI2ecHost_.empty())throw std::runtime_error("GM6 aging: host identity unavailable");
+        }
+        if(writing){const auto owner=windows::uniwillControlOwner();if(!owner.empty())throw std::runtime_error("GM6 aging: OEM owns EC: "+owner);}
+        // First compare ordinary ECRR against exact EC version/project; only
+        // then use the two-argument RIOP selector path. No WIOP is used.
+        const auto capability=exchange(0x78e,{});
+        const auto hostReady=requireBattery?exchange(0x490,{}):std::uint8_t{0};
+        if(!gm6::agingEcIdentity(exchange(0x454,{}),exchange(0x740,{}),capability,hostReady,requireBattery))
+            throw std::runtime_error("GM6 aging: EC identity or battery readiness mismatch");
+        if(!gm6::agingSku18(exchange(0x74c,{}),exchange(0x7ca,{})))
+            throw std::runtime_error("GM6 aging: firmware SKU not confirmed");
+        // EC1.12 publishes applied aging/CV only with AC present. Do not start
+        // a write that cannot be confirmed and rolled back on battery power.
+        if(writing&&requireBattery&&!gm6::agingExternalPower(hostReady))throw std::runtime_error("GM6 aging: подключите питание для подтверждения и отката");
+        const auto internalCapability=uniwillI2ecByte(0x78e);
+        const auto internalReady=requireBattery?uniwillI2ecByte(0x490):std::uint8_t{0};
+        if(!gm6::agingEcIdentity(uniwillI2ecByte(0x454),uniwillI2ecByte(0x740),internalCapability,internalReady,requireBattery)||
+           !gm6::agingI2ecConfiguration(uniwillI2ecByte(0x2014),uniwillI2ecByte(0x2015),uniwillI2ecByte(0x2012)))
+            throw std::runtime_error("GM6 aging: I2EC identity/configuration not confirmed");
+        if(requireBattery){
+            const auto sample=[&]{return std::array<std::uint8_t,3>{uniwillI2ecByte(0x8e6),uniwillI2ecByte(0x8e7),uniwillI2ecByte(0x8b8)};};
+            const auto first=sample(),second=sample();
+            if(first!=second||!gm6::agingPrivateWindow(first[0],first[1],first[2]))
+                throw std::runtime_error("GM6 aging: private I2EC window not confirmed");
+        }
+        gm6Aging_=true;
+    }
     void wujieI2ecAdmission(){
         if(!wujieReviewed_){
             using namespace windows::reviewed_uniwill;
@@ -278,18 +356,18 @@ private:
                registry(HKEY_LOCAL_MACHINE,L"HARDWARE\\DESCRIPTION\\System\\BIOS",L"BIOSVersion")!=L"N.1.20MRO15")
                 throw std::runtime_error("Wujie I2EC: exact BIOS required");
             std::string notes;verifyReviewedUniwillDriver(notes,"6e360ee4a0c42b2a4eaf46208c1592c87f8cd71aca2a6c52831a2ad356e61235");
-            wujieHost_=text(registry(HKEY_LOCAL_MACHINE,L"SOFTWARE\\Microsoft\\Cryptography",L"MachineGuid"));
-            if(wujieHost_.empty())throw std::runtime_error("Wujie I2EC: host identity unavailable");
+            uniwillI2ecHost_=text(registry(HKEY_LOCAL_MACHINE,L"SOFTWARE\\Microsoft\\Cryptography",L"MachineGuid"));
+            if(uniwillI2ecHost_.empty())throw std::runtime_error("Wujie I2EC: host identity unavailable");
             wujieReviewed_=true;
         }
         if(exchange(0x454,{})!=82||exchange(0x456,{})!=72||exchange(0x740,{})!=26)
             throw std::runtime_error("Wujie I2EC: EC identity mismatch");
-        if(wujieByte(0x454)!=82||wujieByte(0x456)!=72||wujieByte(0x740)!=26||
-           wujieByte(0x2014)!=6||wujieByte(0x2015)!=0x80||!(wujieByte(0x2012)&1)||(wujieByte(0x200d)&3)!=3)
+        if(uniwillI2ecByte(0x454)!=82||uniwillI2ecByte(0x456)!=72||uniwillI2ecByte(0x740)!=26||
+           uniwillI2ecByte(0x2014)!=6||uniwillI2ecByte(0x2015)!=0x80||!(uniwillI2ecByte(0x2012)&1)||(uniwillI2ecByte(0x200d)&3)!=3)
             throw std::runtime_error("Wujie I2EC: identity/configuration mismatch");
-        if((wujieByte(0x490)&6)!=6)throw std::runtime_error("Wujie I2EC: battery not ready");
+        if((uniwillI2ecByte(0x490)&6)!=6)throw std::runtime_error("Wujie I2EC: battery not ready");
     }
-    bool wujieReviewed_{};std::string wujieHost_;
+    bool wujieReviewed_{},gm6Aging_{};std::string uniwillI2ecHost_;
     /// Issues one IOCTL. Read and write share the packet layout, so one function
     /// covers both and the two code paths cannot drift apart.
     std::uint8_t exchange(std::uint16_t address, std::optional<std::uint8_t> value) {

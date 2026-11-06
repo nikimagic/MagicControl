@@ -46,7 +46,8 @@ struct IntelMemoryReader::Impl {
                     // No guessed pairing between SMBIOS locator and SMBus address.
                     // Reading SPD serials would require changing the NVM page;
                     // this monitor makes no such writes and labels the real hub.
-                    d.model=sample.ordinaryDdr4?std::format("DDR4 · SPD 0x{:02X}",addresses[i]):std::format("DDR5 · SMBus 0x{:02X}",addresses[i]);
+                    d.model=sample.ordinaryDdr4?std::format("DDR4 · SPD 0x{:02X}",addresses[i]):
+                        std::format("{} · SMBus 0x{:02X}",sample.ordinaryDdr5?"DDR5":"SPD5118",addresses[i]);
                     d.source=sample.ordinaryDdr4?"PawnIO · Intel I801 / JC42":"PawnIO · Intel I801 / SPD5118";
                     try{d.celsius=sample.ordinaryDdr4?module.ddr4TsodTemperature(addresses[i]):module.temperature(addresses[i]);d.status=d.celsius?"ok":"Датчик выключен или показание недоступно";}
                     catch(const std::exception& e){d.status=e.what();discoverAt=0;}

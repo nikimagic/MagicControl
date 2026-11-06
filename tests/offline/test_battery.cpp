@@ -3,6 +3,7 @@
 #include "src/protocols/uniwill/x5sp4nag/BatteryContract.h"
 #include "src/protocols/uniwill/x5sp4nag/BatteryCandidates.h"
 #include "src/protocols/uniwill/x5sp4nag/Registers.h"
+#include "src/protocols/uniwill/gm6ir0c/BatteryAgingGuard.h"
 #include "MagicControl/BatteryJournal.h"
 #include "MagicControl/BatteryEcPolicy.h"
 #include "MagicControl/BatteryProtection.h"
@@ -153,6 +154,19 @@ void lenovoBatteryJournal(){
 }
 void gm6Battery(){
     namespace gm6=mc::gm6;
+    CHECK(gm6::agingEcIdentity(0x4c,25,0x40,7,true));
+    CHECK(!gm6::agingEcIdentity(0x4b,25,0x40,7,true)&&!gm6::agingEcIdentity(0x4c,26,0x40,7,true));
+    CHECK(!gm6::agingEcIdentity(0x4c,25,0xff,7,true)&&!gm6::agingEcIdentity(0x4c,25,0x40,0xff,true));
+    CHECK(gm6::agingEcIdentity(0x4c,25,0x40,0,false)&&!gm6::agingEcIdentity(0x4c,25,0x40,0,true));
+    CHECK(gm6::agingI2ecConfiguration(6,0x80,1)&&!gm6::agingI2ecConfiguration(6,0x80,0xff));
+    CHECK(gm6::agingExternalPower(7)&&!gm6::agingExternalPower(6)&&!gm6::agingExternalPower(0xff));
+    CHECK(!gm6::agingI2ecConfiguration(6,0x81,1)&&!gm6::agingI2ecConfiguration(7,0x80,1));
+    CHECK(gm6::agingExposureDividers(0,59)&&!gm6::agingExposureDividers(0xff,0xff)&&!gm6::agingExposureDividers(60,1));
+    CHECK(gm6::agingSku18(0xd8,0x81)&&!gm6::agingSku18(0xff,0xff)&&!gm6::agingSku18(0xd8,0x80));
+    CHECK(gm6::agingPrivateWindow(0x5d,0x48,0)&&gm6::agingPrivateWindow(0x5d,0x60,0x15));
+    CHECK(!gm6::agingPrivateWindow(0,0,0)&&!gm6::agingPrivateWindow(0xff,0xff,0xff)&&!gm6::agingPrivateWindow(0x5d,0x48,0xff)&&!gm6::agingPrivateWindow(0x5d,0x60,0));
+    CHECK(gm6::batteryTemperature(2970,7)&&std::abs(*gm6::batteryTemperature(2970,7)-23.85)<1e-8);
+    CHECK(!gm6::batteryTemperature(0xffff,7)&&!gm6::batteryTemperature(2970,0)&&!gm6::batteryTemperature(2970,0xff));
     using Raw=std::array<std::uint8_t,gm6::batteryCoreAddresses.size()>;
     const auto load=[](const char* name){
         const auto read=[](std::string path){std::ifstream in(path,std::ios::binary);CHECK(in.good());return std::vector<std::uint8_t>(std::istreambuf_iterator<char>(in),{});};

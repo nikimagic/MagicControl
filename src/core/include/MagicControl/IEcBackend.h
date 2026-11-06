@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 #include <memory>
 #include <optional>
 #include <string>
@@ -16,6 +17,7 @@
 #include <stdexcept>
 
 namespace mc {
+struct BoardDescriptor;
 
 // Observing a byte is not proof that the firmware supports a persistent mode.
 // GUI, CLI and lifecycle must use this same native write admission.
@@ -71,10 +73,17 @@ public:
     // Optional OS owner admission for lighting writers/rollback. Simulated
     // transports need no OS owner query. This is not an exclusive OEM lease.
     virtual void checkKeyboardWriter() const {}
+    // Profile admission is necessary but never sufficient: the actual
+    // transport rechecks its device, firmware and I/O before every operation.
+    virtual BatteryAgingAccess batteryAgingAccess(const BoardDescriptor&) const noexcept{return BatteryAgingAccess::Unavailable;}
+    virtual void checkBatteryAgingWriteAccess(){}
     virtual std::optional<BatteryAgingReading> readBatteryAging(){return {};}
+    // Optional firmware FAN selector observation. Exact device backends supply
+    // this through the same EC transaction; never a general I2EC reader.
+    virtual std::optional<std::array<std::uint8_t,4>> readNativeFanFirmwareSelectors(){return {};}
     virtual std::optional<UsbPowerPriorityStatus> readUsbPriorityStatus(){return {};}
     virtual void setUsbPowerPriority(bool){throw std::runtime_error("USB-C priority transport unavailable");}
-    virtual void writeBatteryAgingByte(std::uint16_t,std::uint8_t){throw std::runtime_error("Battery aging transport unavailable");}
+    virtual void writeBatteryAgingField(BatteryAgingField,std::uint8_t){throw std::runtime_error("Battery aging transport unavailable");}
 
     /// Reads a contiguous block. The default implementation issues one read per
     /// byte; a backend may override it with a faster path.

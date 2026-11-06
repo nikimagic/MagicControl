@@ -10,12 +10,13 @@
 #include "MagicControl/FanMaximum.h"
 #include "MagicControl/DiagnosticDump.h"
 #include "MagicControl/KeyboardBacklight.h"
+#include "MagicControl/NativeDefaultFan.h"
 #include "../../../protocols/uniwill/RamFanFactory.h"
 namespace mc {struct BatteryReading;struct EcBatteryReading;}
 namespace mc::windows {
 // Read-only supplement for one identified physical battery on exact GM6.
 // No live controller/restore worker, threshold setter, or charger-port guessing.
-void readGm6BatteryTelemetry(BatteryReading& result,bool singlePhysicalBattery);
+void readGm6BatteryTelemetry(BatteryReading& result,bool singlePhysicalBattery,bool recordIdentity);
 EcBatteryReading readGm6EcBatteryOnly();
 struct Gm6State {
     bool connected{},writable{},boost{},custom{},ramActive{},respective{},pl4Double{},overrideActive{};
@@ -39,6 +40,8 @@ struct Gm6State {
     std::array<std::optional<std::array<int,3>>,3> cpuPresetLimits;
     std::string cpuPresetStatus;
     std::array<std::optional<int>,2> rpm,pwm,temperature;
+    NativeDefaultFanReading defaultFans;
+    bool defaultFansConsidered{};
     std::optional<gm6::Curves> curves,onlineCurves;
     std::optional<KeyboardBacklightState> keyboard;
     std::string keyboardStatus;

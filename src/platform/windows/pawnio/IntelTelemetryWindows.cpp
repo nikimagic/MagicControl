@@ -1,5 +1,6 @@
 #include "IntelTelemetryWindows.h"
 #include "MagicControl/SensorDecoders.h"
+#include "MagicControl/MemoryTelemetry.h"
 #include "MagicControl/Logging.h"
 #include "../../../devices/lenovo/legion-kwcn/ControlWindows.h"
 #include "SensorModuleWindows.h"
@@ -10,6 +11,7 @@
 #include <powrprof.h>
 #include <cmath>
 #include <cstring>
+#include <format>
 #include <vector>
 
 namespace mc::windows {
@@ -24,6 +26,7 @@ struct IntelTelemetryReader::Impl {
     detail::Module mchbar;
     HANDLE pciMutex{};
     ULONGLONG memoryRetry{};
+    std::string memoryFailure;
     bool supported{};
     bool powerDiagnostics{};
     bool lenovoPowerDiagnostics{};
@@ -46,7 +49,7 @@ struct IntelTelemetryReader::Impl {
         // Runtime valid bits/units still gate readings; this grants no EC writes.
         supported=family==6&&(model==0xB7||model==0xBA||model==0xBF||model==0xC5||model==0xC6);
         coreSupported=family==6&&(model==0xB7||model==0xBA||model==0xBF);
-        memorySupported=family==6&&(model==0x97||model==0x9A||model==0xB7||model==0xBA||model==0xBF);
+        memorySupported=memoryClockBackend(MemoryCpuVendor::Intel,family,model,false,true)==MemoryClockBackend::IntelQclk;
         try{lenovoPowerDiagnostics=coreSupported&&legionHostSupported();}catch(...){}
     }
     void read(MonitoringSnapshot& sample) {
@@ -172,29 +175,36 @@ struct IntelTelemetryReader::Impl {
         lastPowerDiagnostic=out;sample.intelPackagePower=std::move(out);
     }
     void readMemoryClock(MonitoringSnapshot& sample){
-        if(!memorySupported||(!sample.ordinaryDdr5&&!sample.ordinaryDdr4))return;
-        const auto now=GetTickCount64();if(now<memoryRetry)return;
         sample.memoryClockSource="PawnIO · Intel MCHBAR QCLK";
-        sample.memoryClockStatus="approximate: BIOS Gear and nominal BCLK; hardware validation pending";
+        const auto now=GetTickCount64();IntelMemoryCapture captured;
+        const auto publish=[&]{if(!sample.diagnostic)return;
+            sample.additionalSensors.push_back({"Intel memory controller","frequency","MHz",sample.memoryClockSource,
+                sample.memoryClockStatus,sample.memoryClockMhz,{},now});
+            const auto raw=[&](const char* name,std::optional<std::uint32_t> value){if(value)
+                sample.additionalSensors.push_back({"Intel memory controller",name,"raw",sample.memoryClockSource,
+                    sample.memoryClockStatus,double(*value),double(*value),now});};
+            raw("qclk_status_before",captured.before);raw("bios_data",captured.bios);raw("qclk_status_after",captured.after);
+        };
+        if(!memorySupported){sample.memoryClockStatus="Intel CPU memory register layout not reviewed";publish();return;}
+        if(sample.ordinaryDdr5==sample.ordinaryDdr4){sample.memoryClockStatus="DDR4/DDR5 memory type unavailable or ambiguous";publish();return;}
+        if(!memoryRetryDue(now,memoryRetry,sample.diagnostic)){sample.memoryClockStatus="retry pending: "+memoryFailure;return;}
+        sample.memoryClockStatus="QCLK reading unavailable";
         if(!pciMutex)pciMutex=openSharedHardwareMutex(kPciMutexName);
-        if(!pciMutex){sample.memoryClockStatus="PCI mutex unavailable";return;}
+        if(!pciMutex){sample.memoryClockStatus="PCI mutex unavailable";publish();return;}
         const auto acquired=WaitForSingleObject(pciMutex,250);
-        if(acquired!=WAIT_OBJECT_0&&acquired!=WAIT_ABANDONED){sample.memoryClockStatus="PCI mutex busy or unavailable";return;}
+        if(acquired!=WAIT_OBJECT_0&&acquired!=WAIT_ABANDONED){sample.memoryClockStatus="PCI mutex busy or unavailable";publish();return;}
         try{
             if(!mchbar.ready())mchbar.open(L"IntelMCHBAR.bin","3f82b832d99b4aac37d2a20fdb7c9baa2a3bc0488612c9019c9484eb0e8a6eae");
-            for(int attempt=0;attempt<3;++attempt){
-                const auto before=mchbar.intelMemoryStatus(),bios=mchbar.intelMemoryBiosData(),after=mchbar.intelMemoryStatus();
-                const auto decoded=intelMemoryClock(before,bios,after);
-                if(decoded.status==IntelMemoryClockStatus::Transition)continue;
-                if(decoded.status!=IntelMemoryClockStatus::Valid)break;
-                const double ddrClock=decoded.mhz;
-                sample.memoryClockMhz=ddrClock;sample.memoryClockSampledAtMs=GetTickCount64();
+            captured=captureIntelMemoryClock(true,[&]{return mchbar.intelMemoryStatus();},[&]{return mchbar.intelMemoryBiosData();});
+            if(captured.mhz){
+                sample.memoryClockMhz=*captured.mhz;sample.memoryClockSampledAtMs=GetTickCount64();
                 sample.memoryClockStatus="approximate: current QCLK, last BIOS-requested Gear, nominal BCLK; not hardware validated";
-                if(sample.diagnostic)sample.additionalSensors.push_back({"Intel memory controller","frequency","MHz",sample.memoryClockSource,sample.memoryClockStatus,ddrClock,double(after),sample.memoryClockSampledAtMs});
-                break;
-            }
-        }catch(const std::exception& error){sample.memoryClockStatus=error.what();mchbar.reset();memoryRetry=now+30000;}
+                memoryFailure.clear();memoryRetry=0;
+            }else sample.memoryClockStatus=captured.status==IntelMemoryClockStatus::Transition?
+                "QCLK changed during all three reads":"QCLK ratio or requested Gear unavailable/invalid";
+        }catch(const std::exception& error){sample.memoryClockStatus=error.what();memoryFailure=error.what();mchbar.reset();memoryRetry=now+5000;}
         ReleaseMutex(pciMutex);
+        publish();
     }
 };
 IntelTelemetryReader::IntelTelemetryReader(bool powerDiagnostics):impl_(std::make_unique<Impl>(powerDiagnostics)){}

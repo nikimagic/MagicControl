@@ -1,10 +1,17 @@
 #pragma once
 #include "../BatteryCatalog.h"
 #include "MagicControl/Monitoring.h"
+#include "MagicControl/SensorDecoders.h"
 #include <algorithm>
 #include <array>
 #include <span>
 namespace mc::gm6 {
+// Exact GM6 1.12 consumer D6B4 reads 04A2/04A3 as SBS tenths Kelvin.
+// Caller admits the board and supplies a separately double-read word.
+inline std::optional<double> batteryTemperature(std::uint16_t raw,std::uint8_t ready){
+    if(ready==0xff||(ready&6)!=6)return {};
+    return batteryTemperatureCelsius(raw);
+}
 // Exact GM6IR0C DSDT: ECXP=ECMA+400, XIF0..8, XST0..3,
 // XCIN/ACIC/BPST/BSOK, CYCN and ISDB. OEM BatteryInfo confirms494/4A6;
 // BatteryProtection2 confirms7A6.mask30 and separate7B9/7D0 parameters.

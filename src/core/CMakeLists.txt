@@ -47,6 +47,7 @@ add_library(magiccontrol_core STATIC
     ../protocols/uniwill/RamFanFactory.cpp
     ../protocols/uniwill/QuickSwitch.cpp
     ../protocols/uniwill/x5sp4nag/NativeDefaultFan.cpp
+    ../protocols/uniwill/gm6ir0c/NativeDefaultFan.cpp
 )
 
 target_include_directories(magiccontrol_core

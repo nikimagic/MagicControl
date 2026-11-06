@@ -4,6 +4,7 @@
 #include "SensorModuleWindows.h"
 #include "MagicControl/PortableSettings.h"
 #include "MagicControl/Temperature.h"
+#include "MagicControl/MemoryTelemetry.h"
 #include "../../../devices/minisforum/hpbsd/TelemetryWindows.h"
 #include <windows.h>
 #include <intrin.h>
@@ -91,7 +92,7 @@ struct PawnTelemetryReader::Impl {
     ~Impl() { if (busMutex) CloseHandle(busMutex); if (pciMutex) CloseHandle(pciMutex); }
     bool prepareCpu(MonitoringSnapshot& sample) {
         const auto now = GetTickCount64();
-        if (!boardVerified || now < retryCpu) return false;
+        if (!boardVerified || (now < retryCpu&&!sample.diagnostic)) return false;
         try {
             if (!cpu.ready()) {
                 cpu.open(L"AMDFamily17.bin");
@@ -111,46 +112,60 @@ struct PawnTelemetryReader::Impl {
     // must confirm one stable common clock; SPD order is never treated as a
     // channel mapping. Exact CPU/type admission excludes LPDDR and old layouts.
     void readMemoryClock(MonitoringSnapshot& sample){
-        if(!sample.ordinaryDdr5&&!sample.ordinaryDdr4)return;
         int registers[4]{};__cpuid(registers,1);const auto eax=static_cast<unsigned>(registers[0]);
         const unsigned base=(eax>>8)&15,family=base==15?base+((eax>>20)&255):base;
         const unsigned model=((eax>>4)&15)|((eax>>12)&240);
         const bool strix=family==0x1a&&(model==0x20||model==0x24);
-        const bool phoenix=family==0x19&&(model==0x74||model==0x75);
-        const bool legacyDdr4=(family==0x17&&(model==0x60||model==0x71))||(family==0x19&&(model==0x21||model==0x50));
-        if(sample.ordinaryDdr5?!(strix||phoenix):!legacyDdr4)return;
+        const auto path=memoryClockBackend(MemoryCpuVendor::Amd,family,model,sample.ordinaryDdr4,sample.ordinaryDdr5);
+        if(path==MemoryClockBackend::Unavailable){
+            if(sample.diagnostic)sample.additionalSensors.push_back({"AMD memory controller","frequency","MHz","PawnIO · UMC",
+                "CPU/memory register layout unsupported or memory type unknown",{},{},GetTickCount64()});
+            return;
+        }
         sample.memoryClockSource=sample.ordinaryDdr5?"PawnIO · UMC0/1 · active DDR5 P-state":"PawnIO · UMC0/1 · DDR4 P0";
         sample.memoryClockStatus="UMC transition or unavailable reading";
+        std::array<std::optional<std::uint32_t>,2> rawBefore{},rawConfig{},rawAfter{};
         try{
             for(int attempt=0;attempt<3;++attempt){
                 std::array<std::uint32_t,2> before{},config{},after{};
+                rawBefore={};rawConfig={};rawAfter={};
                 bool known=true;
-                for(unsigned ch=0;ch<2;++ch){before[ch]=cpu.memoryStateRegister(ch);if((before[ch]&7)>3)known=false;}
+                for(unsigned ch=0;ch<2;++ch){before[ch]=cpu.memoryStateRegister(ch);rawBefore[ch]=before[ch];if((before[ch]&7)>3)known=false;}
                 // DDR4's P-state pages beyond P0 are not corroborated yet.
                 if(sample.ordinaryDdr4&&((before[0]&7)||(before[1]&7)))known=false;
                 if(!known)continue;
-                for(unsigned ch=0;ch<2;++ch)config[ch]=cpu.memoryClockRegister(ch,before[ch]&7);
-                for(unsigned ch=0;ch<2;++ch)after[ch]=cpu.memoryStateRegister(ch);
+                for(unsigned ch=0;ch<2;++ch){config[ch]=cpu.memoryClockRegister(ch,before[ch]&7);rawConfig[ch]=config[ch];}
+                for(unsigned ch=0;ch<2;++ch){after[ch]=cpu.memoryStateRegister(ch);rawAfter[ch]=after[ch];}
                 const auto first=zenMemoryChannelsClock(sample.ordinaryDdr5,before,config,after);
                 if(!first)continue;
                 sample.memoryClockMhz=*first;sample.memoryClockSampledAtMs=GetTickCount64();
                 sample.memoryPstate={before[0]&7,before[1]&7};
                 sample.memoryClockStatus=strix?"active nominal clock; no measured BCLK correction":"approximate: nominal BCLK; UMC interpretation not hardware validated";
-                if(sample.diagnostic)for(unsigned ch=0;ch<2;++ch)
-                    sample.additionalSensors.push_back({"RAM UMC"+std::to_string(ch),"frequency","MHz",sample.memoryClockSource,
-                        "P"+std::to_string(before[ch]&7)+"; "+sample.memoryClockStatus,double(*first),double(config[ch]),sample.memoryClockSampledAtMs});
-                return;
+                break;
             }
         }catch(const std::exception& error){sample.memoryClockStatus=error.what();}
+        if(sample.diagnostic){
+            const auto at=GetTickCount64();
+            for(unsigned ch=0;ch<2;++ch){const auto name="RAM UMC"+std::to_string(ch);
+                sample.additionalSensors.push_back({name,"frequency","MHz",sample.memoryClockSource,sample.memoryClockStatus,sample.memoryClockMhz,{},at});
+                const auto raw=[&](const char* metric,std::optional<std::uint32_t> value){if(value)
+                    sample.additionalSensors.push_back({name,metric,"raw",sample.memoryClockSource,sample.memoryClockStatus,double(*value),double(*value),at});};
+                raw("state_before",rawBefore[ch]);raw("clock_config",rawConfig[ch]);raw("state_after",rawAfter[ch]);
+            }
+        }
     }
     void readTemperatures(MonitoringSnapshot& sample) {
-        if (!prepareCpu(sample)) return;
+        if (!prepareCpu(sample)) {if(sample.diagnostic)sample.additionalSensors.push_back({"AMD memory controller","frequency","MHz","PawnIO · UMC",
+            "CPU telemetry module unavailable or retry pending",{},{},GetTickCount64()});return;}
+        const auto memoryFailure=[&](const char* reason){if(sample.diagnostic)sample.additionalSensors.push_back({
+            "AMD memory controller","frequency","MHz","PawnIO · UMC",reason,{},{},GetTickCount64()});};
         if (!pciMutex) pciMutex = openSharedHardwareMutex(kPciMutexName);
-        if (!pciMutex) {sample.processorStatus+=" PawnIO: mutex PCI недоступен, Win32="+std::to_string(GetLastError());return;}
+        if (!pciMutex) {sample.processorStatus+=" PawnIO: mutex PCI недоступен, Win32="+std::to_string(GetLastError());memoryFailure("PCI mutex unavailable");return;}
         const DWORD acquired = WaitForSingleObject(pciMutex, 250);
         if (acquired != WAIT_OBJECT_0 && acquired != WAIT_ABANDONED) {
-            if(acquired!=WAIT_TIMEOUT){sample.processorStatus+=" PawnIO: ошибка ожидания mutex PCI, Win32="+std::to_string(GetLastError());return;}
+            if(acquired!=WAIT_TIMEOUT){sample.processorStatus+=" PawnIO: ошибка ожидания mutex PCI, Win32="+std::to_string(GetLastError());memoryFailure("PCI mutex wait failed");return;}
             sample.processorStatus += " PawnIO Tctl: занят доступ PCI; используется AMD ADL";
+            memoryFailure("PCI mutex busy");
             return;
         }
         if(GetTickCount64()>=retryTemperature)try {
@@ -265,7 +280,7 @@ struct PawnTelemetryReader::Impl {
                 }
                 const auto address=useHpbsd?static_cast<std::uint8_t>(0x50+i):genericSpdAddresses[i];
                 try { sample.memory[i].celsius = useHpbsd?smbus.hpbsdTemperature(address):sample.ordinaryDdr4?smbus.ddr4TsodTemperature(address):smbus.temperature(address);
-                    if(!useHpbsd){sample.memory[i].present=true;if(sample.ordinaryDdr4||!legacyMemoryOrder||address!=0x50+i)sample.memory[i].serial.clear();sample.memory[i].model=sample.ordinaryDdr4?std::format("DDR4 · SPD 0x{:02X}",address):std::format("DDR5 · SMBus 0x{:02X}",address);}
+                    if(!useHpbsd){sample.memory[i].present=true;if(sample.ordinaryDdr4||!legacyMemoryOrder||address!=0x50+i)sample.memory[i].serial.clear();sample.memory[i].model=sample.ordinaryDdr4?std::format("DDR4 · SPD 0x{:02X}",address):std::format("{} · SMBus 0x{:02X}",sample.ordinaryDdr5?"DDR5":"SPD5118",address);}
                     sample.memory[i].source=sample.ordinaryDdr4?std::format("PawnIO · JC42 · SPD 0x{:02X}",address):std::format("PawnIO · SPD5118 · SMBus 0x{:02X}",address);
                     sample.memory[i].status=sample.memory[i].celsius?"ok":"Датчик выключен или показание недоступно";
                     if(sample.diagnostic)sample.additionalSensors.push_back({"RAM SMBus "+std::to_string(address),"temperature","C",sample.memory[i].source,sample.memory[i].celsius?"ok":"not reported",sample.memory[i].celsius,{},GetTickCount64()}); }

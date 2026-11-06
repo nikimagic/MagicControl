@@ -31,13 +31,15 @@ inline DefaultFanGraph defaultFanGraph(const ResourcePresentationView& view,unsi
         out.source=formatMessage("База EC · {source} · ступень {stage}/9",{{"source",out.curve->temperatureSource},{"stage",std::to_string(out.curve->stage)}});
         if(out.curve->stage!=out.curve->demandStage)out.source+=" · "+translate("задержка EC");
     }else{
-    out.legend=formatMessage(out.curve->requestDerived?
-        "EC CPU {temperature} °C · Запрос≈{request}% · Факт {actual}%":
-        "EC CPU {temperature} °C · Запрос {request}% · Факт {actual}%",
-        {{"temperature",value(out.temperature)},{"request",value(out.requested)},{"actual",value(out.actual)}});
+    out.legend=formatMessage(out.curve->requestPreOverride?
+        "{source} {temperature} °C · Запрос {request}% (база) · Факт {actual}%":out.curve->requestDerived?
+        "{source} {temperature} °C · Запрос≈{request}% · Факт {actual}%":
+        "{source} {temperature} °C · Запрос {request}% · Факт {actual}%",
+        {{"source",out.curve->temperatureSource},{"temperature",value(out.temperature)},{"request",value(out.requested)},{"actual",value(out.actual)}});
     out.source=formatMessage("База EC · пуск {start} °C · стоп <{stop} °C",
         {{"start",std::to_string(out.curve->startCelsius)},{"stop",std::to_string(out.curve->offBelowCelsius)}});
     if(out.curve->requestDerived)out.source+=" · "+translate("≈ расчёт");
+    if(!out.curve->graphCaption.empty())out.source=translate(out.curve->graphCaption);
     }
     if(out.curve->retained||!nativeDefaultFanFresh(*out.curve,2500))out.legend+=" · "+translate("последнее чтение");
     return out;

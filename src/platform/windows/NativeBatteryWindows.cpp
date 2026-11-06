@@ -1,5 +1,6 @@
 #include "MagicControl/ResourceControl.h"
 #include "NativeBatteryWindows.h"
+#include "BatterySettingsWindows.h"
 #include "BackendWindows.h"
 #include "uniwill-acpi/ReviewedDriverWindows.h"
 #include "BatteryEnforcementWindows.h"
@@ -12,6 +13,7 @@
 #include "MagicControl/DeviceProfile.h"
 #include "MagicControl/DeviceOperation.h"
 #include "MagicControl/IEcBackend.h"
+#include "MagicControl/EcAccess.h"
 #include "MagicControl/Logging.h"
 #include "MagicControl/ActionLog.h"
 #include "MagicControl/RomIdHistory.h"
@@ -29,6 +31,8 @@
 
 namespace mc::windows {
 namespace {
+struct AgingObservationCache {std::mutex gate;std::uint64_t at{};BatteryAgingStatus value;};
+AgingObservationCache& agingObservationCache(){static AgingObservationCache cache;return cache;}
 bool transientReadFailure(const std::exception& error){
     if(dynamic_cast<const WindowsEcNotReady*>(&error)||dynamic_cast<const EcObservationBusy*>(&error))return true;
     if(const auto* io=dynamic_cast<const EcIoError*>(&error)){
@@ -85,7 +89,19 @@ struct NativeBatteryController::Impl {
             ++restoreAttempts;restoreCanRetry=false;
             try{
                 IdentityHistoryScope historyOrigin("automatic",restoreReason);
-                if(!std::filesystem::exists(settingsReadPath(settings)))continue;
+                // The same battery resource owns user and lifecycle aging.
+                // No state file means no I2EC access and no implicit write.
+                std::string agingError;
+                if(gm6&&std::filesystem::exists(portableSettingsPath("battery-aging-override.state")))try{
+                    if(const auto access=nativeBatteryAgingAccess()){
+                        BatterySettingsContext context;context.ec=access.get();context.profile=id;
+                        BatteryWriteRequest request{BatteryWrite::Aging};request.enabled=true;request.lifecycle=true;request.origin=BatteryWriteOrigin::Restore;
+                        try{static_cast<void>(executeBatteryResource(context,request));}
+                        catch(...){invalidateNativeBatteryAgingObservation();throw;}
+                        invalidateNativeBatteryAgingObservation();
+                    }
+                }catch(const std::exception& e){agingError=e.what();logMessage("battery",id+" aging restore not confirmed: "+agingError);}
+                if(!std::filesystem::exists(settingsReadPath(settings))){restoreStatus=agingError;continue;}
                 DevicePreferences saved;std::string error;
                 if(!loadDevicePreferences(settings,saved,error))throw std::runtime_error(error);
                 if(wujie){
@@ -115,7 +131,7 @@ struct NativeBatteryController::Impl {
                     restoreCanRetry=!priorPolicy;
                     try{applyRestart(*restart,false);}catch(...){if(priorPolicy)restoreCanRetry=false;throw;}
                 }
-                restoreStatus.clear();
+                restoreStatus=agingError;
             }catch(const std::exception& e){
                 // Retry only not-ready/busy reads BEFORE any write was sent.
                 // Ownership, identity/pin, invalid settings and uncertain write
@@ -560,5 +576,33 @@ std::shared_ptr<NativeBatteryController> nativeBatteryController(){return shared
 std::shared_ptr<NativeBatteryController> nativeBatteryVoltageController(){
     const auto id=deviceProfile(readBoardDescriptor()).id;
     return id=="wu-jie-15-xpro"||nativeBatteryProfile(id)?sharedBatteryController(true):nullptr;
+}
+std::shared_ptr<EcAccess> nativeBatteryAgingAccess(){
+    if(wcsstr(GetCommandLineW(),L"--no-ec")||deviceProfile(readBoardDescriptor()).id!="mechrevo-gm6ir0c")return {};
+    static std::mutex gate;static std::shared_ptr<EcAccess> access;
+    std::lock_guard lock(gate);
+    if(!access){
+        auto candidate=std::make_shared<EcAccess>(createWindowsAcpiDriverBackend());
+        const auto& check=candidate->verifyBoard();
+        if(!check.verified)throw std::runtime_error("GM6 battery aging: "+check.error);
+        access=std::move(candidate);
+    }
+    return access;
+}
+BatteryAgingStatus observeNativeBatteryAging() noexcept{
+    try{
+        if(deviceOperations().passiveEcReadsPaused())return {};
+        auto& cache=agingObservationCache();std::lock_guard lock(cache.gate);const auto now=GetTickCount64();
+        if(cache.at&&now>=cache.at&&now-cache.at<3000)return cache.value;
+        try{
+            const auto access=nativeBatteryAgingAccess();
+            if(!access||access->observationsPaused())return {};
+            cache.value=observeBatteryAging(*access);
+        }catch(const std::exception& e){cache.value={};cache.value.error=e.what();}
+        cache.at=now;return cache.value;
+    }catch(const std::exception& e){BatteryAgingStatus result;result.error=e.what();return result;}
+}
+void invalidateNativeBatteryAgingObservation() noexcept{
+    try{auto& cache=agingObservationCache();std::lock_guard lock(cache.gate);cache.at=0;cache.value={};}catch(...){}
 }
 }

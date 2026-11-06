@@ -6,7 +6,11 @@
 #include "../gm5hg0a/FactoryCurves.h"
 #include "../../../protocols/uniwill/gm6ir0c/BatteryDecode.h"
 #include "../../../protocols/uniwill/gm6ir0c/BatteryCurrentDiagnostics.h"
+#include "../../../protocols/uniwill/gm6ir0c/NativeDefaultFan.h"
 #include "MagicControl/SensorDecoders.h"
+#include "MagicControl/BatteryDate.h"
+#include "MagicControl/BatteryIdentityHistory.h"
+#include "MagicControl/NativeDefaultFanCache.h"
 #include "MagicControl/BoardIdentity.h"
 #include "MagicControl/DeviceProfile.h"
 #include "MagicControl/EcAccess.h"
@@ -22,6 +26,7 @@
 #include "PowerDiagnosticsWindows.h"
 #include "UniwillControlOwnerWindows.h"
 #include "BackendWindows.h"
+#include "../../../platform/windows/NativeBatteryWindows.h"
 #include "../../../platform/windows/uniwill-acpi/ReviewedDriverWindows.h"
 #include "LightingOwnershipWindows.h"
 #include "WindowsDevices.h"
@@ -231,6 +236,7 @@ struct Gm6Controller::Impl {
     bool online{},onlineLinked{},needsRestore{},onlineProtection{},probeActive{};std::string onlineStatus;
     std::uint64_t onlineGeneration{};
     using Clock=std::chrono::steady_clock;
+    NativeDefaultFanCache defaultFanCache;
     struct NativeRequest {std::uint64_t receivedAt{},epoch{};Clock::time_point queued;std::function<void(Gm6NativeProfileResult)> complete;};
     std::mutex nativeQueueGate;
     std::atomic<std::uint64_t> nativeEpoch{};
@@ -946,6 +952,7 @@ EcBatteryReading readGm6EcBatteryOnly(){
     // worker or setter. FANs and SETs reuse the same timestamped sample.
     static std::mutex gate;static std::unique_ptr<IEcBackend> reader;
     static EcBatteryReading last;static std::uint64_t lastAt{};
+    static std::string gm6ManufactureDate;static std::uint64_t gm6DateAt{};
     static gm6::CurrentDiagnosticSchedule currentDiagnostics;
     std::lock_guard lock(gate);const auto now=GetTickCount64();
     if(last.coherent&&now>=lastAt&&now-lastAt<800)return label(last);
@@ -980,6 +987,18 @@ EcBatteryReading readGm6EcBatteryOnly(){
             for(int attempt=0;attempt<3&&!stable;++attempt){const auto first=sample();raw=sample();stable=first==raw;}
             if(!stable){result.status="Согласованный снимок батареи "+batteryModel+" не получен";return label(result);}
             result=label(gm6::decodeBatteryCore(raw,batteryModel));
+            // The GM6 firmware and the supplied paired EC dump identify this
+            // as the real SBS date cache. Other GM-family maps are not inferred.
+            if(profileId=="mechrevo-gm6ir0c"){
+                if(result.battery.present==false){gm6ManufactureDate.clear();gm6DateAt=0;}
+                else if(result.battery.present==true&&result.readyRaw&&*result.readyRaw!=0xff&&(*result.readyRaw&6)==6){
+                    if(gm6ManufactureDate.empty()||now<gm6DateAt||now-gm6DateAt>=30000)try{
+                        const auto observed=readStableSbsBatteryDate([&](unsigned offset){return byte(static_cast<std::uint16_t>(0x314+offset));});
+                        if(observed){gm6ManufactureDate=*observed;gm6DateAt=now;}
+                    }catch(const std::exception&){} // Optional metadata cannot invalidate battery telemetry.
+                    if(now>=gm6DateAt&&now-gm6DateAt<=40000)result.battery.manufactured=gm6ManufactureDate;
+                }
+            }
             // Optional evidence after the ordinary stable core. Never include fast
             // internal samples in the whole-core equality test or infer charge flow.
             // Exact GM6 only: no corresponding firmware trace for GM5/L16/HYDROC.
@@ -1012,13 +1031,14 @@ EcBatteryReading readGm6EcBatteryOnly(){
                     diagnostic.finishedAtMs=GetTickCount64();result.diagnostics=std::move(diagnostic);
                 }
             }
-            if(gmAmdProfile(profileId)){
+            if(gmAmdProfile(profileId)||profileId=="mechrevo-gm6ir0c"){
                 // Supplied GM5 MBB5.52.50.0 Define.ECSpec.ecBt1Temperature
                 // names1186=4A2. The word is SBS tenths kelvin (dump0C1C).
                 // Read only after exact driver/board admission. A failed
                 // temperature read must not hide XIF/XST voltage/capacities.
                 auto& battery=result.battery;
-                battery.temperatureSource="EC · "+batteryModel+" · 0x4A2 · OEM ecBt1Temperature";
+                battery.temperatureSource="EC · "+batteryModel+" · 0x4A2 · "+
+                    (profileId=="mechrevo-gm6ir0c"?"EC firmware 0.1 K":"OEM ecBt1Temperature");
                 battery.temperatureStatus="Батарея не готова";
                 if(result.readyRaw&&*result.readyRaw!=255&&(*result.readyRaw&6)==6){
                     EcBatteryRegisterReading field;field.address=0x4A2;field.width=2;
@@ -1029,7 +1049,7 @@ EcBatteryReading readGm6EcBatteryOnly(){
                         for(int attempt=0;attempt<3&&!temperature;++attempt){const auto first=word();const auto second=word();if(first==second)temperature=second;}
                         if(!temperature)throw UnstableRead(0x4A2,"GM5 battery temperature: unstable word");
                         field.value=*temperature;field.status="ok";battery.temperatureRaw=*temperature;
-                        battery.celsius=batteryTemperatureCelsius(*temperature);
+                        battery.celsius=gm6::batteryTemperature(*temperature,*result.readyRaw);
                         battery.temperatureStatus=battery.celsius?"ok":"Недопустимая температура EC";
                     }catch(const std::exception& error){field.status=error.what();battery.temperatureStatus=error.what();}
                     result.registers.push_back(std::move(field));
@@ -1042,7 +1062,10 @@ EcBatteryReading readGm6EcBatteryOnly(){
     }catch(const std::exception& error){reader.reset();result=gm6::emptyBatteryReading();result.status=error.what();}
     return label(result);
 }
-void readGm6BatteryTelemetry(BatteryReading& result,bool singlePhysicalBattery){
+void readGm6BatteryTelemetry(BatteryReading& result,bool singlePhysicalBattery,bool recordIdentity){
+    const bool identityPending=recordIdentity&&batteryIdentityHistoryPending();
+    const bool gm6Identity=identityPending&&deviceProfile(readBoardDescriptor()).id=="mechrevo-gm6ir0c";
+    if(gm6Identity)preferBatteryIdentityEc();
     if(!singlePhysicalBattery||result.present==false||result.deviceId.empty()||result.deviceId=="Windows/PowerStatus/aggregate")return;
     const auto ec=readGm6EcBatteryOnly();if(!ec.supported)return;
     const std::string model(gmModelName(ec.profileId));
@@ -1053,6 +1076,10 @@ void readGm6BatteryTelemetry(BatteryReading& result,bool singlePhysicalBattery){
         const auto original=result.healthPercent;result.healthPercent.reset();result.healthReadUnavailable=true;
         result.powerStatus+="; "+source+" health unavailable; Windows_original_health_percent="+(original?std::format("{:.6f}",*original):"unavailable")+"; "+ec.status;
         return;
+    }
+    if(gm6Identity&&batteryIdentityHistoryPending()){
+        const auto aging=observeNativeBatteryAging();
+        observeBatteryIdentity(ec.battery.manufactured,"EC GM6IR0C 0x314/315",true,aging.realHistory);
     }
     const auto oldHealth=result.healthPercent;const auto oldCycles=result.cycles;
     if(!result.cycles&&ec.battery.cycles)result.cycles=ec.battery.cycles;
@@ -1116,6 +1143,23 @@ Gm6State Gm6Controller::read(bool tables) {
             if(s.cpuPresetStatus.empty())s.cpuPresetStatus="CPU PL-пресеты используют свежие параметры прошивки; FANs не меняются";
         }
         for(int ch=0;ch<2;++ch){s.rpm[ch]=impl_->rpm(ch);const auto raw=ec.readStable(ch?0x75C:0x75B);if(raw<=200)s.pwm[ch]=raw/2;}
+        if(impl_->persistentModel()){
+            s.defaultFansConsidered=true;
+            if(s.boost||s.ramActive||s.mode<0){
+                impl_->defaultFanCache.clearInactive();
+            }else{
+                try{
+                    const auto rawGate=ec.readStable(0x49f);const int gate=rawGate==255?-1:(rawGate&2);
+                    const NativeDefaultFanCacheKey key{s.mode,gate};
+                    const auto tick=[] {return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(Impl::Clock::now().time_since_epoch()).count());};
+                    if(impl_->defaultFanCache.needsRefresh(tick(),key)){
+                        auto observed=gm6::readFirmwareDefaultFans(ec);
+                        impl_->defaultFanCache.store(std::move(observed),tick(),key);
+                    }
+                }catch(const std::exception&){impl_->defaultFanCache.clearUnavailable();}
+            }
+            s.defaultFans=impl_->defaultFanCache.reading();
+        }
         if(tables) {
             s.tablesRead=true;
             s.curves=readRamCurves(ec);

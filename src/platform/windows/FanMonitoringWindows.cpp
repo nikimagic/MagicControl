@@ -48,6 +48,10 @@ FanSensorSnapshot readFanMonitoring(const FanMonitoringContext& c){
     }catch(const std::exception& error){snapshot.monitoring.processorStatus+=" · ";snapshot.monitoring.processorStatus+=error.what();}
     if(c.gm6&&!snapshot.typedObservationSkipped){snapshot.gm6=c.gm6->read(c.readGmTables);for(int ch=0;ch<2;++ch){auto& p=snapshot.monitoring.processors[ch];
         if(snapshot.gm6->rpm[ch])p.fanRpm=*snapshot.gm6->rpm[ch];if(snapshot.gm6->pwm[ch])p.fanPwm=*snapshot.gm6->pwm[ch];p.fanSource="UWACPIDriver · GM6IR0C EC";}}
+    if(snapshot.gm6&&snapshot.gm6->defaultFansConsidered){
+        snapshot.monitoring.nativeDefaultFanObservation=snapshot.gm6->defaultFans.observation;
+        snapshot.monitoring.nativeDefaultFans=snapshot.gm6->defaultFans.fans;
+    }
     for(int channel=0;channel<2;++channel){
         auto& reading=channel==0?snapshot.cpu:snapshot.gpu;
         const auto& temperature=snapshot.monitoring.processors[channel].celsius;

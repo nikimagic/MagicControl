@@ -1,6 +1,7 @@
 #pragma once
 #include "MagicControl/Monitoring.h"
 #include "MagicControl/SensorDecoders.h"
+#include "MagicControl/BatteryDate.h"
 #include <algorithm>
 #include <span>
 #include <iterator>
@@ -11,12 +12,7 @@ namespace mc::uniwill::x5sp4nag {
 // X5SP4NAG firmware copies this packed SBS-format date to EC RAM 0x314/315
 // in big-endian order. This is an EC cache, not a direct BMS or BIOS read.
 inline std::string decodeBatteryManufactureDate(std::uint8_t high,std::uint8_t low){
-    const auto raw=static_cast<unsigned>((unsigned(high)<<8)|low);
-    if(raw==0||raw==0xffff)return {};
-    const std::chrono::year_month_day date{std::chrono::year{1980+int(raw>>9)},
-        std::chrono::month{(raw>>5)&15},std::chrono::day{raw&31}};
-    if(!date.ok())return {};
-    return std::format("{:04}-{:02}-{:02}",int(date.year()),unsigned(date.month()),unsigned(date.day()));
+    return decodeSbsBatteryDate(high,low);
 }
 // Pure decoding only. The caller admits an exact-board coherent sample before
 // calling; this function cannot open a backend, read hardware or write it.

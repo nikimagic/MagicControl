@@ -4,12 +4,20 @@
 #include <string>
 namespace mc {
 class EcAccess;
-// Exact Wujie observation. History units are temperature-weighted exposure
-// points, not a conversion to wall-clock hours. Other transports return unknown.
+// Logical fields of the reviewed Uniwill aging protocol. They are not EC
+// addresses: each transport must independently admit and encode the request.
+enum class BatteryAgingField : std::uint8_t {
+    AlternativeDateHigh, AlternativeDateLow, ExposureHigh, ExposureLow, Save
+};
+enum class BatteryAgingAccess : std::uint8_t { Unavailable, ReadOnly, ReadWrite };
+// History units are temperature-weighted exposure points, not wall-clock hours.
+// A backend must supply the normalized busy flags and preserved-context token.
 struct BatteryAgingReading {
     std::string host;
     std::uint16_t manufacture{},design{},cycles{},date{},history{};
     std::uint8_t months{},appliedMonths{},service{},pending{},yearBcd{},monthBcd{};
+    bool serviceBusy{},savePending{};
+    std::uint64_t preservedContext{};
     friend bool operator==(const BatteryAgingReading&,const BatteryAgingReading&)=default;
 };
 struct BatteryAgingStatus {

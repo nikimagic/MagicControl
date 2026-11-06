@@ -86,8 +86,11 @@ public:
     /// Reads a byte twice until two consecutive reads agree, so a caller never
     /// acts on a half-updated register.
     [[nodiscard]] std::uint8_t readStable(std::uint16_t address);
+    [[nodiscard]] BatteryAgingAccess batteryAgingAccess() const noexcept;
+    void ensureBatteryAgingWriteAccess();
     std::optional<BatteryAgingReading> readBatteryAging();
-    void writeBatteryAgingByte(std::uint16_t address,std::uint8_t value);
+    std::optional<std::array<std::uint8_t,4>> readNativeFanFirmwareSelectors();
+    void writeBatteryAgingField(BatteryAgingField field,std::uint8_t value);
     std::optional<UsbPowerPriorityStatus> readUsbPriorityStatus();
     void setUsbPowerPriority(bool performance);
 

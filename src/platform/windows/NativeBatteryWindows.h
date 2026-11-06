@@ -1,11 +1,13 @@
 #pragma once
 #include "MagicControl/BatteryProtection.h"
 #include "MagicControl/BatteryEcPolicy.h"
+#include "MagicControl/BatteryAging.h"
 #include <memory>
 #include <string>
 #include <cstdint>
 #include <vector>
 #include <tuple>
+namespace mc { class EcAccess; }
 namespace mc::windows {
 struct NativeBatteryState {
     bool connected{},writable{},voltageTransitionWritable{};
@@ -57,4 +59,9 @@ std::shared_ptr<NativeBatteryController> nativeBatteryController();
 // Also supports exact WUJIE's voltage-only path. The old factory remains
 // unchanged for its working percentage controller and EC ownership.
 std::shared_ptr<NativeBatteryController> nativeBatteryVoltageController();
+// Shared exact-model aging transport, also used by monitoring and restore.
+// It is not a GUI writer and returns empty on non-admitted profiles.
+std::shared_ptr<EcAccess> nativeBatteryAgingAccess();
+BatteryAgingStatus observeNativeBatteryAging() noexcept;
+void invalidateNativeBatteryAgingObservation() noexcept;
 }

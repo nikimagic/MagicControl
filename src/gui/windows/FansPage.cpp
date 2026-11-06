@@ -1037,7 +1037,9 @@ struct FansPage::Impl : windows::FansOperationsWindows::ViewPort {
 
     void drawGraph(HDC dc, RECT bounds, int channel) const {
         const ResourcePresentationView resources(resourceState);
-        const bool nativeSelected=!preview&&(nativeCurves?
+        const bool nativeSelected=gm6Controller?
+            mc::showObservedDefaultFan(preview,nativeDefaultMode,gm6State.ramActive,gm6State.boost,gm6State.online,gm6Requested.has_value(),resources.defaultFanCurve(channel)):
+            !preview&&(nativeCurves?
             (hlylKnown&&!hlylState.manual&&resources.defaultFanCurve(channel)!=nullptr):
             (huawei?(hlylKnown?!hlylState.manual:resources.defaultFanCurve(channel)!=nullptr):
              (!profiles.ecManual&&profiles.currentPreset(channel)==FanCurvePreset::Default)));
@@ -1227,7 +1229,9 @@ struct FansPage::Impl : windows::FansOperationsWindows::ViewPort {
             downText += controlStatus.linked ? L" · Общая программная кривая" : L" · Раздельные программные кривые";
         else downText += L" · Штатное управление EC";
         {const ResourcePresentationView resources(resourceState);
-         const bool selected=!preview&&!profiles.ecManual&&profiles.currentPreset(channel)==FanCurvePreset::Default;
+         const bool selected=gm6Controller?
+            mc::showObservedDefaultFan(preview,nativeDefaultMode,gm6State.ramActive,gm6State.boost,gm6State.online,gm6Requested.has_value(),resources.defaultFanCurve(channel)):
+            !preview&&!profiles.ecManual&&profiles.currentPreset(channel)==FanCurvePreset::Default;
          const auto native=ui::defaultFanGraph(resources,channel,selected);if(native.curve)downText=wide(native.source);}
         RECT pageLabel = toNativeRect(g.page);
         RECT source = toNativeRect(g.source);

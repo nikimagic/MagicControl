@@ -1,4 +1,5 @@
 #include "MagicControl/BatteryAging.h"
+#include "MagicControl/BatteryDate.h"
 #include "MagicControl/EcAccess.h"
 #include "MagicControl/PortableSettings.h"
 #include "MagicControl/ActionLog.h"
@@ -68,27 +69,28 @@ void apply(EcAccess& ec,const BatteryAgingReading& before,unsigned date,unsigned
     if(current.host!=before.host||current.manufacture!=before.manufacture||current.date!=before.date||current.history!=before.history)
         throw std::runtime_error("Показания батареи изменились перед записью");
     bool changed=false;
-    const auto byte=[&](unsigned address,unsigned value){ec.writeBatteryAgingByte(static_cast<std::uint16_t>(address),static_cast<std::uint8_t>(value));changed=true;};
+    using Field=BatteryAgingField;
+    const auto byte=[&](Field field,unsigned value){ec.writeBatteryAgingField(field,static_cast<std::uint8_t>(value));changed=true;};
     if(current.date!=date){
-        if(date){byte(0x7f3,date&255);byte(0x7f2,date>>8);}
-        else{byte(0x7f2,0);byte(0x7f3,0);}
+        if(date){byte(Field::AlternativeDateLow,date&255);byte(Field::AlternativeDateHigh,date>>8);}
+        else{byte(Field::AlternativeDateHigh,0);byte(Field::AlternativeDateLow,0);}
     }
-    if(current.history!=history){byte(0x9c9,history>>8);byte(0x9ca,history&255);}
+    if(current.history!=history){byte(Field::ExposureHigh,history>>8);byte(Field::ExposureLow,history&255);}
     const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
-    const auto settled=[&]{const auto r=read(ec);return !(r.service&7)&&!(r.pending&8);};
+    const auto settled=[&]{const auto r=read(ec);return !r.serviceBusy&&!r.savePending;};
     if(changed){
         while(!settled()){
             if(std::chrono::steady_clock::now()>=deadline)throw std::runtime_error("EC не завершил предыдущее сохранение батареи");
             std::this_thread::sleep_for(std::chrono::milliseconds(40));
         }
-        ec.writeBatteryAgingByte(0x726,1);
+        ec.writeBatteryAgingField(Field::Save,1);
     }
     int stable=0;
     do{
         const auto r=read(ec);
         if(r.manufacture!=before.manufacture||r.design!=before.design||r.cycles!=before.cycles||
-           (r.service&0x80)!=(before.service&0x80))throw std::runtime_error("Контекст батареи или вентиляторов изменился");
-        if(r.date==date&&r.history==history&&r.months==age&&r.appliedMonths==age&&!(r.service&7)&&!(r.pending&8)){
+           r.preservedContext!=before.preservedContext)throw std::runtime_error("Контекст батареи или вентиляторов изменился");
+        if(r.date==date&&r.history==history&&r.months==age&&r.appliedMonths==age&&!r.serviceBusy&&!r.savePending){
             if(++stable>=3)return;
         }else stable=0;
         std::this_thread::sleep_for(std::chrono::milliseconds(60));
@@ -104,7 +106,7 @@ BatteryAgingStatus observeBatteryAging(EcAccess& ec){
         const EcAccess::Transaction transaction(ec);
         out.reading=ec.readBatteryAging();out.authoritative=true;if(!out.reading)return out;
         out.sampledAtMs=static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
-        out.writable=true;auto saved=load();
+        out.writable=ec.batteryAgingAccess()==BatteryAgingAccess::ReadWrite;auto saved=load();
         if(saved){
             match(*saved,*out.reading);
             accumulate(*saved,*out.reading);out.realHistory=saved->total;
@@ -121,7 +123,13 @@ BatteryAgingStatus observeBatteryAging(EcAccess& ec){
 void setBatteryAgingOverride(EcAccess& ec,bool enabled,bool lifecycle){
     const EcAccess::Transaction transaction(ec);auto s=load();
     if(lifecycle&&(!s||!s->enabled))return;
+    if(ec.batteryAgingAccess()!=BatteryAgingAccess::ReadWrite)throw std::runtime_error("Подмена батареи для этого устройства недоступна");
+    ec.ensureBatteryAgingWriteAccess();
     const auto before=read(ec);
+    if(before.host.empty()||decodeSbsBatteryDate(static_cast<std::uint8_t>(before.manufacture>>8),static_cast<std::uint8_t>(before.manufacture)).empty()||
+       !before.design||before.design==0xffff||before.cycles==0xffff||before.serviceBusy||before.savePending)
+        throw std::runtime_error("Исходные данные батареи или очередь сохранения не подтверждены");
+    static_cast<void>(monthDate(before)); // Validate the clock before creating any backup.
     if(!s){
         if(std::filesystem::exists(originalPath()))throw std::runtime_error("Отсутствует рабочая история батареи; исходная резервная копия сохранена");
         if(!enabled){if(before.date)throw std::runtime_error("Исходный снимок отсутствует");return;}

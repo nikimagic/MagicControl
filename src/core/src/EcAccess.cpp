@@ -237,19 +237,34 @@ std::uint8_t EcAccess::readStable(std::uint16_t address) {
     return impl_->readStableLocked(address);
 }
 
+BatteryAgingAccess EcAccess::batteryAgingAccess() const noexcept{
+    const std::lock_guard lock(impl_->gate_);
+    if(!boardVerified())return BatteryAgingAccess::Unavailable;
+    const auto access=impl_->backend_->batteryAgingAccess(impl_->boardCheck_.board);
+    return access==BatteryAgingAccess::ReadWrite&&!impl_->backend_->info().writable?BatteryAgingAccess::ReadOnly:access;
+}
+void EcAccess::ensureBatteryAgingWriteAccess(){
+    ensureWritable();const std::lock_guard lock(impl_->gate_);const BackendLock transport(*impl_->backend_);
+    if(batteryAgingAccess()!=BatteryAgingAccess::ReadWrite)throw BoardNotVerified("Battery aging transport/profile denied");
+    impl_->backend_->checkBatteryAgingWriteAccess();
+}
 std::optional<BatteryAgingReading> EcAccess::readBatteryAging(){
     const std::lock_guard lock(impl_->gate_);const BackendLock transport(*impl_->backend_);
-    if(!boardVerified()||deviceProfile(impl_->boardCheck_.board).id!="wu-jie-15-xpro")return {};
+    if(batteryAgingAccess()==BatteryAgingAccess::Unavailable)return {};
     return impl_->backend_->readBatteryAging();
 }
-void EcAccess::writeBatteryAgingByte(std::uint16_t address,std::uint8_t value){
+std::optional<std::array<std::uint8_t,4>> EcAccess::readNativeFanFirmwareSelectors(){
+    const std::lock_guard lock(impl_->gate_);const BackendLock transport(*impl_->backend_);
+    if(!boardVerified())return {};
+    return impl_->backend_->readNativeFanFirmwareSelectors();
+}
+void EcAccess::writeBatteryAgingField(BatteryAgingField field,std::uint8_t value){
     ensureWritable();const std::lock_guard lock(impl_->gate_);const BackendLock transport(*impl_->backend_);
-    if(deviceProfile(impl_->boardCheck_.board).id!="wu-jie-15-xpro"||
-       (address!=0x7f2&&address!=0x7f3&&address!=0x9c9&&address!=0x9ca&&address!=0x726))
-        throw BoardNotVerified("Battery aging address/profile denied");
-    audit::event("battery_aging_write","\"address\":"+std::to_string(address)+",\"value\":"+std::to_string(value));
+    if(batteryAgingAccess()!=BatteryAgingAccess::ReadWrite)
+        throw BoardNotVerified("Battery aging transport/profile denied");
+    audit::event("battery_aging_write","\"field\":"+std::to_string(static_cast<unsigned>(field))+",\"value\":"+std::to_string(value));
     impl_->writes_.fetch_add(1,std::memory_order_relaxed);
-    impl_->backend_->writeBatteryAgingByte(address,value);
+    impl_->backend_->writeBatteryAgingField(field,value);
 }
 
 std::optional<UsbPowerPriorityStatus> EcAccess::readUsbPriorityStatus(){
