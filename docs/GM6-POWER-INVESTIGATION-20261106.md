@@ -32,6 +32,13 @@ is therefore a candidate, not a proven explanation or a reason to silently
 alter the user's PL4. Intel 13th/14th gen datasheet:
 https://cdrdv2-public.intel.com/743844/743844-015.pdf .
 
+Correlating only CPU samples with load at least 95%, a fresh EC triple read
+within four seconds, and at least five seconds since the triple changed gives
+14 samples at 45/45/200 with package RAPL 44.3–45.6 W (median 44.9 W), and
+16 samples at 30/30/30 with 17.8–18.1 W (median 18.0 W). These are separately
+sampled observations, not a controlled comparison of PL4 alone. The older
+archives 18 and 19 did not contain comparable high-load records in this schema.
+
 The EC diagnostic snapshots in this archive read `FF` throughout 0x800–0xBFF,
 including the internal firmware candidates 0x8C4/0x8C5/0x8C6 and 0x873/0x87B/
 0x88B. The transport validity bitmap confirms read completion, not that these

@@ -35,7 +35,7 @@ bool saveOsdPreference(bool disabled, std::string& error);
 std::unique_ptr<KeysOperations> createKeysOperations(bool preview,ApplicationPreferences&,
     std::function<void(const ApplicationPreferences&)> applyPreferences,
     std::function<std::uint64_t(KeyAction,bool)> beginNotice,std::function<void()> ready,
-    std::string presentationProfile={});
+    std::optional<std::string> presentationProfile);
 
 }
 }

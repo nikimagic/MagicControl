@@ -1,5 +1,19 @@
 # Hardware-free regression suite
 
+`Run-ModelPreview.ps1` builds and runs the focused Windows/Linux model-preview
+matrix in isolated build directories. `magiccontrol_model_preview_tests` uses
+the real profile registry, catalog presentation, shared KEYs owner, and the
+platform SETs preview owner with injected board identity and memory-only
+callbacks. It checks every actual/selected catalog pair, all 11 KEYs actions in
+both positions against independent Windows/Linux routing expectations, blocked
+preview hardware commands, SETs actions, card parity, and compact geometry. It also
+runs the existing FAN, GPU and SETs preview/geometry checks. INFO is intentionally
+about the real host, so the test only asserts that preview suppresses FAN probes.
+The source-boundary check also verifies that both GUI factories pass the chosen
+presentation profile while deriving the hardware owner from the actual board.
+There is no GUI/app launch, physical EC, microphone or driver access. This does
+not replace an actual-device or pixel-level acceptance check.
+
 `settings_geometry_offline_contract` (owner request24.10.2026) checks every SETs
 outer card and nested battery/Logger edges across7DPI,5widths, Logger on/off,
 manual/automatic power controls, brightness ranges and diagnostic row counts.

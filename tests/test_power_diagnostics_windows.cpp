@@ -45,6 +45,8 @@ static int checkLenovoDiagnosticJson() {
     sample.intelPackagePower->msrLimit1Watts=140.; sample.intelPackagePower->msrLimit2Watts=190.;
     sample.intelPackagePower->mmioLimit1Watts=110.; sample.intelPackagePower->mmioLimit2Watts=115.;
     sample.intelPackagePower->msrLimit1Enabled=true; sample.intelPackagePower->mmioLimit1Clamp=true;
+    sample.intelPackagePower->msrPl4CurrentRaw=0x800000F0;
+    sample.intelPackagePower->msrPl4CurrentAmps=30.; sample.intelPackagePower->msrPl4CurrentLocked=true;
     sample.lenovoPowerEcDiagnostic.emplace();
     auto& ec=*sample.lenovoPowerEcDiagnostic;
     ec.c2a5=0; ec.c29a=10; ec.c364=0x34; ec.c365=0x12;
@@ -73,6 +75,7 @@ static int checkLenovoDiagnosticJson() {
         "\"adapter_ec_c2bb\":11", "\"adapter_ec_c43e\":65",
         "\"msr_pl1_w\":140.000", "\"msr_pl2_w\":190.000", "\"cltp_mmio_w\":110.000", "\"cstp_mmio_w\":115.000",
         "\"msr_pl1_enabled\":true", "\"mmio_pl1_clamp\":true",
+        "\"msr_601_raw\":\"0x800000F0\"", "\"msr_pl4_current_a\":30.000", "\"msr_pl4_current_locked\":true",
         "\"ec_c5e1\":103", "\"ec_c5e3\":110",
         "\"candidate_f9fb_bit7\":true", "\"ec_sampled_at_ms\":125"})
         require(json.find(field)!=std::string::npos,field);

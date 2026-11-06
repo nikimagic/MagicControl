@@ -14,7 +14,7 @@ const DeviceProfile& deviceProfile(const BoardDescriptor&) noexcept {
 }
 }
 int main(){
-    for(const int actual:{0,2,3,17,18}){
+    for(int actual=0;actual<static_cast<int>(ui::kSupportedLaptops.size());++actual){
         actualIndex=actual;
         for(int selected=0;selected<static_cast<int>(ui::kSupportedLaptops.size());++selected){
             ui::laptopSelection.store(selected);

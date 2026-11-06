@@ -177,7 +177,7 @@ KeyBackendResult executeKeyHardwareCommand(const KeysHardwareContext& context,Ke
 }
 std::unique_ptr<KeysOperations> createKeysOperations(EcAccess* ec,bool preview,ApplicationPreferences& preferences,
         std::function<void(const ApplicationPreferences&)> applyPreferences,
-        std::function<std::uint64_t(KeyAction,bool)> beginNotice,std::function<void()> ready,std::string presentationProfile){
+        std::function<std::uint64_t(KeyAction,bool)> beginNotice,std::function<void()> ready,std::optional<std::string> presentationProfile){
     struct Owner {
         std::string profile;bool preview{};EcAccess* ec{};
         std::unique_ptr<LaptopControl> laptop;std::shared_ptr<Gm6Controller> native;

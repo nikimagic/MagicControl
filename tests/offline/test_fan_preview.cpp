@@ -1,5 +1,6 @@
 #include "MagicControl/DeviceProfile.h"
 #include "MagicControl/BoardDescriptor.h"
+#include "MagicControl/Logging.h"
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -25,6 +26,7 @@ struct View final:mc::windows::FansOperationsWindows::ViewPort {
 #endif
 }
 int main(){try {
+    mc::setLoggingEnabled(false);mc::setBatteryLoggingEnabled(false);
     int checked{};
     std::vector<mc::BoardDescriptor> boards;
     for(const auto* p:mc::deviceProfiles()){
