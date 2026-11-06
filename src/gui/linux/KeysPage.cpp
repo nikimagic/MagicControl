@@ -109,7 +109,7 @@ GtkWidget* createKeysPage(OsdService* osd){
                 if(auto* owner=life->owner)completeKeys(*owner);
                 return G_SOURCE_REMOVE;
             },delivery,+[](gpointer data){delete static_cast<std::shared_ptr<KeysState::Life>*>(data);});
-        });
+        },std::string(deviceProfile(ui::presentationBoard()).id));
     for(int i=0;i<static_cast<int>(ui::keyRowCount);++i){
         gtk_widget_set_visible(state->off[i],state->operations->visible(i));
         gtk_widget_set_visible(state->on[i],state->operations->visible(i));

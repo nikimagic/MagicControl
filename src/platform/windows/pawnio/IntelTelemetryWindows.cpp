@@ -25,6 +25,7 @@ struct IntelTelemetryReader::Impl {
     HANDLE pciMutex{};
     ULONGLONG memoryRetry{};
     bool supported{};
+    bool powerDiagnostics{};
     bool lenovoPowerDiagnostics{};
     ULONGLONG lastPowerDiagnosticAt{};
     std::optional<IntelPackagePowerObservation> lastPowerDiagnostic;
@@ -35,7 +36,7 @@ struct IntelTelemetryReader::Impl {
     ULONGLONG previousCoreAt{},coreRetry{};
     bool coreSupported{},memorySupported{},coreCounterObserved{};
     ~Impl(){if(pciMutex)CloseHandle(pciMutex);}
-    Impl() {
+    explicit Impl(bool collectDiagnostics):powerDiagnostics(collectDiagnostics) {
         if (nativeCpuVendor()!=ProcessorVendor::Intel) return;
         int info[4]{}; __cpuid(info,1);
         const unsigned eax=static_cast<unsigned>(info[0]);
@@ -57,7 +58,10 @@ struct IntelTelemetryReader::Impl {
         readMemoryClock(sample);
         if(!supported){sample.processorStatus+=" Intel DTS/RAPL: модель CPU пока не подключена";return;}
         const auto now=GetTickCount64();
-        const bool collectPower=lenovoPowerDiagnostics&&(loggingEnabled()||sample.diagnostic);
+        // Reuse the existing read-only Raptor Lake collector during an action
+        // burst or an explicit diagnostic. Lenovo keeps its prior baseline.
+        const bool collectPower=powerDiagnostics&&coreSupported&&(sample.diagnostic||powerDiagnosticBurstActive()||
+            (lenovoPowerDiagnostics&&loggingEnabled()));
         if(now<retry){if(collectPower)readPackagePowerDiagnostic(sample);return;}
         try {if(!module.ready())module.open(L"IntelMSR.bin","d6ed85d65ab17a22f813ef98207d6d537155ee2ded5976a21cb48413c9b92e5f");msrModuleError.clear();}
         catch(const std::exception& error){msrModuleError=error.what();module.reset();previousEnergy.reset();previousCoreEnergy.reset();coreCounterObserved=false;retry=now+30000;sample.processorStatus+=" Intel/PawnIO: "+msrModuleError;if(collectPower)readPackagePowerDiagnostic(sample);return;}
@@ -114,6 +118,7 @@ struct IntelTelemetryReader::Impl {
         if(lastPowerDiagnostic&&now>=lastPowerDiagnosticAt&&now-lastPowerDiagnosticAt<interval){sample.intelPackagePower=lastPowerDiagnostic;return;}
         lastPowerDiagnosticAt=now;
         IntelPackagePowerObservation out;
+        out.legacyLenovoDiagnostic=lenovoPowerDiagnostics;
         const auto addError=[&](std::string_view which,const std::exception& e){if(!out.status.empty())out.status+="; ";out.status+=std::string(which)+": "+e.what();};
         const auto window=[](std::uint64_t field,int timeExp){const auto y=static_cast<int>((field>>17)&31),z=static_cast<int>((field>>22)&3);return std::ldexp(1.0,y-timeExp)*(1.0+z/4.0);};
         if(module.ready()){
@@ -131,6 +136,16 @@ struct IntelTelemetryReader::Impl {
         }catch(const std::exception& e){addError("MSR 610",e);}
         try{const auto perf=module.intelMsr(0x613);if(perf==UINT64_MAX)throw std::runtime_error("invalid all-ones MSR");out.msrPerformanceRaw=perf;}
         catch(const std::exception& e){addError("MSR 613",e);}
+        // Intel SDM Vol.4, Tables 2-45/2-46: on reviewed family 6 models
+        // B7/BA/BF, MSR 601[12:0] is PL4 current in 0.125 A steps; bit31
+        // is lock. This is separate from the EC PL4 request and RAPL watts.
+        try{
+            const auto current=module.intelMsr(0x601);
+            if(current==UINT64_MAX)throw std::runtime_error("invalid all-ones MSR");
+            out.msrPl4CurrentRaw=current;
+            out.msrPl4CurrentAmps=double(current&0x1fff)*0.125;
+            out.msrPl4CurrentLocked=(current&(1ULL<<31))!=0;
+        }catch(const std::exception& e){addError("MSR 601",e);}
         out.msrSampledAtMs=GetTickCount64();
         }else out.status="MSR: "+(msrModuleError.empty()?std::string("IntelMSR module unavailable or retry pending"):msrModuleError);
         if(!pciMutex)pciMutex=openSharedHardwareMutex(kPciMutexName);
@@ -182,7 +197,7 @@ struct IntelTelemetryReader::Impl {
         ReleaseMutex(pciMutex);
     }
 };
-IntelTelemetryReader::IntelTelemetryReader():impl_(std::make_unique<Impl>()){}
+IntelTelemetryReader::IntelTelemetryReader(bool powerDiagnostics):impl_(std::make_unique<Impl>(powerDiagnostics)){}
 IntelTelemetryReader::~IntelTelemetryReader()=default;
 void IntelTelemetryReader::read(MonitoringSnapshot& sample){impl_->read(sample);}
 }

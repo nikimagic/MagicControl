@@ -80,7 +80,7 @@ bool saveOsdPreference(bool disabled,std::string& error) {
 }
 std::unique_ptr<KeysOperations> createKeysOperations(bool preview,ApplicationPreferences& preferences,
         std::function<void(const ApplicationPreferences&)> applyPreferences,
-        std::function<std::uint64_t(KeyAction,bool)> beginNotice,std::function<void()> ready){
+        std::function<std::uint64_t(KeyAction,bool)> beginNotice,std::function<void()> ready,std::string presentationProfile){
     struct Owner {
         std::string profile;bool preview{};std::unique_ptr<LaptopControl> control;
         std::mutex gate;LaptopDisplayCache display;
@@ -120,7 +120,7 @@ std::unique_ptr<KeysOperations> createKeysOperations(bool preview,ApplicationPre
     services.lifecycleRead=[owner](KeyAction action){return observeKeyForRestore(owner->profile,owner->preview,owner->control.get(),owner->gate,action);};
     services.lifecycleSet=[owner](KeyAction action,bool on){applyKey(owner->profile,owner->preview,owner->control.get(),owner->gate,action,on);};
     services.beginNotice=std::move(beginNotice);
-    return std::make_unique<KeysOperations>(owner->profile,preview,true,std::move(services),std::move(ready));
+    return std::make_unique<KeysOperations>(owner->profile,preview,true,std::move(services),std::move(ready),std::move(presentationProfile));
 }
 
 }

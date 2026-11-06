@@ -61,7 +61,10 @@ struct KeyOperationServices {
 // All methods except destruction/worker callbacks are called on the UI thread.
 class KeysOperations {
 public:
-    KeysOperations(std::string profile,bool preview,bool linuxHost,KeyOperationServices,std::function<void()> ready);
+    // presentationProfile selects rows only during preview; all hardware
+    // admission and lifecycle restoration continue to use the actual profile.
+    KeysOperations(std::string profile,bool preview,bool linuxHost,KeyOperationServices,std::function<void()> ready,
+                   std::string presentationProfile={});
     ~KeysOperations();
     KeySubmission submit(int row,bool on);
     bool refresh();

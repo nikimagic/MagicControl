@@ -62,6 +62,8 @@ std::string lenovoPowerDiagnostic(const MonitoringSnapshot& sample){
         const auto hex=[](auto v){return v?quote(std::format("0x{:X}",*v)):std::string("null");};
         result+=std::format("\"msr_sampled_at_ms\":{},\"mmio_sampled_at_ms\":{},\"msr_units_raw\":{},\"msr_610_raw\":{},\"msr_613_cumulative_raw\":{},\"msr_pl1_w\":{},\"msr_pl2_w\":{},\"msr_pl1_enabled\":{},\"msr_pl2_enabled\":{},\"msr_pl1_window_s\":{},\"msr_pl2_window_s\":{},\"mmio_59a0_raw\":{},\"mmio_59a4_raw\":{},\"cltp_mmio_w\":{},\"cstp_mmio_w\":{},\"mmio_pl1_enabled\":{},\"mmio_pl2_enabled\":{},\"mmio_pl1_clamp\":{},\"mmio_shared_window_s\":{},\"intel_status\":{}",
             p->msrSampledAtMs,p->mmioSampledAtMs,hex(p->unitsRaw),hex(p->msrLimitRaw),hex(p->msrPerformanceRaw),number(p->msrLimit1Watts),number(p->msrLimit2Watts),boolean(p->msrLimit1Enabled),boolean(p->msrLimit2Enabled),number(p->msrWindow1Seconds),number(p->msrWindow2Seconds),hex(p->mmioLimit1Raw),hex(p->mmioLimit2Raw),number(p->mmioLimit1Watts),number(p->mmioLimit2Watts),boolean(p->mmioLimit1Enabled),boolean(p->mmioLimit2Enabled),boolean(p->mmioLimit1Clamp),number(p->mmioWindow1Seconds),quote(p->status));
+        result+=std::format(",\"msr_601_raw\":{},\"msr_pl4_current_a\":{},\"msr_pl4_current_locked\":{}",
+            hex(p->msrPl4CurrentRaw),number(p->msrPl4CurrentAmps),boolean(p->msrPl4CurrentLocked));
     }
     if(const auto& e=sample.lenovoPowerEcDiagnostic){
         if(result.size()>1)result+=',';
@@ -448,7 +450,9 @@ void recordPowerSample(EcAccess* access, const MonitoringSnapshot& sample) noexc
         static ULONGLONG lastSampleAt{};
         const auto now = GetTickCount64();
         const auto pending=samplesRemaining.load();
-        const bool lenovo=sample.intelPackagePower.has_value()||sample.lenovoPowerEcDiagnostic.has_value();
+        const bool powerDetail=sample.intelPackagePower.has_value()||sample.lenovoPowerEcDiagnostic.has_value();
+        const bool lenovo=sample.lenovoPowerEcDiagnostic.has_value()||
+            (sample.intelPackagePower&&sample.intelPackagePower->legacyLenovoDiagnostic);
         // Keep a sparse idle baseline, but capture the requested CPU/GPU
         // interaction at 10 s when the NVIDIA GPU is under substantial load.
         const auto gpuWatts=sample.processors[1].powerWatts;
@@ -457,8 +461,8 @@ void recordPowerSample(EcAccess* access, const MonitoringSnapshot& sample) noexc
         const bool gpuTransition=gpuLoaded&&(!previousGpuLoaded||*previousGpuLoaded!=*gpuLoaded);
         if(gpuLoaded)previousGpuLoaded=gpuLoaded;
         const auto interval=pending?kSampleIntervalMs:gpuLoaded.value_or(false)?10000ULL:60000ULL;
-        const bool immediateTransition=lenovo&&!pending&&gpuTransition&&(!lastSampleAt||now-lastSampleAt>=5000);
-        if ((!pending&&!lenovo) || (!immediateTransition&&lastSampleAt && now - lastSampleAt < interval)) return;
+        const bool immediateTransition=powerDetail&&!pending&&gpuTransition&&(!lastSampleAt||now-lastSampleAt>=5000);
+        if ((!pending&&!powerDetail) || (!immediateTransition&&lastSampleAt && now - lastSampleAt < interval)) return;
         lastSampleAt = now;
         const auto remaining = pending?samplesRemaining.fetch_sub(1)-1:0;
         const auto& cpu = sample.processors[0]; const auto& gpu = sample.processors[1];
@@ -492,7 +496,7 @@ void recordPowerSample(EcAccess* access, const MonitoringSnapshot& sample) noexc
             battery.temperatureRaw?std::to_string(*battery.temperatureRaw):"null",quote(battery.temperatureSource),quote(battery.temperatureStatus),quote(battery.source),
             battery.dynamicStale,batteryAges(),quote(battery.powerStatus),
             devices(sample.memory),devices(sample.disks),quote(sample.processorStatus));
-        if(lenovo)fields+=",\"lenovo_power_diagnostic\":"+lenovoPowerDiagnostic(sample);
+        if(powerDetail)fields+=std::string(lenovo?",\"lenovo_power_diagnostic\":":",\"intel_power_diagnostic\":")+lenovoPowerDiagnostic(sample);
         journal().write("sample",fields);
         if (pending&&!remaining) journal().write("burst_complete", "\"remaining\":0");
     } catch (const std::exception& error) { journal().write("sample_error", "\"error\":" + quote(error.what())); }

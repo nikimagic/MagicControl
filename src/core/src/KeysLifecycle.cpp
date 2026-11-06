@@ -243,9 +243,10 @@ struct KeysOperations::Impl {
     std::shared_ptr<DeviceOperation> operation;
     ResourceWorker worker;std::atomic<bool> done{};KeyOperationResult pending;
 
-    Impl(std::string id,bool viewing,bool linuxPlatform,KeyOperationServices adapters,std::function<void()> notify)
+    Impl(std::string id,bool viewing,bool linuxPlatform,KeyOperationServices adapters,std::function<void()> notify,std::string presentationProfile)
         :profile(std::move(id)),preview(viewing),linuxHost(linuxPlatform),services(std::move(adapters)),ready(std::move(notify)){
-        for(std::size_t i=0;i<kKeyCount;++i)visible[i]=keyActionVisible(profile,static_cast<KeyAction>(i));
+        const auto& presentation=preview&&!presentationProfile.empty()?presentationProfile:profile;
+        for(std::size_t i=0;i<kKeyCount;++i)visible[i]=keyActionVisible(presentation,static_cast<KeyAction>(i));
         localState();
         if(services.lifecycleRead&&services.lifecycleSet)
             lifecycle=std::make_unique<KeysLifecycle>(profile,services.lifecycleRead,services.lifecycleSet,services.lifecycleObserve);
@@ -364,8 +365,8 @@ struct KeysOperations::Impl {
         return completed;
     }
 };
-KeysOperations::KeysOperations(std::string profile,bool preview,bool linuxHost,KeyOperationServices services,std::function<void()> ready)
-    :impl_(std::make_unique<Impl>(std::move(profile),preview,linuxHost,std::move(services),std::move(ready))){}
+KeysOperations::KeysOperations(std::string profile,bool preview,bool linuxHost,KeyOperationServices services,std::function<void()> ready,std::string presentationProfile)
+    :impl_(std::make_unique<Impl>(std::move(profile),preview,linuxHost,std::move(services),std::move(ready),std::move(presentationProfile))){}
 KeysOperations::~KeysOperations()=default;
 KeySubmission KeysOperations::submit(int row,bool on){return impl_->submit(row,on);}
 bool KeysOperations::refresh(){return impl_->refresh();}

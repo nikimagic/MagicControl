@@ -183,10 +183,15 @@ struct DeviceTemperature {
 // cannot impose a lower limit.
 struct IntelPackagePowerObservation {
     std::uint64_t msrSampledAtMs{},mmioSampledAtMs{};
-    std::optional<std::uint64_t> unitsRaw,msrLimitRaw,msrPerformanceRaw;
+    std::optional<std::uint64_t> unitsRaw,msrLimitRaw,msrPerformanceRaw,msrPl4CurrentRaw;
     std::optional<std::uint32_t> mmioLimit1Raw,mmioLimit2Raw;
     std::optional<double> msrLimit1Watts,msrLimit2Watts,msrWindow1Seconds,msrWindow2Seconds,mmioLimit1Watts,mmioLimit2Watts,mmioWindow1Seconds,mmioWindow2Seconds;
     std::optional<bool> msrLimit1Enabled,msrLimit2Enabled,mmioLimit1Enabled,mmioLimit2Enabled,mmioLimit1Clamp,mmioLimit2Clamp;
+    // Intel MSR 0x601 encodes a proactive PL4 current limit, in 0.125 A
+    // increments on the reviewed Raptor Lake models. It is not a watt value.
+    std::optional<double> msrPl4CurrentAmps;
+    std::optional<bool> msrPl4CurrentLocked;
+    bool legacyLenovoDiagnostic{};
     std::string status;
     friend bool operator==(const IntelPackagePowerObservation&,const IntelPackagePowerObservation&)=default;
 };

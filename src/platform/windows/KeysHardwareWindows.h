@@ -50,7 +50,8 @@ KeyBackendResult executeKeyHardwareCommand(const KeysHardwareContext&,KeyAction,
     const std::function<void()>& radioAccess={},KeySnapshot baseline={});
 std::unique_ptr<KeysOperations> createKeysOperations(EcAccess*,bool preview,ApplicationPreferences&,
     std::function<void(const ApplicationPreferences&)> applyPreferences,
-    std::function<std::uint64_t(KeyAction,bool)> beginNotice,std::function<void()> ready);
+    std::function<std::uint64_t(KeyAction,bool)> beginNotice,std::function<void()> ready,
+    std::string presentationProfile={});
 
 }
 }

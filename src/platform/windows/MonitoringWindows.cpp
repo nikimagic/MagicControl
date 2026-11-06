@@ -227,7 +227,8 @@ struct MonitoringReader::Impl {
     NvidiaGpu nvidia;
     IntelGpu displayIntel;
     RadeonGpu displayRadeon;
-    windows::IntelTelemetryReader intel;
+    // The main monitoring owner alone samples optional package-limit details.
+    windows::IntelTelemetryReader intel{true};
     windows::IntelMemoryReader intelMemory;
     windows::AmdTelemetryReader amd;
     windows::PawnTelemetryReader pawn;

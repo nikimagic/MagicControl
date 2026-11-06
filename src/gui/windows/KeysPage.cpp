@@ -93,7 +93,7 @@ struct KeysPage::Impl {
         createFonts();
         operations=windows::createKeysOperations(access,ui::laptopPreview(),settings,std::move(applySettings),
             [notifications=popup](KeyAction action,bool on){return notifications?notifications->beginOperation(osd::keySwitch(static_cast<int>(action),on)):0;},
-            [window=page]{PostMessageW(window,WM_APP+20,0,0);});
+            [window=page]{PostMessageW(window,WM_APP+20,0,0);},std::string(deviceProfile(ui::presentationBoard()).id));
     }
     ~Impl() {
         operations.reset();

@@ -167,7 +167,7 @@ public:
     }
     std::uint64_t intelMsr(std::uint32_t address) {
         switch (address) {
-        case 0x1B1: case 0x1A2: case 0x606: case 0x610: case 0x611: case 0x613: case 0x639: return call("ioctl_read_msr", {address});
+        case 0x1B1: case 0x1A2: case 0x601: case 0x606: case 0x610: case 0x611: case 0x613: case 0x639: return call("ioctl_read_msr", {address});
         default: throw std::invalid_argument("Intel MSR outside monitoring allowlist");
         }
     }

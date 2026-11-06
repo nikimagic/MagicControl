@@ -1,5 +1,15 @@
 # Режимы мощности APU и переопределения EC
 
+## Intel: read-only диагностика PL при действии пользователя, 06.11.2026
+
+Общий Windows collector для проверенных CPUID Raptor Lake B7/BA/BF дополняет
+существующий короткий logging burst раздельными MSR610 и MMIO59A0/59A4, а
+также raw MSR601 и PL4 current в амперах. Для Lenovo прежний фоновый режим и
+имя его записи сохранены; для остальных источник называется
+`intel_power_diagnostic`. Это не изменение PL, не физический watt readback и
+не непрерывный новый poller. Таймштампы MSR и MMIO независимы. Подробнее:
+docs/GM6-POWER-INVESTIGATION-20261106.md. Linux collector не добавлен.
+
 ## Отмена ожидания при сне, 04.11.2026
 
 Windows ConfigurationRestore на системном событии сна отменяет ожидающую

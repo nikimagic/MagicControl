@@ -7,7 +7,7 @@
 
 namespace mc { class EcAccess; struct MonitoringSnapshot; struct BatteryPowerPolicy; }
 namespace mc::windows {
-// Shared production serializer; no hardware access.
+// Legacy name for the shared Intel/optional Lenovo JSON serializer; no hardware access.
 [[nodiscard]] std::string lenovoPowerDiagnostic(const MonitoringSnapshot& sample);
 // Shared typed policy reader for the battery card and diagnostic JSON. Read-only.
 BatteryPowerPolicy readBatteryPowerPolicy(const GUID* activeScheme=nullptr);
