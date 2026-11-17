@@ -7,13 +7,17 @@ backend, устройство, драйвер и права; совпадени�
 
 ## Проверенный срез
 
-На **01.11.2026** последний сверенный общий билд — **0.1.428**, с ранней CLI read-only защитой и межпроцессной защитой логов/сведений (код — коммит этой версии).
-Windows/Linux GUI+CLI и обе рабочие portable имеют эту версию; build manifest
-сообщает `complete`, обе платформы `verified`. Это датированный срез, не обещание
-автоматически актуального номера. Источники текущей версии и hashes:
-`build/product-build.json`, `build/product-version.txt`, `MagicControl/*/build-version.txt`.
-Версия локального архива и опубликованного релиза может отличаться от working build;
-локальные пакеты перечислены в [GitHub_Releases/README.txt](GitHub_Releases/README.txt).
+Сверено **17.11.2026**: рабочие Windows/Linux GUI+CLI и обе portable —
+**0.1.491**. `build/product-build.json` имеет статус `complete`, обе платформы
+`verified`; четыре исполняемых файла сверены с SHA-256 манифеста, различий
+в его входных файлах не обнаружено. Основание сборки — `23d0f84` (коммит
+0.1.490) и отмеченное манифестом рабочее дерево. Номер коммита и номер
+portable не подменяют друг друга. Сборка датирована 07.11.2026; новые
+аппаратные проверки при этой сверке не выполнялись.
+
+Версии и хэши следующих сборок смотреть в `build/product-build.json`,
+`build/product-version.txt` и `MagicControl/*/build-version.txt`.
+Локальный или опубликованный архив может иметь другую версию.
 
 В GUI нет собственных thread/jthread/async creators; команды INFO/KEYs/SETs/FANs/
 GPU/Update/Sc используют общий runtime. Нативный Windows OSD сохраняет свой HWND
@@ -49,7 +53,8 @@ message loop через core actor; Linux — GTK/D-Bus. Это описание
 | INFO | Сведения реальной машины, явная установка драйвера, сбор EC/BIOS/VBIOS/EEPROM evidence |
 | GPU | NVIDIA/Radeon providers, точная identity, поддерживаемые драйвером лимиты и readback |
 
-Каталог содержит17 известных профилей (16 ноутбуков и HPBSD) и отдельный Unknown.
+Каталог содержит **18 профилей** (17 ноутбуков и мини-ПК HPBSD),
+включая Lenovo Legion KWCN, и отдельный fallback Unknown.
 Точный состав — [DeviceRegistry](src/devices/DeviceRegistry.cpp), допуски —
 [матрица поддержки](docs/DEVICE-SUPPORT-MATRIX.md). Профиль в меню не обещает
 полного управления: INFO/системные KEYs и независимые GPU tools могут работать
@@ -62,7 +67,8 @@ message loop через core actor; Linux — GTK/D-Bus. Это описание
 
 В KEYs OSD/Copilot хранятся в `keys-settings.ini`; Copilot — native firmware
 resource, без F23/Win+C hook. Bluetooth не воспроизводится из INI при startup/resume.
-У батареи различаются штатные Full Capacity/Balanced/Healthy, процентные запросы,
+У батареи различаются штатные режимы конкретного backend (в том числе
+Full Capacity/Balanced/Healthy у поддержанных Uniwill), процентные запросы,
 aging/history и реально применённое состояние; действующий контракт —
 [BATTERY](src/platform/windows/BATTERY.md). Firmware readback не доказывает
 физическое удержание заряда, измеренное потребление или полноту SPI.
@@ -72,7 +78,36 @@ Linux — KDE/Plasma Wayland/KScreen либо X11/XRandR. GlobalShortcuts portal
 попросить разрешение; нужен корректный kernel keymap. GNOME/wlroots Wayland
 writer не подключён, KEY_UNKNOWN не подменяется Sc. См. [LINUX-SC](docs/LINUX-SC.txt).
 
+Custom общий для устройств: один редактор, слоты1/2/3 с мощностью и собственными
+FAN-кривыми, общая библиотека и ресурсный вход. База Custom и дополнительные
+параметры мощности задаются данными/возможностями backend. Модель хранит16
+ячеек на канал; активное число точек — `DeviceProfile.fanPointCounts`.
+Read-only штатная таблица не даёт разрешения записывать её.
+
+Для BIOS/VBIOS общий `TelemetryGate` согласует паузу опроса, завершение уже
+начатых наблюдений и владение reader. Активный защитный контур охлаждения
+не отключается ради захвата. Gate принадлежит процессу; внешние программы
+им не управляются. Ограничения и неподтверждённые случаи — в
+[DIAGNOSTIC-DUMPS](docs/DIAGNOSTIC-DUMPS.md).
+
+Текущие частоты памяти выбираются по CPUID/типу DDR и проверенным register
+layouts. Номинальная скорость SMBIOS/SPD не выдаётся за текущее измерение;
+неподтверждённые или недоступные значения остаются unknown. Состояние OEM
+Overclock/FwVars Wujie и границы исследования описаны в
+[WUJIE-OVCLOCK](docs/WUJIE-OVCLOCK.md).
+
 ## Разработка
+
+В Git хранятся исходники, конфигурация и текстовая документация. Бинарные
+зависимости, шрифты/изображения, portable, релизные архивы, логи и дампы
+остаются локально. Свежему клону нужны отдельно предоставленные артефакты
+по [EXTERNAL-ARTIFACTS](docs/EXTERNAL-ARTIFACTS.md), с проверкой provenance/SHA-256.
+
+Исследования индексируются в [research/INDEX.md](research/INDEX.md).
+`build` содержит используемые сборки/clangd/staging, одноразовые прогоны —
+`out`; общие декомпиляции и внешние оригиналы находятся в соседних каталогах
+[материалов](../КАТАЛОГ_МАТЕРИАЛОВ.md). Переносы продолжаются: старый путь
+или отсутствие cache-файла не являются основанием для удаления данных.
 
 Перед правкой прочитайте [AGENTS.md](AGENTS.md) и обязательный раздел
 [WORKING-RULES](docs/WORKING-RULES.md). [PROJECT-MAP](docs/PROJECT-MAP.md) показывает
@@ -99,5 +134,7 @@ rg --no-ignore -n "нужный признак" research/конкретный-ca
 `Tools/Package-Releases.py`; публикация/push/tag/signing — отдельное поручение.
 `mctl` входит только в личные working portable, не в публичные архивы.
 
-Лицензия исходников не определена. Условия сторонних компонентов — в notices и
-source offers соответствующих пакетов. Документационная правка не меняет лицензию.
+Условия официальной двоичной поставки — [packaging/LICENSE.txt](packaging/LICENSE.txt).
+Условия сторонних компонентов приведены отдельно в notices/source offers.
+Доступ к исходникам сам по себе не заменяет условий правообладателя; этот
+документ не вводит новую лицензию.

@@ -40,7 +40,8 @@ PawnIO и VERSIONINFO установленного SYS, а также верси
 
 HPBSD uses the same HpbsdFanController as GUI: `fans default`, `fans min`,
 `fans max`, `fans manual CPU_PERCENT SYSTEM_PERCENT` (or `fans fixed`).
-Targets are nominal-RPM percentages, CPU36..100 and system38..100, not PWM.
+Inputs use the common5..100% range. Targets are nominal-RPM percentages, not PWM;
+actual backend minima/thermal safeguards remain separate from editor input bounds.
 Writes require `--yes` and the existing exclusive CLI/GUI control lease.
 Manual/Min/Max stay foreground for their watchdog; `--count N` bounds a check.
 Normal exit restores this controller's Default. `dump-ec` captures the full
@@ -52,8 +53,9 @@ logs_<actual board>, как GUI. JSON stdout остаётся прежним; о
 automatic restore и пользовательских изменений, независимая от обычных логов.
 
 Консольная версия возвращена по поручению владельца25.10.2026, начиная с0.1.192.
-История: последняя старая версия перед удалением — `0fb38b4^`, удаление — `0fb38b4`.
-Сборочные настройки восстановлены из этой истории; старые прямые EC/полосочные
+Исторический разбор ссылался на `0fb38b4^`/`0fb38b4`. После переписывания Git
+эти commit IDs могут отсутствовать и не являются текущей навигацией.
+Текущие сборочные настройки — в src/cli/CMakeLists.txt; старые прямые EC/полосочные
 writers заменены адаптерами текущих типизированных API GUI.
 
 ## Пути и первый запуск
@@ -115,7 +117,7 @@ Windows-протоколы через чужие Linux EC-регистры не 
 |FANs/телеметрия|status, diag, fans status|MonitoringReader, read-only diagnostic hardware, GPU selection по нагрузке и источники GUI|
 |INFO|inventory|defaultHardwareProvider().collect/toJson, общий формат INFO|
 |EC-дамп|dump-ec|createDiagnosticDump, по умолчанию ReadOnly и минимум60сек; probes только с двумя явными флагами --with-fan-probes --yes|
-|BIOS|dump-bios|createBiosRomDump: прежние AMI/AMD и FPT16, exact HYDROC/YAOSHI Ultra275HX FPT19; Windows only; H2OFFT пока не подключён|
+|BIOS|dump-bios|createBiosRomDump: общий automatic reader admission AFU/FPT16/FPT19/допущенный Insyde READ; точные платформенные ограничения и отказы сохраняются, включая запрет неподтверждённого Insyde на Lenovo|
 |Вентиляторы|fans default/max/manual/online FILE, fans fixed CPU GPU|FanWriteRequest/executeFanResource; exact controllers, общий readback и caller lease. Manual EC и Online различаются; fixed5..100, Min из native state. Прежний foreground watchdog сохранён|
 |Мощность|power status/economy/office/gaming/balanced/turbo/auto/custom A B C/slot N|Общие текущие setters; порядок полей как на модели GUI. Honor — read/custom SMU. Неизвестный preset остаётся отказом|
 |Батарея|battery status/limit/restart/thresholds/policy/protection/view/aging/native-turbo|Общий BatteryWriteRequest/executeBatteryResource; реальные model adapters сохраняют свои guards/rollback. Native pair/upper/restart общие для Windows/Linux; policy/protection/aging требуют подключённого backend. Physical enforcement не объявляется по readback|

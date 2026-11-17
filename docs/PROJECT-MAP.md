@@ -4,10 +4,11 @@ Lenovo KWCN: [контракт](LENOVO-KWCN.md), `src/devices/lenovo/legion-kwcn
 (общий Windows owner WMI/FAN/INFO), `src/protocols/lenovo` (чистые codecs и
 factory fingerprints), `tests/offline/lenovo` (протокол, Custom и startup/resume).
 
-Карта кода обновлена 01.11.2026: инкапсуляция SETs/FANs, общие CPU/APU, lighting, battery и FAN-входы; номер и hashes сверенной сборки —
-в [README](../README.md#проверенный-срез) и build/product-build.json. Старые
-датированные отчёты относятся к указанному в них commit/устройству, не к текущему
-status. Эта карта — навигация, не допуск к железу и не повтор нормативных правил.
+Карта сверена **17.11.2026** по текущему дереву: общие ресурсные операции,
+Custom/число FAN-точек как данные, native restore, Lenovo KWCN и координация
+firmware capture/телеметрии. Рабочий билд0.1.491 и границы сверки —
+[README](../README.md#проверенный-срез). Исторические отчёты относятся к своей
+версии/устройству; эта карта задаёт навигацию по коду, не аппаратный допуск.
 Перед изменением поведения — [AGENTS](../AGENTS.md) и [WORKING-RULES](WORKING-RULES.md).
 
 ## Структура
@@ -21,6 +22,7 @@ status. Эта карта — навигация, не допуск к желе�
 | src/gui | Общие data presentation/geometry/theme плюс Win32/GTK bindings |
 | src/cli | Синхронные запросы тех же операций, SSH lifetime и JSON output |
 | src/update | Verified check/prepare/helper и общая модель update::Operations |
+| out | Локальные одноразовые прогоны/исследовательские сборки, вне Git |
 | cmake, Tools | Build/embedded runtime/staging и единственный packager |
 | docs | Текущие тематические контракты и явно датированные исторические ревизии |
 | research, Users_logs, archive | Evidence/дампы/декомпил/предыдущий код; адресный поиск с --no-ignore |
@@ -28,7 +30,13 @@ status. Эта карта — навигация, не допуск к желе�
 
 `.ignore` ограничивает обычный rg, но не меняет Git/build и не удаляет evidence.
 Чистые settings packages — `packaging`; actual logs привязаны к реальной плате,
-не к выбранному в меню preview. Системный Current Working Directory — MagicControl.
+не к выбранному в меню preview. Рабочий каталог исходников — MagicControl. Portable/settings paths определяются
+кодом относительно исполняемого файла, не текущим каталогом оболочки.
+Git содержит только исходники/конфигурацию/текст. Runtime/assets, portable и
+бинарное evidence локальны; [EXTERNAL-ARTIFACTS](EXTERNAL-ARTIFACTS.md) описывает
+возврат зависимостей в свежий clone. `out` — одноразовые прогоны, декомпиляции —
+в соседнем `Decompile`, оригиналы — в `BIOS_EC/Control_Center/Reference_Projects`.
+Переносы и текущие evidence paths — [research/INDEX](../research/INDEX.md).
 
 ## Вход → владелец → факт → сохранение
 
@@ -42,7 +50,7 @@ status. Эта карта — навигация, не допуск к желе�
 | KEYs explicit | KeysPage/CLI → KeysOperations, core/include/MagicControl/KeyResourceControl.h и core/src/KeysLifecycle.cpp | Windows KeysHardwareWindows, Linux KeysControlLinux → общий typed setter и fresh observation | completeKeyResource → KeysPreferences/keys-settings.ini; UI take/OSD после overlays |
 | KEYs startup/resume/observe | KeysLifecycle под тем же владельцем | Те же readers/setters, собственная retry/suspend/Bluetooth policy | Один writer; внешние более свежие строки не затираются baseline |
 | SETs Windows | SettingsPage → typed SettingsAction → SettingsOperationsWindows / ResourceDispatch | SettingsActionWindows → BatterySettings/CustomMode(executePowerResource)/LightingControl(executeLightingResource)/EcLogger → native controller | SettingsSnapshot freshness/confirmation → SettingsPersistence/нативный writer; GUI accepted state |
-| SETs Linux | SettingsPage → SettingsOperationsLinux в SettingsServicesLinux | SettingsWorkerLinux/LightingControlLinux → поддержанный LaptopControl/sysfs; own sleep epoch | Common model result/cache и backend persistence; неподключённый writer остаётся unavailable |
+| SETs Linux | SettingsPage → SettingsOperationsLinux в SettingsServicesLinux | SettingsWorkerLinux → LaptopLightingResource → поддержанный LaptopControl/sysfs; own sleep epoch | Common model result/cache и backend persistence; неподключённый writer остаётся unavailable |
 | FANs Windows | FansPage → FansOperationsWindows в FanDeviceActionsWindows | FanWriteRequest/executeFanResource → exact FanController/GM/NativeFixedFans; общий command/readback | Model queue с тем же DTO; caller lease, pending/confirmed; storage и receipts у прежних owners |
 | FANs Linux | FansPage → FansOperationsLinux в FansServicesLinux | MonitoringReader и только имеющиеся typed backend возможности | Прежние profile storage/result/cache; без чужого Windows EC writer |
 | Lighting GUI/CLI/restore | LightingWriteRequest → executeLightingResource; Windows policy в LightingControlWindows, native обеих ОС в LaptopLightingResource | Проверенный SingleZone/native/HID backend; cycle Update не обходит expected/epoch | Explicit fresh observation → rememberLightingChoice; native/HID persistence у backend; временный restore не новый выбор |
@@ -66,6 +74,17 @@ queue/pending и изменяемые drafts принадлежат private owne
 содержит только native presentation callbacks; worker их не вызывает. Из GUI нет
 доступа к backend handles или mutable model state. Private backend factory SETs
 поглощена SettingsOperationsWindows; старые файлы удалены.
+
+`TelemetryGate` согласует Observation, SafetyControl и FirmwarePause. Capture
+закрывает приём опросов и дренирует начатые работы; lifetime ещё живого child
+сохраняет владение. Этот gate процессный; межпроцессная изоляция телеметрии и
+внешних NVIDIA providers не объявляется доказанной. Контракт —
+[DIAGNOSTIC-DUMPS](DIAGNOSTIC-DUMPS.md#пауза-опроса-при-biosvbios-06112026).
+
+`CustomPresets`/`CustomPresetValidation`/`PowerSettings` — общая модель слотов,
+power recipe/options и file validation. `DeviceProfile.customPreset` и
+`fanPointCounts` содержат различия данных. `ConfigurationRestoreWindows`
+обслуживает EC и native owners; `AwakeDeadline` не расходует бюджет во сне.
 
 ResourceWorker/ResourceDispatch — handles/typed queue; ResourceActor — lease для
 длительных control/event loops с прежним stop/join. UI threads не создают own
@@ -108,14 +127,18 @@ ELF adapter. Версии payload сверять по текущему embedded 
 | Общие resource entrypoints | [CONTROL-RESOURCE-ENTRYPOINTS](CONTROL-RESOURCE-ENTRYPOINTS.md) |
 | Каталог/данные/readback semantics | [RESOURCE-ARCHITECTURE-PLAN](RESOURCE-ARCHITECTURE-PLAN.md) |
 | UI geometry/header/scroll | [LINUX-UI-PARITY](LINUX-UI-PARITY.md), Geometry/ScrollModel/PageMechanics |
+| Внешние зависимости и локальные артефакты | [EXTERNAL-ARTIFACTS](EXTERNAL-ARTIFACTS.md), [research/INDEX](../research/INDEX.md) |
+| Lenovo KWCN | [LENOVO-KWCN](LENOVO-KWCN.md), devices/lenovo/legion-kwcn |
 | Readers и диагностический результат | [DIAGNOSTIC-DUMPS](DIAGNOSTIC-DUMPS.md), [VBIOS-DUMP](VBIOS-DUMP.md) |
 | Sc/portal/compositor/keymap | [LINUX-SC](LINUX-SC.txt) |
 | Build, installer/update, архивы, лицензии | [APP-UPDATES](APP-UPDATES.md), [CLI](CLI.md) |
 
 ## Свежие изменения и границы проверки
 
-Сверенный код включает common GUI/CLI/runtime cutover, Linux Sc и последующие
-Wujie aging/thermal-history изменения. Общая visibility policy скрывает USB-C
+Сверенный код включает common GUI/CLI/runtime, native Custom/restore, Lenovo,
+паузы firmware capture, модельный preview и общий aging backend. Телеметрия
+памяти — MemoryTelemetry/SensorDecoders и существующие OS collectors; точный
+допуск CPUID/DDR и физические подтверждения — в DEVICE-ARCHITECTURE. Общая visibility policy скрывает USB-C
 Battery/Performance, raw EC policy и Logger controls; сохранённые данные/API не
 удалены. USB-C priority не поддержан: admission отказывает до writer/save и не
 replay-ит этот режим при startup/resume/adapter change. BatteryAging находится в
@@ -131,5 +154,6 @@ BMS manufacture-age evidence — BatteryIdentityHistory; battery journal ownersh
 GUI execution перенос завершён в коде для перечисленных доменов: прежний список
 GPU/Update/OSD/Sc в WORKLIST закрыт. Это не физическая проверка всех плат и ОС.
 Остаются дополнительные private API/header weight и device/compositor validation — [актуальный WORKLIST](ARCHITECTURE-WORKLIST.md).
-Старые развёрнутые README/MAP и сведения их срезов сохранены в Git до этого пакета;
-датированные research/REVISION — история с собственной базой, не новая инструкция.
+История Git переписана при переходе к source-only хранению; наличие старого
+commit hash или пути проверять фактически. Датированные research/REVISION
+остаются историей своей базы и не заменяют действующий контракт.

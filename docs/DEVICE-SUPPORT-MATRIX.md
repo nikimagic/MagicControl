@@ -1,9 +1,10 @@
-# Матрица поддержки 17 устройств
+# Матрица поддержки 18 устройств
 
-Актуализация **27.10.2026**, база сборки **bbd7699**, рабочие Windows/Linux
-GUI и mctl **0.1.243**. Файлы/версии/4SHA проверены; в этой документальной
-актуализации приложение, драйверы и аппаратные утилиты не запускались.
-Подробные датированные evidence ниже сохраняют собственную область проверки.
+Актуализация **17.11.2026** по реестру и исходникам рабочего билда **0.1.491**
+(база манифеста23d0f84 /0.1.490). Обе portable и4SHA сверены чтением файлов.
+Аппаратные проверки и тесты при документальной сверке не запускались.
+Датированные evidence ниже сохраняют собственную область проверки: старая
+версия лога не подтверждает новую функцию или весь профиль.
 
 ## Как читать статус
 
@@ -17,12 +18,12 @@ GUI и mctl **0.1.243**. Файлы/версии/4SHA проверены; в э�
 Реестр: [DeviceRegistry](../src/devices/DeviceRegistry.cpp),
 [11 reported-профилей](../src/devices/mechrevo/ReportedProfiles.cpp),
 [capabilities](../src/core/include/MagicControl/DeviceProfile.h).
-Состав: **7 устройств с собственными Windows путями управления +10 inventory-only =17**.
-Это16ноутбуков и mini-PC HPBSD; возможности различаются, полного аппаратного
+Состав: **8 устройств с собственными Windows путями управления +10 inventory-only =18**.
+Это17ноутбуков (включая Lenovo KWCN) и mini-PC HPBSD; возможности различаются, полного аппаратного
 покрытия каждого элемента нет. Honor не является battery-only профилем.
 GM5 входит в 11 reported-профилей, но его возможности уже включены; слово reported
 в имени реестра не означает, что все его записи остаются только каталогом.
-Unknown/noname — резервный режим, в эти17 не входит.
+Unknown/noname — резервный режим, в эти18 не входит.
 
 Меню использует общий каталог. ДобавлениеHPBSD и остальных пунктов не
 переносит на них чужой transport/codec. Обычный inventory и общие BIOS/VBIOS
@@ -39,7 +40,7 @@ readers имеют отдельные hardware admissions: inventory-only EC п�
 
 [KEYs](../src/gui/common/KeysPolicy.h) не скрывается по модели: OSD и системный
 микрофон не требуют её EC-карты. В Windows также используются существующие системные
-пути Wi-Fi/Bluetooth/камеры/тачпада и программная блокировка Copilot. В Linux эти
+пути Wi-Fi/Bluetooth/камеры/тачпада и firmware-путь Copilot без клавиатурного hook. В Linux эти
 четыре системных переключателя и Copilot пока не подключены. Windows/Fn/USB/AC
 через Wujie EC не переносятся на остальные платы; Honor Fn использует свой HWMI/sysfs.
 Состояние и доступность определяются ответом ОС; выбор чужого профиля — просмотр.
@@ -69,7 +70,8 @@ readers имеют отдельные hardware admissions: inventory-only EC п�
 | 14 | **CANGLONG Series-X8xR55xP-B2**; Ryzen9 9955HX/RTX5070; N.1.40MRO57 | Инвентаризация; EC-протокол пуст. Project26, CC5.56.60.34. [I14](#i14-canglong-x8) | Общие функции; сравнить OEM с X6, сохраняя отдельный профиль и допуски. | **D0+D1**. Не использовать MRO14 от X6 или MRO56 от X6DR по одному префиксу/номеру; своё EC/RAM и AMD-кодек. |
 | 15 | **YAOSHI Series-X6AR55xY**; Ultra9 275HX/RTX5070Ti; N.1.18MRO24 **и** N.1.33MRO62 | Инвентаризация; EC-протокол пуст. Два отчёта, Project26, CC5.56.60.22/5.56.51.44. [I15](#i15-yaoshi) | Приоритетный семейный кандидат: разобран **X6AR5xxxN133MRO63**, рядом есть X6AR45-вариант. Есть общий Intel C5/C6 read-only monitor, но его наличие не даёт EC-карту. | **D0+D1 отдельно для MRO24/MRO62**; доказать соответствие ветви. MRO63 не является точным MRO62, X6AR45 не равен X6AR5. |
 | 16 | **GM6IX9B**, Yaoshi16Super; i9-14900HX/RTX4090; N.1.10MRO09 | Инвентаризация; EC-протокол пуст. Project25, CC5.56.51.58. [I16](#i16-gm6ix9b) | Приоритетный кандидат: OpenRevo прямо упоминает **GM6IX9B** в модели `models.json`; общие Intel и RAM1.5 механизмы можно сопоставлять с его OEM. | **D0+D1**, собственные FAN-таблицы/PL/драйвер. Публичный OpenRevo не содержит аппаратных карт; пример PL из документа не переносить. Project25/MRO09 не делают его GM6IR0C. |
-| 17 | **MINISFORUM EliteMini HPBSD**, Ryzen7 8845HS/Radeon780M; AMI1.06 / EC0.2 | Собственный ITE5571/PawnIO FAN controller и SMU telemetry; AFU два32МиБ ROM. [M17](#m17-hpbsd) | Сохранять отдельную native policy, ownership/Default и исходные кривые. Границы GUI20–100°C/5–100% не изменяют аппаратные таблицы сами по себе. | Public CPU power setter/battery/RGB/Uniwill map не включены; Linux writer не подтверждён. SPD temperature unavailable не доказывает отсутствия датчика. |
+| 17 | **MINISFORUM EliteMini HPBSD**, Ryzen7 8845HS/Radeon780M; AMI1.06 / EC0.2 | Собственный ITE5571/PawnIO FAN controller и SMU telemetry; AFU два32МиБ ROM. [M17](#m17-hpbsd) | Сохранять отдельную native policy, ownership/Default и исходные кривые. Границы GUI20–100°C/5–100% не изменяют аппаратные таблицы сами по себе. | Ручные SMU запросы и общий Custom подключены в коде; штатные профили требуют своего подтверждения. Battery/RGB/Uniwill map не заимствуются; Linux writer не подтверждён. SPD temperature unavailable не доказывает отсутствия датчика. |
+| 18 | **LENOVO LNVNB161216 / 82WK, 82WQ**, Legion KWCN | Код: общий native owner WMI/FAN/INFO, Custom power/options, Energy battery/brightness, startup/resume. [Контракт](LENOVO-KWCN.md) | Проверять fresh WMI ranges/readback и точный KWCN/SKU; Max — штатный Full Speed, не переписанная Manual100% таблица. | Флаг Full Speed не доказывает реальные RPM. Не переносить KWCN RAM/WMI policy на другие Legion. Linux writer не добавлен; аппаратные границы и история инцидента — в контракте. |
 
 ## Что означает «нужен дамп»
 

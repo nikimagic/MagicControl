@@ -1,5 +1,8 @@
 # Shared command boundaries
 
+Сверено 17.11.2026 по дереву рабочего билда 0.1.491. Зарегистрированы 18 профилей
+и Unknown fallback; поддержка команд различается по фактическому OS/backend.
+
 GUI and CLI use the same device-write entries. A resource key describes an
 operation, not evidence of a compatible device or permission to write.
 
@@ -7,8 +10,8 @@ operation, not evidence of a compatible device or permission to write.
 |---|---|---|
 | Native/EC battery upper, restart, platform policy, voltage | executeBatteryResource | Existing NativeBatteryController or admitted Wujie battery API |
 | Native charge upper/restart/expert pair, both OS | executeBatteryResource(LaptopControl,BatteryWriteRequest) | Exact known native policy, one read/decision/write/save transaction, checked LaptopControl setter |
-| FAN modes/curves/restore/compound | executeFanResource(FanResourceContext,FanWriteRequest) | Existing GM/native/Wujie owners; command/readback together, asynchronous EC submission remains explicitly pending |
-| Stock CPU profiles, Custom/editor/slots, automatic, economy, supply-limited legacy command | executePowerResource | Existing GM controller, native LaptopControl, Honor SMU or Wujie power API |
+| FAN modes/curves/restore/compound | executeFanResource(FanResourceContext,FanWriteRequest) | Existing GM/native/Wujie owners, including admitted Lenovo/HPBSD; command/readback together, asynchronous EC submission remains explicitly pending |
+| Stock CPU profiles, Custom/editor/slots, automatic, economy, supply-limited legacy command | executePowerResource | Existing GM controller, native LaptopControl (including Lenovo/HPBSD), Honor SMU or Wujie power API |
 | Lighting modes/palette/RGB/brightness, raw restore and cycle ticks | executeLightingResource(LightingControlContext,LightingWriteRequest) | Private policy; existing GM keyboard API or admitted Wujie backlight API |
 | HID lighting zones | Same lighting entry / Zone request | Existing ITE controller with fresh zone admission and per-zone configuration |
 | Native brightness/timeout, both OS | executeLightingResource(LaptopControl,LightingWriteRequest) | Existing native setters and their own model bounds/readback |
@@ -58,7 +61,9 @@ and rejects direct writes in every GUI/CLI source, as well as bypasses in the
 GUI battery and Custom policy functions. It is a structure check, not physical
 hardware verification. Fake-adapter tests cover refused/malformed routes;
 existing policy/queue/FAN/RGB tests check their admitted ordering and results.
-Pre-cutover sources live in `archive/control-cutover-0.1.384` and are not built.
+Pre-cutover reports describe their own revisions. Git history was rewritten;
+verify old commit IDs and any local archive path before relying on them.
+Historical sources are not part of current build targets.
 
 ResourceControlTable is the sole route-table implementation. Application-owned
 OSD/Copilot preferences use their existing transaction and KeysPreferences
@@ -71,3 +76,15 @@ entries above. Core ResourceControl Runtime owns finite workers; ResourceActor
 registry owns dedicated permanent resource loops. OS window/GTK readiness and
 pure input/render bindings remain UI-only. The old per-OS coordinators are not
 kept as compatibility wrappers. No new device/protocol admission is implied.
+
+Custom remains one shared editor/library/slot model, including power options
+and each slot's curves. DeviceProfile provides active point counts and validation
+data; the backend owns its actual codec/capability/readback. Native startup/resume
+uses ConfigurationRestoreWindows and the same FAN/CPU entries, never another
+Custom engine. AwakeDeadline preserves its budget across sleep.
+
+Firmware capture has an additional process-owned TelemetryGate boundary:
+observation admission/drain, safety-control refusal and reader lifetime. The
+DeviceOperation firmware ticket is required after quiescence. This is distinct
+from process/file leases and cannot pause another application's telemetry.
+See DIAGNOSTIC-DUMPS for documented provider teardown/child-cleanup limitations.
