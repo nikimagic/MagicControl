@@ -7,6 +7,7 @@
 
 ## GM6 (37)
 
+- [BIOS, EC и декомпиляция GM6](../../Decompile/GM6IR0C/BIOS_и_EC/)
 - [Ревизия чтения VBIOS и EEPROM, 23.11.2026](gm6-vbios-audit-20261123.md)
 - [Исходники GitHub: программные считыватели NVIDIA ROM](gm6-vbios-github-readers-20261123.md)
 - [b23 — сохранённые BIOS и распаковки](b23/) · [карта прежних путей](ec-platform-catalogue-20261023/B23-UB23-RELOCATION.md)
@@ -314,7 +315,11 @@
 - [runtime-tail-cutover-20261030](runtime-tail-cutover-20261030/)
 - [scroll-unification-20261027](scroll-unification-20261027/)
 - [sets-card-edges-20261024](sets-card-edges-20261024/)
-- [test_util](test_util/)
+- [SensorProbe и EC — отчёты и скрипты](test_util/analysis/README.md)
+  · [сохранённые входные данные](../out/test_util/analysis/)
+  · [журналы SensorProbe](../out/test_util/logs/)
+  · [исторические прогоны discovery](../out/test_util/discovery/runs/).
+  Последние три ссылки ведут к локальным данным; свежему клону их нужно предоставить отдельно.
 - [ui](ui/)
 - [users-logs-review-20261023](users-logs-review-20261023/)
 

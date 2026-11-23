@@ -75,6 +75,7 @@ CAPTURE_DSDT=ROOT/'out/test_util/analysis/EC_20261012_073054/acpi/DSDT.dat'
 OLD_IMAGES=ROOT/'build/gm6-battery-firmware-20261021/mro10-static'
 OLD_GM6_BATTERY=ROOT/'build/gm6-battery-firmware-20261021'
 GM6_BATTERY=ROOT/'research/gm6-battery-firmware-20261021'
+GM6_BATTERY_ARCHIVE=ROOT.parent/'Decompile/GM6IR0C/BIOS_и_EC'
 IMAGE_COPIES={'backup.fd':'b0.bin','bios.bin':'b1.bin','new.fd':'b2.bin'}
 ECP23_IDENTICAL_DUMPS=(
  (ECP23/'171a0d/b0.bin.dump',ECP23/'171a0d/b1.bin.dump'),
@@ -173,7 +174,8 @@ def resolve_recorded(recorded,*,platform_name=None):
  except ValueError:pass
  else:
   if '..' in relative.parts:raise ValueError('Invalid historical GM6 battery evidence path')
-  return GM6_BATTERY/relative
+  preserved=GM6_BATTERY/relative
+  return preserved if preserved.exists() else GM6_BATTERY_ARCHIVE/relative
  return path
 
 def read_verified(recorded,expected_sha256):

@@ -8,7 +8,7 @@ backend, устройство, драйвер и права; совпадени�
 ## Проверенный срез
 
 Сверено **17.11.2026**: рабочие Windows/Linux GUI+CLI и обе portable —
-**0.1.491**. `build/product-build.json` имеет статус `complete`, обе платформы
+**0.1.492**. `build/product-build.json` имеет статус `complete`, обе платформы
 `verified`; четыре исполняемых файла сверены с SHA-256 манифеста, различий
 в его входных файлах не обнаружено. Основание сборки — `23d0f84` (коммит
 0.1.490) и отмеченное манифестом рабочее дерево. Номер коммита и номер
@@ -104,6 +104,9 @@ Overclock/FwVars Wujie и границы исследования описаны
 по [EXTERNAL-ARTIFACTS](docs/EXTERNAL-ARTIFACTS.md), с проверкой provenance/SHA-256.
 
 Исследования индексируются в [research/INDEX.md](research/INDEX.md).
+Для материалов SensorProbe и EC см. [обзор архива](research/test_util/analysis/README.md),
+[отчёт по температурам](research/test_util/analysis/TEMPERATURES-FULL-REPORT.md)
+и [инвентаризацию датчиков](research/test_util/analysis/sensor_inventory.py).
 `build` содержит используемые сборки/clangd/staging, одноразовые прогоны —
 `out`; общие декомпиляции и внешние оригиналы находятся в соседних каталогах
 [материалов](../КАТАЛОГ_МАТЕРИАЛОВ.md). Переносы продолжаются: старый путь
