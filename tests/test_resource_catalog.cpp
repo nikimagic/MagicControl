@@ -117,7 +117,7 @@ int main(int argc,char** argv){
         check(executeInfoDumpResource(request,&services).report.saved,"EC resource invokes its collector");
         request.kind=InfoDumpKind::Bios;check(executeInfoDumpResource(request,&services).report.message=="bios","BIOS resource invokes its collector");
         request.kind=InfoDumpKind::Vbios;const auto partial=executeInfoDumpResource(request,&services);
-        check(partial.report.message=="partial"&&partial.vbios.outcome()=="completed_partial","VBIOS partial result is retained");
+        check(partial.report.saved&&partial.vbios.outcome()=="completed","ordinary VBIOS is a complete result");
         PowerInputDumpSession session;request.kind=InfoDumpKind::PowerInput;request.powerSession=&session;request.displaySnapshot="display";
         check(executeInfoDumpResource(request,&services).report.paused,"guided power resource invokes its collector");
         check(calls==std::vector<std::string>({"ec","bios","vbios","power"}),"each INFO request invokes only its matching collector");

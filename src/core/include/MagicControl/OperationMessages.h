@@ -68,7 +68,9 @@ private:
                 const auto& details=body.at("details");
                 // Only user-relevant stages. Full paths, hashes, stdout and
                 // repeated preflights remain in the disk log; append deduplicates.
-                if(event=="capture_started"){append("Подготовка дампов VBIOS и EEPROM.");return;}
+                if(event=="capture_started"){
+                    append(details.at("mode").text()=="eeprom"?"Подготовка чтения полного EEPROM.":"Подготовка чтения VBIOS.");return;
+                }
                 if(event=="actual_platform"&&details.at("profile").text().empty()){append("Модель не распознана; проверяется фактическая видеокарта.");return;}
                 if(event=="target_selected"){append("Видеокарта: "+details.at("name").text()+".");return;}
                 if(event=="tool_verified"){
@@ -99,7 +101,6 @@ private:
                     if(details.at("capacity").at("admitted").flag())append("Ёмкость EEPROM проверена.");
                     return;
                 }
-                if(event=="capacity_probe_failed")return; // The following entire_refused owns this error.
                 if(event=="pass_file"&&details.at("bytes").number()>0&&details.at("exit_code").number()==0){
                     const auto name=details.at("mode").text()=="vbios"?"VBIOS":"EEPROM";
                     append(std::string(name)+": чтение "+std::to_string(static_cast<int>(details.at("pass").number()))+" сохранено.");return;
@@ -111,12 +112,7 @@ private:
                     const auto name=details.at("mode").text()=="vbios"?"VBIOS":"EEPROM";
                     append(std::string(name)+": "+details.at("error").text(),Tone::Error);return;
                 }
-                if(event=="entire_refused"){
-                    append("EEPROM: "+details.at("reason").text(),Tone::Error);
-                    if(details.at("ordinary_vbios_preserved").flag())
-                        append("Проверенный обычный VBIOS сохранён независимо от полного EEPROM.",Tone::Success);
-                    return;
-                }
+                if(event=="entire_refused")return; // The terminal result explains the refusal.
             }
             if(event=="cancel_pending"){append("Отмена запрошена. Ожидание окончания текущего чтения.");return;}
             if(event=="failed"||event=="capture_failed"||event=="vendor_process_pending"){

@@ -38,6 +38,7 @@ inline Options parse(const std::vector<std::string>& args){
             else o.output=std::filesystem::u8path(args[i]);
         }else if(a=="--dump-bios"&&o.words.empty())o.words.push_back("dump-bios");
         else if(a=="--dump-vbios"&&o.words.empty())o.words.push_back("dump-vbios");
+        else if(a=="--dump-eeprom"&&o.words.empty())o.words.push_back("dump-eeprom");
         else if(a.starts_with("--"))throw std::invalid_argument("Unknown option: "+a);
         else o.words.push_back(a);
     }

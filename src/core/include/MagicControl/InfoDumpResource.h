@@ -12,6 +12,7 @@ struct InfoDumpResourceRequest {
     std::stop_token cancellation;
     std::atomic<std::uint64_t>* progress{};
     std::string pci;
+    VbiosDumpMode vbiosMode{VbiosDumpMode::Image};
     std::filesystem::path outputRoot;
     std::shared_ptr<EcAccess> access;
     MaximumFanProbe maximumProbe;

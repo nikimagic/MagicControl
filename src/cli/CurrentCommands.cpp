@@ -134,7 +134,8 @@ usage: mctl COMMAND [arguments] [--yes] [--watch] [--count N] [--interval-ms N]
   dump-ec [--output DIR]                  ReadOnly dump (minimum60s)
   dump-ec --with-fan-probes --yes         explicit GUI Default/Max diagnostic
   dump-bios | --dump-bios                 same automatic AFU/FPT16/FPT19 collector
-  dump-vbios [0000:01:00.0] [--output DIR] NVIDIA VBIOS + entire EEPROM,2 reads each
+  dump-vbios  [0000:01:00.0] [--output DIR] NVIDIA VBIOS, two reads
+  dump-eeprom [0000:01:00.0] [--output DIR] Entire primary NVIDIA EEPROM, requires known capacity
   power [status|economy|office|gaming|balanced|performance|turbo|auto]
   power custom A B C [key=value ...] --yes model-native order/ranges as in GUI
     Lenovo options: gpu.offset gpu.ctgp gpu.boost cpu.tau cpu.temperature gpu.temperature
@@ -605,17 +606,18 @@ int run(const std::vector<std::string>& args){
         if(cmd=="models"){
             arity(o,1,1);std::string data="[";for(const auto* p:deviceProfiles()){if(data.size()>1)data+=',';data+="{\"id\":"+quote(p->id)+",\"manufacturer\":"+quote(p->manufacturer)+",\"baseboard\":"+quote(p->baseBoard)+",\"name\":"+quote(p->displayName)+",\"protocol\":"+quote(p->protocolId)+"}";}emit("models","\"profiles\":"+data+"]");return 0;
         }
-        const std::array commands{"board","status","diag","resources","fans","inventory","dump-ec","dump-bios","dump-vbios","power","battery","keyboard","keys","lighting","gpu","lpp"};
+        const std::array commands{"board","status","diag","resources","fans","inventory","dump-ec","dump-bios","dump-vbios","dump-eeprom","power","battery","keyboard","keys","lighting","gpu","lpp"};
+        const bool gpuFirmwareDump=cmd=="dump-vbios"||cmd=="dump-eeprom";
         if(std::none_of(commands.begin(),commands.end(),[&](const char* name){return cmd==name;}))throw std::invalid_argument("Unknown command; use --help");
         if(o.probes&&cmd!="dump-ec")throw std::invalid_argument("Fan probes belong to dump-ec only");
-        if(!o.output.empty()&&cmd!="dump-ec"&&cmd!="dump-bios"&&cmd!="dump-vbios")throw std::invalid_argument("Output directory belongs to dump commands only");
+        if(!o.output.empty()&&cmd!="dump-ec"&&cmd!="dump-bios"&&!gpuFirmwareDump)throw std::invalid_argument("Output directory belongs to dump commands only");
         const bool writes=writer(o);
         if(writes&&!o.yes){emit(cmd,"\"dry_run\":true,\"requested\":"+arguments(o.words));return 0;}
 #if defined(_WIN32)
         winrt::init_apartment(winrt::apartment_type::multi_threaded);
 #endif
         Runtime r(writes);ApplicationPreferences prefs;std::string error;loadApplicationPreferences(portableSettingsPath("app-settings.ini"),prefs,error);
-        if(!initializeLogging(prefs.allLogs,(cmd=="dump-bios"||cmd=="dump-vbios")?o.output:std::filesystem::path{},prefs.batteryLog))
+        if(!initializeLogging(prefs.allLogs,(cmd=="dump-bios"||gpuFirmwareDump)?o.output:std::filesystem::path{},prefs.batteryLog))
             throw std::runtime_error("Cannot initialize logs: "+loggingInitializationError());
         audit::Scope action("cli."+cmd,"\"arguments\":"+arguments(o.words));
         IdentityHistoryScope historyOrigin("user","cli."+cmd);
@@ -623,7 +625,7 @@ int run(const std::vector<std::string>& args){
         auto operation=writes&&!ownedInside?deviceOperations().tryBegin():std::shared_ptr<DeviceOperation>{};
         if(writes&&!ownedInside&&!operation)throw std::runtime_error("Device operation busy");
         // BIOS dump is deliberately before any EC startup read/restoration.
-        if(cmd!="dump-bios"&&cmd!="dump-vbios"&&cmd!="board"&&cmd!="resources")recordStartupRomId(!o.noEc);
+        if(cmd!="dump-bios"&&!gpuFirmwareDump&&cmd!="board"&&cmd!="resources")recordStartupRomId(!o.noEc);
         if(cmd=="board"){arity(o,1,1);board(r);}
         else if(cmd=="resources"){arity(o,1,2);resources(r,o);}
         else if(cmd=="status"||cmd=="diag"||(cmd=="fans"&&(o.words.size()==1||o.words[1]=="status"))){arity(o,1,2);status(r,o);}
@@ -635,8 +637,9 @@ int run(const std::vector<std::string>& args){
         }
         else if(cmd=="dump-bios"){arity(o,1,1);InfoDumpResourceRequest request;request.kind=InfoDumpKind::Bios;request.cancellation=r.stop.get_token();
             const auto s=executeInfoDumpResource(request).report;emit(cmd,"\"saved\":"+std::string(s.saved?"true":"false")+",\"message\":"+quote(s.message));return s.saved?0:4;}
-        else if(cmd=="dump-vbios"){arity(o,1,2);InfoDumpResourceRequest request;request.kind=InfoDumpKind::Vbios;request.cancellation=r.stop.get_token();request.pci=o.words.size()==2?o.words[1]:"";request.outputRoot=o.output;
-            const auto s=executeInfoDumpResource(request).vbios;const auto u=s.directory.u8string();emit(cmd,"\"outcome\":"+quote(s.outcome())+",\"cancelled\":"+(s.cancelled?"true":"false")+",\"saved\":"+std::string(s.saved?"true":"false")+",\"vbios_saved\":"+(s.vbiosSaved?"true":"false")+",\"eeprom_saved\":"+(s.eepromSaved?"true":"false")+",\"capacity_verified\":"+(s.capacityVerified?"true":"false")+",\"eeprom_bytes\":"+std::to_string(s.eepromBytes)+",\"directory\":"+quote(std::string(reinterpret_cast<const char*>(u.data()),u.size()))+",\"message\":"+quote(s.message));return s.saved?0:4;}
+        else if(gpuFirmwareDump){arity(o,1,2);InfoDumpResourceRequest request;request.kind=InfoDumpKind::Vbios;request.cancellation=r.stop.get_token();request.pci=o.words.size()==2?o.words[1]:"";request.outputRoot=o.output;
+            request.vbiosMode=cmd=="dump-eeprom"?VbiosDumpMode::EntireEeprom:VbiosDumpMode::Image;
+            const auto s=executeInfoDumpResource(request).vbios;const auto u=s.directory.u8string();emit(cmd,"\"outcome\":"+quote(s.outcome())+",\"cancelled\":"+(s.cancelled?"true":"false")+",\"saved\":"+std::string(s.saved?"true":"false")+",\"vbios_saved\":"+(s.vbiosSaved?"true":"false")+",\"eeprom_saved\":"+(s.eepromSaved?"true":"false")+",\"capacity_verified\":"+(s.capacityVerified?"true":"false")+",\"eeprom_bytes\":"+std::to_string(s.eepromBytes)+",\"directory\":"+quote(std::string(reinterpret_cast<const char*>(u.data()),u.size()))+",\"message\":"+quote(s.message));return s.outcome()=="completed"?0:4;}
         else if(cmd=="dump-ec"){arity(o,1,1);InfoDumpResourceRequest request;request.kind=InfoDumpKind::Ec;request.cancellation=r.stop.get_token();request.mode=o.probes?DiagnosticDumpMode::WithFanProbes:DiagnosticDumpMode::ReadOnly;request.outputRoot=o.output;
             const auto s=executeInfoDumpResource(request).report;emit(cmd,"\"saved\":"+std::string(s.saved?"true":"false")+",\"hardware_warning\":"+(s.hardwareWarning?"true":"false")+",\"hardware_warning_message\":"+quote(s.hardwareWarningMessage)+",\"message\":"+quote(s.message));return s.saved?0:4;}
         else if(cmd=="battery")batteryCommand(r,o);else if(cmd=="keyboard")keyboardCommand(r,o);else if(cmd=="keys")keysCommand(r,o);

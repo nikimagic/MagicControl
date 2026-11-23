@@ -286,8 +286,8 @@ using namespace mc::gui;
         events.clear();request.operation=InfoResourceOperation::EcDump;result=wait(InfoOperation::start(request,services));
         check(result.success&&events==std::vector<std::string>{"dump"}&&result.message=="dump","INFO dump routes only to supplied service");
         events.clear();request.operation=InfoResourceOperation::VbiosDump;partial=true;result=wait(InfoOperation::start(request,services));
-        check(!result.success&&result.vbios.outcome()=="completed_partial"&&result.message=="partial"&&events==std::vector<std::string>{"dump"},
-            "INFO preserves independently saved VBIOS partial result");
+        check(result.success&&result.vbios.outcome()=="completed"&&result.message=="partial"&&events==std::vector<std::string>{"dump"},
+            "INFO treats a saved ordinary VBIOS as complete");
         events.clear();request.operation=InfoResourceOperation::PawnIoPrepare;result=wait(InfoOperation::start(request,services));
         check(!result.success&&events==std::vector<std::string>{"prepare"}&&result.message.find("fixture")!=std::string::npos,
             "INFO worker publishes preparation failure");

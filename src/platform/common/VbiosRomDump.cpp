@@ -105,17 +105,21 @@ std::vector<GraphicsAdapter> vbiosDumpAdapters(){
 }
 std::string vbiosAdapterPci(const GraphicsAdapter& a){return pci(a);}
 bool vbiosRomDumpAvailable() noexcept{return observeGpuPresence([]()->GpuPresence&{return gpuPresence();},GpuPresenceKind::VbiosDump,[]{return !captureAdapters().empty();});}
-VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uint64_t>* progress,std::string selectedPci,fs::path outputRoot,std::shared_ptr<TelemetryGate::FirmwarePause> telemetryPause){
+VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uint64_t>* progress,std::string selectedPci,fs::path outputRoot,std::shared_ptr<TelemetryGate::FirmwarePause> telemetryPause,VbiosDumpMode mode){
     using namespace diagnostics::nvflash;
-    VbiosRomDumpResult result;
+    VbiosRomDumpResult result;result.mode=mode;
+    const bool entire=mode==VbiosDumpMode::EntireEeprom;
+    const auto requested=std::string(entire?"[\"entire_eeprom\"]":"[\"vbios\"]");
     Capture vbios{"vbios","pass","vbios.rom","nvflash_saved_vbios"};
     Capture eeprom{"eeprom","eeprom-pass","eeprom-full.rom","nvflash_entire_primary_eeprom"};
+    auto& selected=entire?eeprom:vbios;
+    (entire?vbios:eeprom).state="not_requested";
     Capacity capacity;std::string error,state="precheck",chosen="null";std::ofstream events;bool fatal{};std::uint64_t completedBytes{};
-    const auto synchronize=[&]{result.vbiosSaved=vbios.verified;result.eepromSaved=eeprom.verified;result.saved=result.vbiosSaved&&result.eepromSaved;result.eepromBytes=capacity.bytes;};
+    const auto synchronize=[&]{result.vbiosSaved=vbios.verified;result.eepromSaved=eeprom.verified;result.saved=result.requestedImageSaved();result.eepromBytes=capacity.bytes;};
     const auto checkpoint=[&]{
         synchronize();if(result.directory.empty())return;
         atomicText(result.directory/"manifest.json","{\"schema\":2,\"app_version\":"+q(MAGICCONTROL_VERSION_STRING)+",\"utc\":"+q(time())+
-            ",\"state\":"+q(state)+",\"target\":"+chosen+",\"requested_modes\":[\"vbios\",\"entire_eeprom\"]"+
+            ",\"state\":"+q(state)+",\"target\":"+chosen+",\"requested_modes\":"+requested+
             ",\"vbios_saved\":"+(result.vbiosSaved?"true":"false")+",\"eeprom_saved\":"+(result.eepromSaved?"true":"false")+
             ",\"saved\":"+(result.saved?"true":"false")+",\"capacity_verified\":"+(result.capacityVerified?"true":"false")+
             ",\"eeprom_expected_bytes\":"+std::to_string(capacity.bytes)+",\"capacity\":"+capacityJson(capacity)+
@@ -140,7 +144,7 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
         for(unsigned i=0;i<1000;++i){const auto p=root/(prefix+"-"+std::to_string(i));if(fs::create_directory(p)){result.directory=p;break;}}
         if(result.directory.empty())throw std::runtime_error("Cannot create unique VBIOS/EEPROM directory");
         events.open(result.directory/"events.jsonl",std::ios::binary);if(!events)throw std::runtime_error("Cannot create VBIOS/EEPROM event log");
-        event("capture_started","{\"requested_pci\":"+q(selectedPci)+",\"modes\":[\"vbios\",\"entire_eeprom\"],\"reads_per_mode\":2}");checkpoint();
+        event("capture_started","{\"requested_pci\":"+q(selectedPci)+",\"modes\":"+requested+",\"mode\":"+q(selected.name)+",\"reads_per_mode\":2}");checkpoint();
         if(telemetryPause&&!telemetryGate().owns(telemetryPause))throw std::invalid_argument("VBIOS: foreign telemetry pause");
         if(!telemetryPause)telemetryPause=telemetryGate().requestFirmwareCapture(token);
         telemetryPause->waitForQuiescence(token,std::chrono::seconds(10));
@@ -218,6 +222,7 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
                     event("pass_file","{\"mode\":"+q(c.name)+",\"pass\":"+std::to_string(pass+1)+",\"bytes\":"+std::to_string(c.sizes[pass])+",\"sha256\":"+q(c.hashes[pass])+",\"exit_code\":"+std::to_string(returned.first)+"}");checkpoint();
                     if(returned.first)throw std::runtime_error("NVFlash save failed; raw and partial files retained");
                     if(const auto problem=readProblem(returned.second,entire);!problem.empty())throw std::runtime_error("NVFlash read reported "+problem);
+                    if(!c.sizes[pass])throw std::runtime_error("NVFlash did not produce a nonempty ROM file");
                     if(entire&&!entireSizeMatches(capacity,c.sizes[pass]))throw std::runtime_error("Entire EEPROM file size differs from recognized chip capacity");
                 }
                 cancelled(token);c.state="verifying";checkpoint();
@@ -225,6 +230,9 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
                 if(!c.equal)throw std::runtime_error("Two reads are empty or differ in size/SHA256");
                 const auto image=bytes(result.directory/(c.prefix+"1.rom"));if(diagnostics::firmwareSha256(image)!=c.hashes[0])throw std::runtime_error("Saved file changed before validation");
                 if(entire){
+                    if(std::all_of(image.begin(),image.end(),[](auto byte){return byte==0;})||
+                       std::all_of(image.begin(),image.end(),[](auto byte){return byte==0xff;}))
+                        throw std::runtime_error("Entire EEPROM returned only blank bytes");
                     // Address-space completeness is independent of bootability.
                     try{c.shape=structure(image,target.deviceId);}
                     catch(const std::exception& e){c.shape="{\"validated\":false,\"error\":"+q(e.what())+"}";event("eeprom_structure_observation",c.shape);}
@@ -232,10 +240,11 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
                     if(compared.first)throw std::runtime_error("Raw EEPROM compare failed");
                     if(const auto problem=readProblem(compared.second);!problem.empty())throw std::runtime_error("Raw EEPROM compare reported "+problem);
                     if(!compareConfirmed(compared.second))throw std::runtime_error("NVFlash did not positively confirm identical firmware images in raw compare");
-                    c.compared=true;const auto last=checkCapacity("check-after");
+                    c.compared=true;rebind("list-eeprom-check-after");const auto last=checkCapacity("check-after");
                     if(!sameCapacity(capacity,last)){result.capacityVerified=false;throw std::runtime_error("EEPROM identity/capacity changed after raw compare");}
                 }else c.shape=structure(image,target.deviceId);
                 rebind("list-"+c.name+"-after");
+                cancelled(token);
                 fs::copy_file(result.directory/(c.prefix+"1.rom"),result.directory/c.canonical,fs::copy_options::none);
                 if(diagnostics::firmwareSha256(bytes(result.directory/c.canonical))!=c.hashes[0])throw std::runtime_error("Canonical file SHA256 differs from verified reads");
                 cancelled(token);c.verified=true;c.state="verified";event("mode_verified","{\"mode\":"+q(c.name)+",\"capture\":"+captureJson(c)+"}");checkpoint();
@@ -244,26 +253,23 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
                 if(fatal||token.stop_requested())throw;
             }
         };
-        // Ordinary VBIOS does not require EEPROM geometry. A restricted --check
-        // must not prevent its two reads or erase their independently verified result.
-        capturePair(vbios,Command::Save);
-        state="checking_capacity";event("capacity_probe_started","{\"ordinary_vbios_saved\":"+std::string(vbios.verified?"true":"false")+"}");checkpoint();
-        try{capacity=checkCapacity("check-before");result.capacityVerified=capacity.admitted;}
-        catch(const std::exception& e){
-            if(fatal||token.stop_requested())throw;
-            capacity={};capacity.reason=std::string("EEPROM capacity check failed: ")+e.what();
-            event("capacity_probe_failed","{\"error\":"+q(capacity.reason)+"}");
+        if(!entire)capturePair(vbios,Command::Save);
+        else{
+            state="checking_capacity";event("capacity_probe_started","{}");checkpoint();
+            capacity=checkCapacity("check-before");result.capacityVerified=capacity.admitted;
+            event("capacity_probe_finished","{\"admitted\":"+std::string(capacity.admitted?"true":"false")+"}");checkpoint();
+            if(capacity.admitted)capturePair(eeprom,Command::SaveEntire);
+            else{
+                eeprom.state="refused";eeprom.error=capacity.reason;
+                event("entire_refused","{\"reason\":"+q(eeprom.error)+"}");
+            }
         }
-        event("capacity_probe_finished","{\"admitted\":"+std::string(capacity.admitted?"true":"false")+"}");checkpoint();
-        if(capacity.admitted)capturePair(eeprom,Command::SaveEntire);
-        else{eeprom.state="refused";eeprom.error=capacity.reason;event("entire_refused","{\"reason\":"+q(eeprom.error)+",\"ordinary_vbios_preserved\":"+std::string(vbios.verified?"true":"false")+"}");}
-        cancelled(token);state=vbios.verified&&eeprom.verified?"verified":
-            vbios.verified||eeprom.verified?"partial":"failed";
-        if(!vbios.verified)error="VBIOS: "+vbios.error;if(!eeprom.verified){if(!error.empty())error+="; ";error+="EEPROM: "+eeprom.error;}
+        cancelled(token);state=selected.verified?"verified":"failed";
+        if(!selected.verified)error=selected.error;
         checkpoint();event("capture_finished","{\"outcome\":"+q(result.outcome())+",\"vbios_saved\":"+std::string(result.vbiosSaved?"true":"false")+",\"eeprom_saved\":"+(result.eepromSaved?"true":"false")+",\"error\":"+q(error)+"}");
     }catch(const std::exception& e){
         error=e.what();result.cancelled=token.stop_requested();state=result.cancelled?"cancelled":"failed";
-        eeprom.verified=false;if(eeprom.error.empty())eeprom.error=error;
+        if(!selected.verified){if(selected.state!="refused")selected.state=state;if(selected.error.empty())selected.error=error;}
         for(auto* c:{&vbios,&eeprom})for(unsigned pass=0;pass<2;++pass){try{if(!result.directory.empty()){
             fileSnapshot(*c,pass);if(events&&c->sizes[pass])event("partial_file_snapshot","{\"mode\":"+q(c->name)+",\"pass\":"+std::to_string(pass+1)+",\"bytes\":"+std::to_string(c->sizes[pass])+",\"sha256\":"+q(c->hashes[pass])+",\"unverified\":true}");
         }}catch(...){}}
@@ -272,13 +278,17 @@ VbiosRomDumpResult createVbiosRomDump(std::stop_token token,std::atomic<std::uin
         catch(...){logMessage("vbios_dump","Failure metadata could not be saved: unknown exception");}
     }catch(...){
         error="Unexpected VBIOS capture exception; raw/partial files retained";result.cancelled=token.stop_requested();state=result.cancelled?"cancelled":"failed";
-        if(!vbios.verified){vbios.state=state;if(vbios.error.empty())vbios.error=error;}
-        eeprom.verified=false;if(eeprom.error.empty())eeprom.error=error;
+        if(!selected.verified){selected.state=state;if(selected.error.empty())selected.error=error;}
         try{event("capture_failed","{\"error\":"+q(error)+"}");checkpoint();}catch(...){logMessage("vbios_dump",error);}
     }
     synchronize();
-    result.message=result.saved?"VBIOS и EEPROM: сохранены по два одинаковых чтения; ёмкость, SHA256 и raw compare проверены.":
-        std::string(result.vbiosSaved||result.eepromSaved?"Частично: ":"Дамп не завершён: ")+"VBIOS "+(result.vbiosSaved?"сохранён":"не подтверждён")+", EEPROM "+(result.eepromSaved?"сохранён":"не подтверждён")+". "+error;
+    if(result.cancelled)result.message="Операция отменена.";
+    else if(result.saved)result.message=entire?
+        "Полный EEPROM сохранён: два одинаковых чтения; ёмкость, SHA256 и raw compare проверены.":
+        "VBIOS сохранён: два одинаковых чтения, SHA256 и структура проверены.";
+    else if(entire&&selected.state=="refused"&&!capacity.recognized)
+        result.message="Полный EEPROM не прочитан: ёмкость чипа не определена. "+error;
+    else result.message=std::string(entire?"Полный EEPROM не прочитан. ":"VBIOS не подтверждён. ")+error;
     if(!result.directory.empty())result.message+=" Файлы: "+pathText(result.directory);
     return result;
 }

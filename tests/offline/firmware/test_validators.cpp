@@ -211,6 +211,12 @@ int main(int argc,char** argv){try{
             const auto s=bios::validate(b,std::stoull(argv[4]),std::string_view(argv[2])=="intel");
             std::cout<<"{\"accepted\":true,\"kind\":\""<<s.kind<<"\",\"descriptor_bytes\":"<<s.descriptorBytes<<",\"components\":"<<s.components
                 <<",\"firmware_volumes\":"<<s.firmwareVolumes<<",\"all_regions_readable\":"<<(bios::allRegionsReadable(s)?"true":"false")<<"}\n";
+        }else if(std::string_view(argv[2])=="nvidia"){
+            const auto shape=vbios::validate(
+                {reinterpret_cast<const std::uint8_t*>(b.data()),b.size()},
+                static_cast<unsigned>(std::stoul(argv[4],nullptr,0)));
+            std::cout<<"{\"ifr_version\":"<<shape.ifrVersion<<",\"prefix_bytes\":"<<shape.prefixBytes
+                <<",\"trailing_bytes\":"<<shape.trailingBytes<<",\"images\":"<<shape.images.size()<<"}\n";
         }else throw std::runtime_error("Unknown fixture route");return 0;
     }
     CHECK(argc==2);const std::string_view suite=argv[1];

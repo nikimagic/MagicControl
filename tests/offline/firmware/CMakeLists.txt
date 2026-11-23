@@ -131,6 +131,10 @@ endif()
 add_test(NAME firmware_nvidia_contract COMMAND nvflash_contract_offline_tests)
 add_test(NAME firmware_nvidia_state COMMAND nvflash_state_offline_tests)
 add_test(NAME firmware_nvidia_collector COMMAND nvidia_collector_offline_tests "${CMAKE_CURRENT_BINARY_DIR}/nvidia-captures")
+add_test(NAME firmware_nvidia_gm6_saved_rom
+    COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_LIST_DIR}/test_gm6_vbios_file.py"
+    "$<TARGET_FILE:firmware_validator_offline_tests>" "${MC_REPO}/../BIOS_EC/GM6IR0C/VBIOS_Юрия_20261106_обычный.rom")
+set_tests_properties(firmware_nvidia_gm6_saved_rom PROPERTIES LABELS "offline;firmware;nvidia;private-fixtures" SKIP_RETURN_CODE 77 TIMEOUT 30)
 set_tests_properties(firmware_nvidia_contract firmware_nvidia_collector firmware_nvidia_state PROPERTIES LABELS "offline;firmware;nvidia" TIMEOUT 90)
 if(WIN32)
     add_executable(nvflash_lease_windows test_nvflash_lease_windows.cpp)

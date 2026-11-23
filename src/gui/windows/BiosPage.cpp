@@ -450,8 +450,13 @@ struct BiosPage::Impl {
         if (job || (!collection && !biosRom && !ui::biosDeviceActionsAllowed())) return;
         if(biosRom&&!biosRomDumpAvailable())return;
         std::string vbiosPci;
+        auto vbiosMode=VbiosDumpMode::Image;
         if(vbiosRom){
             if(!ui::biosDeviceActionsAllowed()||!vbiosRomDumpAvailable())return;
+            const auto choice=showChoiceDialog(GetAncestor(page,GA_ROOT),dpi,wide(ui::translate(ui::kVbiosDumpChoice)),
+                {wide(ui::translate(ui::kVbiosRomDumpCaption)),wide(ui::translate(ui::kEepromDumpCaption)),L"Отмена"});
+            if(choice!=0&&choice!=1)return;
+            if(choice==1)vbiosMode=VbiosDumpMode::EntireEeprom;
             try{
                 const auto adapters=vbiosDumpAdapters();
                 if(adapters.size()>1){
@@ -472,17 +477,17 @@ struct BiosPage::Impl {
         const auto dumpMode=guided?DiagnosticDumpMode::ReadOnly:ui::biosFanProbesAllowed()?DiagnosticDumpMode::WithFanProbes:DiagnosticDumpMode::ReadOnly;
         InfoOperationRequest request;request.operation=guided?InfoResourceOperation::PowerInputDump:action;
         request.auditId=audit::capture();request.powerSession=powerSession;
-        request.dump.pci=std::move(vbiosPci);request.dump.access=ec;request.dump.maximumProbe=maximumProbe;
+        request.dump.pci=std::move(vbiosPci);request.dump.vbiosMode=vbiosMode;request.dump.access=ec;request.dump.maximumProbe=maximumProbe;
         request.dump.firmwareDefault=firmwareDefault;request.dump.mode=dumpMode;
         job=InfoOperation::start(std::move(request),windows::infoOperationServices(action));shownProgress=0;
         const auto task=job;
         if (collection) snapshot = L"Собираю сведения… Можно прокручивать страницу и переключать вкладки.";
-        else if(vbiosRom)update=L"NVIDIA: VBIOS и EEPROM, по два чтения; ёмкость, SHA256 и raw compare. Результат: logs_<плата>/vbios-dumps. Отмена — после текущего чтения.";
+        else if(vbiosRom)update=vbiosMode==VbiosDumpMode::EntireEeprom?L"NVIDIA: полный EEPROM. Проверяю ёмкость перед чтением.":L"NVIDIA: обычный VBIOS, два чтения.";
         else if(biosRom)update=L"BIOS: проверяю оборудование и выбираю совместимый ридер. Два прохода; результат в logs_<плата>/bios-dumps. Отмена — после текущего чтения.";
         else if(dumping)update=dumpMode==DiagnosticDumpMode::ReadOnly?L"Дамп EC и минимум 60 сек датчиков без проб вентиляторов… Результат: logs_<плата>/ec-dumps.":L"Default → EC → минимум 60 сек датчиков, Max по 30 сек → возврат FANs. Результат: logs_<плата>/ec-dumps.";
         else update = action==InfoResourceOperation::LenovoEnergyPrepare?L"Подготавливаю официальный установщик Lenovo Energy и проверяю подпись…":L"Подготавливаю встроенный установщик PawnIO2.2.0 и проверяю его подпись…";
         refreshLabels(); arrange();
-        showOperationDialog(GetAncestor(page,GA_ROOT),dpi,collection?L"MagicControl · Сведения":vbiosRom?L"MagicControl · VBIOS / EEPROM":biosRom?L"MagicControl · BIOS":dumping?L"MagicControl · Дамп EC":action==InfoResourceOperation::LenovoEnergyPrepare?L"MagicControl · Lenovo Energy":L"MagicControl · Установка PawnIO",task->messages(),[weak=std::weak_ptr<InfoOperation>(task)]{if(auto p=weak.lock())p->cancel();});
+        showOperationDialog(GetAncestor(page,GA_ROOT),dpi,collection?L"MagicControl · Сведения":vbiosRom?(vbiosMode==VbiosDumpMode::EntireEeprom?L"MagicControl · EEPROM":L"MagicControl · VBIOS"):biosRom?L"MagicControl · BIOS":dumping?L"MagicControl · Дамп EC":action==InfoResourceOperation::LenovoEnergyPrepare?L"MagicControl · Lenovo Energy":L"MagicControl · Установка PawnIO",task->messages(),[weak=std::weak_ptr<InfoOperation>(task)]{if(auto p=weak.lock())p->cancel();});
         EnableWindow(buttons[0], FALSE); EnableWindow(buttons[1], FALSE);EnableWindow(energyButton,FALSE);EnableWindow(buttons[5],FALSE);EnableWindow(buttons[6],biosRom);if(biosRom)SetWindowTextW(buttons[6],wide("Отмена BIOS").c_str());
         refreshVbiosButton();
         SetTimer(page, 1, 50, nullptr);
@@ -508,7 +513,7 @@ struct BiosPage::Impl {
                 const auto done=task->progress();if(done!=shownProgress){shownProgress=done;
                     // Actual bytes across reads, never an invented full-SPI percentage.
                     update=wide(task->operation()==InfoResourceOperation::VbiosDump?
-                        std::format("VBIOS / EEPROM: сохранено {} байт (2+2 чтения).",done):
+                        std::format("NVIDIA ROM: прочитано {} байт.",done):
                         std::format("BIOS: сохранено {} байт (2 прохода). Образ и SHA256 проверяются после чтения.",done));refreshLabels();}
             }
             return;

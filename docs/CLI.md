@@ -207,14 +207,15 @@ GitHub-архивы этим поручением не готовились. С�
 `research/cli-restore-20261025/verification.json`. Аппаратные команды помощником
 не запускались; реальные SSH/контрольные операции на ноутбуках не проверены.
 
-## VBIOS и EEPROM NVIDIA,0.1.196
+## VBIOS и EEPROM NVIDIA
 
-`mctl dump-vbios [0000:01:00.0] [--output DIR]` доступен в Windows/Linux.
-Если NVIDIA несколько, PCI-адрес обязателен. Используется тот же collector,
-что в INFO: VBIOS и полный EEPROM через --entire, по2чтения, проверка
-распознанной ёмкости/размеров/SHA256/PCI ROM/raw compare, полный raw log в
-`vbios-dumps`. В JSON отдельно vbios_saved/eeprom_saved/capacity_verified/
-eeprom_bytes. Exit0 — оба результата; exit4 — partial/отказ/ошибка с файлами.
+`mctl dump-vbios [0000:01:00.0] [--output DIR]` сохраняет обычный VBIOS,
+а `mctl dump-eeprom [0000:01:00.0] [--output DIR]` запрашивает только
+полный основной EEPROM. Обе команды доступны в Windows/Linux. Если NVIDIA
+несколько, PCI-адрес обязателен. INFO и CLI используют тот же collector.
+Отчёт и исходные логи сохраняются в `vbios-dumps`. В JSON отдельно
+`vbios_saved`, `eeprom_saved`, `capacity_verified`, `eeprom_bytes`.
+Exit 0 — запрошенный образ подтверждён; exit 4 — отказ, отмена или ошибка.
 Нужен elevated Windows или root Linux сеанс; диалоги повышения прав не вызываются.
 EC/ROM-ID startup не читаются, `--yes` для этого явного read/save не требуется.
-`--dump-vbios` — alias. [Контракт и ограничения](VBIOS-DUMP.md).
+`--dump-vbios` и `--dump-eeprom` — алиасы. [Контракт и ограничения](VBIOS-DUMP.md).

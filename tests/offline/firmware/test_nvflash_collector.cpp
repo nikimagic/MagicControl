@@ -34,6 +34,9 @@ unsigned fixtureInfoResults();
 unsigned fixtureInfoFinishes();
 namespace {
 enum class Case { Both, Unknown, Large, Truncated, DifferentEntire, SilentCompare, ChipChanged, PendingReader, PendingCancelled, DifferentVbios, ResolveDomain, AmbiguousDomain, ChangedOs, CleanupFailure, CancelBefore, CancelAfterFirst, HybridIntelPrimary, HybridMissingNvml, ListMismatch, IfrV3Unknown, IfrV3Invalid, IfrV3Different } scenario;
+enum class Fault { None, MissingFile, CheckExit, ReadExit, BlankChip, CapMarker, ChangedAfterCompare, CancelAfterList };
+Fault fault{};
+std::vector<Command> commands;
 unsigned normalReads{},entireReads{},checks{},compares{},calls{},assertions{};
 std::atomic<unsigned> graphicsCalls{};
 bool interrupted{};std::stop_source cancellation;
@@ -74,7 +77,7 @@ std::vector<GraphicsAdapter> graphicsAdapters(){
     a.location={0,1,0,0,"synthetic"};
     const bool hybrid=scenario==Case::HybridIntelPrimary||scenario==Case::HybridMissingNvml;
     if(scenario==Case::ResolveDomain||scenario==Case::AmbiguousDomain||hybrid)a.location.domain.reset();
-    if(scenario==Case::ChangedOs&&normalReads)a.location.bus=2;
+    if((scenario==Case::ChangedOs&&normalReads)||(fault==Fault::ChangedAfterCompare&&compares))a.location.bus=2;
     if(hybrid){
         GraphicsAdapter intel;intel.name="Synthetic Intel UHD display GPU";intel.vendorId=0x8086;intel.deviceId=0xa788;
         intel.id="mock-primary-intel";intel.physicalId="mock-intel-pci";intel.location={0,0,2,0,"synthetic Intel"};
@@ -126,27 +129,37 @@ std::shared_ptr<void> preflight(const fs::path&,const Event&){
 void atomicText(const fs::path& p,const std::string& text){write(p,text);}
 unsigned run(Command c,unsigned index,const fs::path& output,const fs::path& artifacts,const std::string& label,const Event& event,std::stop_token,std::atomic<std::uint64_t>*,std::uint64_t,const std::shared_ptr<void>& lease){
     ++calls;require(!interrupted,"another command after pending-reader failure");
+    commands.push_back(c);
     require(c==Command::List||index==3,"wrong synthetic PCI binding/index");
     const auto args=arguments(c,index,output.string());require(!args.empty(),"missing readonly argv");
-    std::string text;
+    std::string text;unsigned exitCode{};
     switch(c){
     case Command::List:text=scenario==Case::ListMismatch?"<3> Synthetic NVIDIA (10DE,28A0,1D05,1273) S:00,B:02,D:00,F:00\n":"<3> Synthetic NVIDIA (10DE,28A0,1D05,1273) S:00,B:01,D:00,F:00\n";break;
     case Command::Check:
         ++checks;
+        if(fault==Fault::CheckExit)exitCode=7;
         text=unknownCapacity()?"EEPROM ID (EF,4015) : Unknown\n":
             std::string("EEPROM ID (")+(scenario==Case::ChipChanged&&checks>=3?"C2,2015":"EF,4015")+
             ") : Vendor SyntheticPart 2.7-3.6V "+(scenario==Case::Large?"262144Kx1S":"16384Kx1S")+", page\n";
         break;
     case Command::Save:
         ++normalReads;if(scenario==Case::PendingReader||scenario==Case::PendingCancelled){pendingReaderLease=lease;interrupted=true;if(scenario==Case::PendingCancelled)cancellation.request_stop();throw std::runtime_error("synthetic pending reader");}
+        if(fault==Fault::MissingFile)break;
         image(output,false);
+        if(fault==Fault::ReadExit)exitCode=9;
         if(scenario==Case::CleanupFailure){interrupted=true;throw std::runtime_error("synthetic post-reader cleanup failure");}
         if(scenario==Case::CancelAfterFirst)cancellation.request_stop();break;
-    case Command::SaveEntire:++entireReads;image(output,true);break;
+    case Command::SaveEntire:
+        ++entireReads;
+        if(fault==Fault::BlankChip)write(output,std::string(2097152,static_cast<char>(0xff)));
+        else image(output,true);
+        if(fault==Fault::CapMarker)text="Limited the part size to the max of buffer size";
+        break;
     case Command::Compare:++compares;if(scenario!=Case::SilentCompare)text="Firmware images are identical\n";break;
     }
     write(artifacts/(label+".stdout.log"),text);write(artifacts/(label+".stderr.log"),"");
-    event("synthetic_native_return","{\"exit_code\":0}");return 0;
+    if(fault==Fault::CancelAfterList&&(label=="list-vbios-after"||label=="list-eeprom-after"))cancellation.request_stop();
+    event("synthetic_native_return","{\"exit_code\":"+std::to_string(exitCode)+"}");return exitCode;
 }
 }
 }
@@ -200,10 +213,20 @@ int main(int argc,char** argv){try{
     ecDiagnostic.reset();
 
     for(const auto test:{Case::Both,Case::Unknown,Case::Large,Case::Truncated,Case::DifferentEntire,Case::SilentCompare,Case::ChipChanged,Case::PendingReader,Case::PendingCancelled,Case::DifferentVbios,Case::ResolveDomain,Case::AmbiguousDomain,Case::ChangedOs,Case::CleanupFailure,Case::CancelBefore,Case::CancelAfterFirst,Case::HybridIntelPrimary,Case::HybridMissingNvml,Case::ListMismatch,Case::IfrV3Unknown,Case::IfrV3Invalid,Case::IfrV3Different}){
-        scenario=test;normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};teardown.clear();if(test==Case::CancelBefore)cancellation.request_stop();
-        const auto r=mc::createVbiosRomDump(cancellation.get_token(),nullptr,"0000:01:00.0",root/std::to_string(static_cast<int>(test)));
+        scenario=test;commands.clear();normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};teardown.clear();if(test==Case::CancelBefore)cancellation.request_stop();
+        const bool entire=test==Case::Both||test==Case::Unknown||test==Case::Large||test==Case::Truncated||
+            test==Case::DifferentEntire||test==Case::SilentCompare||test==Case::ChipChanged;
+        const auto r=mc::createVbiosRomDump(cancellation.get_token(),nullptr,"0000:01:00.0",
+            root/std::to_string(static_cast<int>(test)),{},entire?mc::VbiosDumpMode::EntireEeprom:mc::VbiosDumpMode::Image);
         require(fs::exists(r.directory/"manifest.json")&&fs::exists(r.directory/"events.jsonl"),"missing forensic report");
-        if(test==Case::Both||test==Case::ResolveDomain||test==Case::HybridIntelPrimary)require(r.saved&&r.vbiosSaved&&r.eepromSaved&&r.capacityVerified&&r.eepromBytes==2097152&&normalReads==2&&entireReads==2&&compares==1,"both capture path");
+        for(const auto command:commands)
+            require(entire?command!=Command::Save:command==Command::List||command==Command::Save,"mode crossed its command boundary");
+        if(test==Case::Both)require(commands==std::vector<Command>{Command::List,Command::Check,Command::List,Command::Check,
+            Command::SaveEntire,Command::List,Command::Check,Command::SaveEntire,Command::List,Command::Compare,
+            Command::List,Command::Check,Command::List},"entire read and comparison must remain identity-bound");
+        if(test==Case::Both)require(r.saved&&!r.vbiosSaved&&r.eepromSaved&&r.capacityVerified&&r.eepromBytes==2097152&&normalReads==0&&entireReads==2&&compares==1,"explicit full EEPROM capture");
+        else if(test==Case::ResolveDomain||test==Case::HybridIntelPrimary||test==Case::IfrV3Unknown)
+            require(r.saved&&r.vbiosSaved&&!r.eepromSaved&&normalReads==2&&checks==0&&entireReads==0,"complete ordinary VBIOS capture");
         else if(test==Case::AmbiguousDomain||test==Case::CancelBefore||test==Case::HybridMissingNvml)require(!r.saved&&!r.vbiosSaved&&!r.eepromSaved&&calls==0,"ambiguous/cancelled target must not launch a reader");
         else if(test==Case::ListMismatch)require(!r.saved&&calls==1&&checks==0&&normalReads==0&&entireReads==0,"NVFlash list mismatch must stop before reads");
         else if(test==Case::ChangedOs||test==Case::CleanupFailure||test==Case::CancelAfterFirst){
@@ -211,7 +234,7 @@ int main(int argc,char** argv){try{
             require(fs::exists(r.directory/"pass1.rom"),"retain first raw read on failure");
             if(test==Case::CancelAfterFirst)require(r.cancelled,"cancellation recorded");
         }
-        else if(test==Case::DifferentVbios)require(!r.saved&&!r.vbiosSaved&&r.eepromSaved&&entireReads==2&&compares==1,"full success must survive ordinary mismatch");
+        else if(test==Case::DifferentVbios)require(!r.saved&&!r.vbiosSaved&&!r.eepromSaved&&normalReads==2&&checks==0&&entireReads==0,"ordinary mismatch must fail without EEPROM access");
         else if(test==Case::IfrV3Invalid){
             require(!r.saved&&!r.vbiosSaved&&!r.eepromSaved&&r.outcome()=="failed"&&normalReads==2&&entireReads==0,
                 "invalid IFR v3 must not produce canonical VBIOS or EEPROM");
@@ -235,8 +258,10 @@ int main(int argc,char** argv){try{
             require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"fake child exit releases telemetry pause and device reservation");
         }
         else {
-            require(!r.saved&&r.vbiosSaved&&!r.eepromSaved&&normalReads==2,"ordinary success must survive full refusal");
-            if(test==Case::Unknown||test==Case::Large||test==Case::IfrV3Unknown)require(entireReads==0,"unknown/oversize must never read entire");
+            require(!r.saved&&!r.vbiosSaved&&!r.eepromSaved&&normalReads==0,"EEPROM refusal does not invoke ordinary VBIOS");
+            if(test==Case::Unknown||test==Case::Large)require(entireReads==0,"unknown/oversize must never read entire");
+            if(test==Case::Unknown)require(checks==1&&r.message.starts_with("Полный EEPROM не прочитан: ёмкость чипа не определена"),
+                "unknown EEPROM capacity has an explicit refusal");
             if(test==Case::Truncated||test==Case::ChipChanged)require(entireReads==1&&compares==0,"invalid first read/capacity change must stop pair");
             if(test==Case::DifferentEntire)require(entireReads==2&&compares==0,"mismatched full hashes must skip compare");
             if(test==Case::SilentCompare)require(entireReads==2&&compares==1,"silent exit0 compare must refuse full");
@@ -246,64 +271,95 @@ int main(int argc,char** argv){try{
         require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"completed or failed collector leaves no firmware pause or reservation");
         if(test==Case::Unknown||test==Case::IfrV3Unknown)
             require(teardown==std::vector<std::string>({"provider_destroyed","native_lease_released"}),
-                "partial capture releases provider before native lease");
+                "collector releases provider before native lease");
         if(test==Case::IfrV3Unknown){
-            require(r.outcome()=="completed_partial"&&!r.capacityVerified&&checks==1,
-                "IFR v3: valid VBIOS with unknown EEPROM is partial");
+            require(r.outcome()=="completed"&&!r.capacityVerified&&checks==0,
+                "IFR v3: ordinary VBIOS succeeds without checking EEPROM");
             const auto raw1=read(r.directory/"pass1.rom"),raw2=read(r.directory/"pass2.rom"),canonical=read(r.directory/"vbios.rom");
             require(raw1==raw2&&raw1==canonical&&raw1.size()==8704,"both synthetic IFR reads and canonical bytes agree");
             const auto shape=mc::diagnostics::vbios::validate(std::span<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(canonical.data()),canonical.size()),0x28a0);
             require(shape.ifrVersion==3&&shape.prefixBytes==8192&&shape.images.size()==1,"IFR v3 wrapper and PCI image retained");
             const auto manifest=mc::json::JsonReader::parse(read(r.directory/"manifest.json"));
-            require(manifest.at("state").text()=="partial"&&manifest.at("vbios_saved").flag()&&!manifest.at("eeprom_saved").flag(),"manifest keeps partial VBIOS result");
+            require(manifest.at("state").text()=="verified"&&manifest.at("vbios_saved").flag()&&!manifest.at("eeprom_saved").flag(),"manifest keeps complete VBIOS result");
             require(manifest.at("vbios").at("shape").at("ifr_version").number()==3&&manifest.at("vbios").at("two_passes_equal").flag(),"manifest records IFR v3 and both equal reads");
-            require(manifest.at("eeprom").at("state").text()=="refused"&&!fs::exists(r.directory/"eeprom-full.rom"),"unknown capacity refuses full EEPROM");
-            require(read(r.directory/"events.jsonl").find("\"outcome\":\"completed_partial\"")!=std::string::npos,"partial terminal event recorded");
+            require(manifest.at("eeprom").at("state").text()=="not_requested"&&!fs::exists(r.directory/"eeprom-full.rom"),"ordinary VBIOS never requests EEPROM");
+            require(read(r.directory/"events.jsonl").find("\"outcome\":\"completed\"")!=std::string::npos,"successful terminal event recorded");
             // Repeat against the same target and output root; no stale result or
             // reader lease may make a later request overwrite the prior dump.
             normalReads=entireReads=checks=compares=calls=0;interrupted=false;cancellation=std::stop_source{};
             const auto again=mc::createVbiosRomDump(cancellation.get_token(),nullptr,"0000:01:00.0",root/std::to_string(static_cast<int>(test)));
-            require(again.directory!=r.directory&&again.outcome()=="completed_partial"&&again.vbiosSaved&&!again.eepromSaved,
+            require(again.directory!=r.directory&&again.outcome()=="completed"&&again.vbiosSaved&&!again.eepromSaved,
                 "repeated IFR v3 operation completes separately with its own result");
-            require(normalReads==2&&checks==1&&entireReads==0&&read(again.directory/"vbios.rom")==canonical,
+            require(normalReads==2&&checks==0&&entireReads==0&&read(again.directory/"vbios.rom")==canonical,
                 "repeated IFR v3 operation reads twice without full EEPROM");
         }
         std::cout<<"PASS synthetic scenario "<<static_cast<int>(test)<<"; saved="<<r.saved<<"; normal_reads="<<normalReads<<"; entire_reads="<<entireReads<<"\n";
     }
+    struct FaultCase {Fault fault;bool entire;const char* message;unsigned normal,full,check,compare;};
+    for(const auto& test:{FaultCase{Fault::MissingFile,false,"nonempty ROM",1,0,0,0},
+        {Fault::ReadExit,false,"save failed",1,0,0,0},
+        {Fault::CheckExit,true,"exit=7",0,0,1,0},
+        {Fault::BlankChip,true,"blank bytes",0,2,3,0},
+        {Fault::CapMarker,true,"limited the part size",0,1,2,0},
+        {Fault::ChangedAfterCompare,true,"identity changed",0,2,3,1},
+        {Fault::CancelAfterList,false,"отменена",2,0,0,0},
+        {Fault::CancelAfterList,true,"отменена",0,2,4,1}}){
+        scenario=Case::Both;fault=test.fault;normalReads=entireReads=checks=compares=calls=0;
+        interrupted=false;cancellation=std::stop_source{};teardown.clear();
+        const auto result=mc::createVbiosRomDump(cancellation.get_token(),nullptr,"0000:01:00.0",
+            root/("fault-"+std::to_string(static_cast<int>(fault))),{},
+            test.entire?mc::VbiosDumpMode::EntireEeprom:mc::VbiosDumpMode::Image);
+        require(!result.saved&&!result.vbiosSaved&&!result.eepromSaved&&result.message.find(test.message)!=std::string::npos,
+            "fault must fail the selected mode and explain the cause");
+        require(result.cancelled==(fault==Fault::CancelAfterList),"only the cancellation fixture is cancelled");
+        require(normalReads==test.normal&&entireReads==test.full&&checks==test.check&&compares==test.compare,
+            "fault did not stop at the expected command");
+        require(!fs::exists(result.directory/"vbios.rom")&&!fs::exists(result.directory/"eeprom-full.rom"),
+            "fault must not publish a canonical ROM");
+        require(bool(mc::telemetryGate().tryObservation())&&!mc::deviceOperations().busy(),"fault leaked firmware ownership");
+    }
+    fault=Fault::None;
     // Exercise the same asynchronous INFO owner and resource route used by the
     // application, with only the platform transport supplied by the fixture.
     scenario=Case::IfrV3Unknown;normalReads=entireReads=checks=compares=calls=0;interrupted=false;teardown.clear();
     mc::InfoOperationServices infoServices;
     infoServices.dump=[](const mc::InfoDumpResourceRequest& request){
         mc::InfoDumpResourceServices services;
-        services.vbios=[](const auto& input){return mc::createVbiosRomDump(input.cancellation,input.progress,input.pci,input.outputRoot,input.firmwarePause);};
+        services.vbios=[](const auto& input){return mc::createVbiosRomDump(input.cancellation,input.progress,input.pci,input.outputRoot,input.firmwarePause,input.vbiosMode);};
         return mc::executeInfoDumpResource(request,&services);
     };
     fs::path firstDirectory;
-    for(unsigned attempt=0;attempt<2;++attempt){
+    for(unsigned attempt=0;attempt<3;++attempt){
+        const bool entire=attempt==2;
+        const auto commandsBefore=commands.size();
         mc::InfoOperationRequest request;request.operation=mc::InfoResourceOperation::VbiosDump;request.auditId=42;
         request.dump.pci="0000:01:00.0";request.dump.outputRoot=root/"info-lifecycle";
+        request.dump.vbiosMode=entire?mc::VbiosDumpMode::EntireEeprom:mc::VbiosDumpMode::Image;
         const auto resultsBefore=fixtureInfoResults(),finishesBefore=fixtureInfoFinishes();
         auto job=mc::InfoOperation::start(std::move(request),infoServices);
         const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(15);
         while(!job->done()&&std::chrono::steady_clock::now()<deadline)std::this_thread::sleep_for(std::chrono::milliseconds(5));
         require(job->done(),"INFO VBIOS operation finished without a hardware reader");
         const auto* result=job->poll();
-        require(result&&result->vbios.outcome()=="completed_partial"&&result->vbios.vbiosSaved&&!result->vbios.eepromSaved,
-            "INFO route preserves independently verified VBIOS and partial result");
-        require(!result->success&&job->messages()->done(),"INFO transcript reaches terminal state for partial dump");
+        require(result&&result->vbios.outcome()==(entire?"failed":"completed")&&
+            result->vbios.vbiosSaved==!entire&&!result->vbios.eepromSaved,"INFO routes only the requested mode");
+        require(result->success==!entire&&job->messages()->done(),"INFO transcript reaches the matching terminal state");
+        if(entire){
+            require(commands.size()==commandsBefore+2&&commands[commandsBefore]==Command::List&&commands.back()==Command::Check,
+                "INFO EEPROM request probes capacity and refuses without either save");
+        }
         std::size_t cursor{};const auto transcript=job->messages()->read(cursor);
         const auto success=std::find_if(transcript.begin(),transcript.end(),[](const auto& row){
             return row.text=="VBIOS: два чтения совпали, дамп проверен."&&row.tone==mc::OperationMessages::Tone::Success;});
         const auto refused=std::find_if(transcript.begin(),transcript.end(),[](const auto& row){
-            return row.text.starts_with("EEPROM: ")&&row.tone==mc::OperationMessages::Tone::Error;});
-        require(success!=transcript.end()&&refused!=transcript.end(),"INFO transcript reports saved VBIOS and refused EEPROM separately");
+            return row.text.starts_with("Полный EEPROM не прочитан: ёмкость чипа не определена")&&row.tone==mc::OperationMessages::Tone::Error;});
+        require((success!=transcript.end())==!entire&&(refused!=transcript.end())==entire,"INFO transcript reports only the selected result");
         require(fixtureInfoResults()==resultsBefore+1,"INFO publishes its terminal result exactly once");
-        require(read(result->vbios.directory/"vbios.rom")==read(result->vbios.directory/"pass1.rom"),"INFO retains canonical synthetic image");
+        if(!entire)require(read(result->vbios.directory/"vbios.rom")==read(result->vbios.directory/"pass1.rom"),"INFO retains canonical synthetic image");
         if(!attempt)firstDirectory=result->vbios.directory;
         else require(result->vbios.directory!=firstDirectory,"repeated INFO request has a separate output directory");
         while(fixtureInfoFinishes()==finishesBefore&&std::chrono::steady_clock::now()<deadline)std::this_thread::sleep_for(std::chrono::milliseconds(5));
         require(fixtureInfoFinishes()==finishesBefore+1,"INFO worker finishes after terminal publication");
     }
-    std::cout<<"PASS 22 real-collector synthetic scenarios plus repeats and 2 INFO lifecycles; "<<assertions<<" checks; no native platform/vendor/hardware execution.\n";return 0;
+    std::cout<<"PASS synthetic collector scenarios, 8 fault cases and 3 INFO lifecycles; "<<assertions<<" checks; no native platform/vendor/hardware execution.\n";return 0;
 }catch(const std::exception& e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

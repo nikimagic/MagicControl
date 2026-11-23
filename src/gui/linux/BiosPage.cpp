@@ -66,7 +66,7 @@ gboolean pollInfo(gpointer data){
     const auto* result=job->poll();
     if(!result){
         if(job->firmwareDump()){
-            const auto n=job->progress();if(n!=s->shownProgress){s->shownProgress=n;s->update="VBIOS / EEPROM: сохранено "+std::to_string(n)+" байт (2+2 чтения).";gtk_widget_queue_resize(s->header->widget());s->header->redraw();}
+            const auto n=job->progress();if(n!=s->shownProgress){s->shownProgress=n;s->update="NVIDIA ROM: прочитано "+std::to_string(n)+" байт.";gtk_widget_queue_resize(s->header->widget());s->header->redraw();}
         }
         return G_SOURCE_CONTINUE;
     }
@@ -228,6 +228,10 @@ GtkWidget* createBiosPage(OsdService* osd) {
     state->buttons[7]=actionButton(ui::kVbiosRomDumpCaption,[state]{
         if(state->job){if(state->job->operation()==InfoResourceOperation::VbiosDump)state->job->cancel();return;}
         if(!ui::biosDeviceActionsAllowed()||!vbiosRomDumpAvailable())return;
+        const auto choice=showChoiceDialog(GTK_WINDOW(gtk_widget_get_root(state->header->widget())),
+            ui::translate(ui::kVbiosDumpChoice),{ui::translate(ui::kVbiosRomDumpCaption),ui::translate(ui::kEepromDumpCaption),ui::translate("Отмена")});
+        if(choice!=0&&choice!=1)return;
+        const auto mode=choice==1?VbiosDumpMode::EntireEeprom:VbiosDumpMode::Image;
         std::string target;
         try{const auto adapters=vbiosDumpAdapters();
             if(adapters.size()>1){std::vector<std::string> choices;for(const auto& a:adapters)choices.push_back(a.name+" · "+vbiosAdapterPci(a));
@@ -235,9 +239,9 @@ GtkWidget* createBiosPage(OsdService* osd) {
                 if(selected<0||static_cast<std::size_t>(selected)>=adapters.size())return;target=vbiosAdapterPci(adapters[static_cast<std::size_t>(selected)]);
             }else if(adapters.size()==1)target=vbiosAdapterPci(adapters.front());
         }catch(const std::exception& e){state->update=e.what();gtk_widget_queue_resize(state->header->widget());state->header->redraw();return;}
-        state->update="NVIDIA: VBIOS и EEPROM, по два чтения; ёмкость, SHA256 и raw compare. Результат: logs_<плата>/vbios-dumps.";
-        InfoOperationRequest request;request.operation=InfoResourceOperation::VbiosDump;request.dump.pci=std::move(target);
-        startInfo(*state,std::move(request),"MagicControl · VBIOS / EEPROM");
+        state->update=choice==1?"NVIDIA: полный EEPROM. Проверяю ёмкость перед чтением.":"NVIDIA: обычный VBIOS, два чтения.";
+        InfoOperationRequest request;request.operation=InfoResourceOperation::VbiosDump;request.dump.pci=std::move(target);request.dump.vbiosMode=mode;
+        startInfo(*state,std::move(request),choice==1?"MagicControl · EEPROM":"MagicControl · VBIOS");
     },false,ui::biosDeviceActionsAllowed()&&vbiosRomDumpAvailable());
     gtk_widget_set_tooltip_text(state->buttons[7],ui::translate(ui::kVbiosRomDumpNote).c_str());
     for(const int i:ui::kBiosActionTabOrder)state->header->add(state->buttons[i]);

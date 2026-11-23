@@ -180,7 +180,7 @@ DiagnosticDumpResult createDiagnosticDump(std::shared_ptr<EcAccess>,std::stop_to
     std::shared_ptr<std::mutex>,DiagnosticDumpMode,FirmwareFanDefault,std::string,std::filesystem::path){forbidden();}
 DiagnosticDumpResult createPowerInputDump(PowerInputDumpSession&,const PowerInputPrompt&,
     std::stop_token,std::shared_ptr<EcAccess>,std::string){forbidden();}
-VbiosRomDumpResult createVbiosRomDump(std::stop_token,std::atomic<std::uint64_t>*,std::string,std::filesystem::path,std::shared_ptr<TelemetryGate::FirmwarePause>){forbidden();}
+VbiosRomDumpResult createVbiosRomDump(std::stop_token,std::atomic<std::uint64_t>*,std::string,std::filesystem::path,std::shared_ptr<TelemetryGate::FirmwarePause>,VbiosDumpMode){forbidden();}
 void logMessage(std::string_view,std::string_view)noexcept{}
 void recordLog(std::string_view,std::string_view)noexcept{}
 namespace audit {

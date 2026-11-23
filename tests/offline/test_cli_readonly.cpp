@@ -30,7 +30,7 @@ int main(){
         {"models"},{"board"},{"status"},{"resources","all"},{"inventory"},{"fans"},{"fans","status"},
         {"power","status"},{"battery","status"},{"battery","priority","status"},
         {"keyboard","status"},{"keys","microphone"},{"lighting","zones"},{"gpu","status"},
-        {"lpp","status"},{"dump-ec"},{"dump-bios"},{"--dump-bios"},{"dump-vbios"},{"--dump-vbios"}
+        {"lpp","status"},{"dump-ec"},{"dump-bios"},{"--dump-bios"},{"dump-vbios"},{"--dump-vbios"},{"dump-eeprom"},{"--dump-eeprom"}
     };
     for(auto command:reads){command.push_back("--read-only");command.push_back("--yes");const auto options=parse(command);CHECK(options.readOnly&&!writer(options));}
     bool empty=false;try{parse({});}catch(const std::invalid_argument&){empty=true;}CHECK(empty);

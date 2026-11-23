@@ -27,6 +27,23 @@ int main(int argc,char** argv){try{
         const auto expected=version.empty()?"Утилита NVFlash проверена; версия не сообщена.":"Утилита NVFlash "+version+" проверена.";
         check(rows.size()==1&&rows[0].text==expected,"NVFlash version must come from verified tool event, including future versions");
     }
+    for(const bool entire:{false,true}){
+        auto m=mc::OperationMessages::create(++action);
+        const auto publish=[&](std::string_view data){mc::OperationMessages::publish("vbios_dump",data,action);};
+        publish(entire?"\"event\":\"capture_started\",\"details\":{\"mode\":\"eeprom\"}":
+                       "\"event\":\"capture_started\",\"details\":{\"mode\":\"vbios\"}");
+        if(entire){
+            publish("\"event\":\"entire_refused\",\"details\":{\"reason\":\"unknown chip\"}");
+            m->finish("Полный EEPROM не прочитан: ёмкость чипа не определена. unknown chip",false);
+        }else{
+            publish("\"event\":\"mode_verified\",\"details\":{\"mode\":\"vbios\"}");
+            m->finish("VBIOS сохранён.",true);
+        }
+        std::size_t cursor{};const auto rows=m->read(cursor);
+        check(m->done()&&rows.size()==3,"one transcript per firmware mode without duplicate refusal");
+        check(rows.front().text==(entire?"Подготовка чтения полного EEPROM.":"Подготовка чтения VBIOS."),"mode-specific initial message");
+        check(rows[1].tone==(entire?mc::OperationMessages::Tone::Error:mc::OperationMessages::Tone::Success),"correct mode outcome tone");
+    }
     const std::string label="Выбран BIOS-ридер Insyde H2OFFT 6.76.";
     {
         auto m=mc::OperationMessages::create(++action);

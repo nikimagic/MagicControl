@@ -26,7 +26,8 @@ InfoDumpResourceResult bios(const InfoDumpResourceRequest& request,const InfoDum
 }
 InfoDumpResourceResult vbios(const InfoDumpResourceRequest& request,const InfoDumpResourceServices& services){
     if(!services.vbios)throw std::invalid_argument("INFO: VBIOS collector unavailable");
-    auto result=services.vbios(request);return {result,std::move(result)};
+    auto result=services.vbios(request);result.mode=request.vbiosMode;
+    result.saved=result.requestedImageSaved();return {result,std::move(result)};
 }
 const Routes& routes(){
     static const auto result=[] {
@@ -51,7 +52,7 @@ const InfoDumpResourceServices& productionServices(){
         [](const auto& r){return createBiosRomDump(r.cancellation,r.progress,r.firmwarePause);},
         [](const auto& r){if(!r.powerSession)throw std::runtime_error("Power input diagnostic session unavailable");
             return createPowerInputDump(*r.powerSession,r.prompt,r.cancellation,r.access,r.displaySnapshot);},
-        [](const auto& r){return createVbiosRomDump(r.cancellation,r.progress,r.pci,r.outputRoot,r.firmwarePause);}
+        [](const auto& r){return createVbiosRomDump(r.cancellation,r.progress,r.pci,r.outputRoot,r.firmwarePause,r.vbiosMode);}
     };
     return services;
 }
@@ -161,6 +162,10 @@ void InfoOperation::run(){
             dump.prompt=[this,token](const auto& instruction,const auto& reason){return prompts.ask(instruction,reason,token);};
             auto collected=services_.dump?services_.dump(dump):executeInfoDumpResource(dump);
             result_.dump=std::move(collected.report);result_.vbios=std::move(collected.vbios);
+            if(operation()==InfoResourceOperation::VbiosDump){
+                result_.vbios.mode=dump.vbiosMode;
+                result_.dump.saved=result_.vbios.requestedImageSaved();
+            }
             result_.message=result_.dump.message;result_.success=result_.dump.saved;
         }
     }catch(const std::exception& e){result_.success=false;result_.message="Операция не завершена: "+std::string(e.what());}
