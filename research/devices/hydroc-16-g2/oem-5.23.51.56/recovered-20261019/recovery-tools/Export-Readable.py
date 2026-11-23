@@ -6,13 +6,17 @@ import re,json,collections,hashlib
 import argparse,subprocess,struct
 root=next(p for p in Path(__file__).resolve().parents if (p/'AGENTS.md').is_file() and (p/'src').is_dir())
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--directory',type=Path,default=root/'build/research-hydroc16g2/exact-reproduction')
-parser.add_argument('--destination',type=Path,default=root/'research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019')
-parser.add_argument('--input',type=Path,default=root/'build/research-hydroc16g2/installer/app/AiStoneService/MyControlCenter/GCUService.exe')
-parser.add_argument('--decompiler',type=Path,default=root/'build/research-hydroc16g2/decompiler/bin/Debug/net10.0/Decompile.exe')
+parser.add_argument('--directory',type=Path,default=root/'out/research-hydroc16g2/exact-reproduction')
+parser.add_argument('--destination',type=Path,default=root/'out/research-hydroc16g2/recovered-20261019')
+parser.add_argument('--input',type=Path,default=root/'research/research-hydroc16g2/installer/app/AiStoneService/MyControlCenter/GCUService.exe')
+parser.add_argument('--decompiler',type=Path,default=root/'research/research-hydroc16g2/decompiler/bin/Debug/net10.0/Decompile.exe')
 parser.add_argument('--reuse-raw',action='store_true',help='Reuse this pinned sample raw C# export')
-args=parser.parse_args();r=args.directory.resolve();dest=args.destination.resolve();tool=args.decompiler.resolve();source=r/'GCUService.exact-all-layers.analysis-only.dll'
-assert hashlib.sha256(source.read_bytes()).hexdigest()==json.loads((r/'exact-inner-decryption.json').read_text())['output_sha256']
+args=parser.parse_args();r=args.directory.resolve();r.mkdir(parents=True,exist_ok=True);dest=args.destination.resolve();tool=args.decompiler.resolve()
+historical=root/'research/research-hydroc16g2/exact-reproduction'
+use_historical=r==(root/'out/research-hydroc16g2/exact-reproduction').resolve()
+input_path=lambda name:(r/name) if (r/name).is_file() or not use_historical else (historical/name)
+source=input_path('GCUService.exact-all-layers.analysis-only.dll')
+assert hashlib.sha256(source.read_bytes()).hexdigest()==json.loads(input_path('exact-inner-decryption.json').read_text())['output_sha256']
 if not args.reuse_raw:
  subprocess.run([str(tool),str(source),'--tree-token',str(r/'final-raw')],check=True)
  for token in ['06000001','06000002']:
@@ -54,7 +58,12 @@ def decode_literal(s):
  quoted=''.join(r'\u%04x'%ord(c) if 0xd800<=ord(c)<=0xdfff or ord(c) in [0x2028,0x2029] else c for c in quoted)
  return quoted
 counts=collections.Counter();manifest=[]
-source_files=list((r/'final-raw').glob('*.cs'))+[r/'Module-06000001.cs',r/'Module-06000002.cs']
+saved_raw=root/'research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019/raw-csharp'
+if args.reuse_raw and not (r/'final-raw').is_dir():
+ source_files=sorted(saved_raw.glob('*.cs'))
+ if not source_files:raise FileNotFoundError('Saved raw C# export is unavailable')
+else:
+ source_files=list((r/'final-raw').glob('*.cs'))+[r/'Module-06000001.cs',r/'Module-06000002.cs']
 for source in source_files:
  text=source.read_text(encoding='utf-8-sig');(raw/source.name).write_text(text,encoding='utf-8')
  def inline(m):counts['decoded_literal_calls']+=1;return decode_literal(m[1])

@@ -20,7 +20,7 @@ for path in sorted(profiles.glob('Mode*_Profile*.json')):
     rows.append({'file':path.name,'name':j.get('Name'),'activated':j.get('Activated'),
                  'AmdSPL_SPPT_FPPT':[cpu.get(k) for k in ['AmdSPL','AmdSPPT','AmdFPPT']],
                  'fan':j.get('FAN'),'scope':'Saved user-profile backup, not independently pristine factory data.'})
-sys.path.insert(0,str(ROOT/'build/honor-analysis'))
+sys.path.insert(0,str(ROOT/'../Decompile/HONOR_HLYL-WXX9/honor-analysis'));sys.dont_write_bytecode=True
 from disasm51 import addresses,codeanalyzer,instructions
 firmware=ROOT/'research/wujie-full-bios-20261024/wujie-embedded-ec-core-candidate-128KiB.bin'
 data=record(firmware);assert metadata[-1]['sha256']=='5d4ec03a4ec9b36938d907fd6fcb51109b445b4a43c5498f018d022d4e6ac7a8'

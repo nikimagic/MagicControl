@@ -1,11 +1,12 @@
 """Disassemble saved AML only. Never acquires current-machine tables or evaluates AML."""
 from pathlib import Path
-import hashlib,json,subprocess,re,collections
+import hashlib,json,subprocess,re,collections,uuid
 ROOT=Path(__file__).resolve().parents[4]
-OUT=Path(__file__).resolve().parent
-capture_source=ROOT/'build/gm6ir0c-logs4-20261021/logs_GM6IR0C/dumps/dump-20261021-175302-0/firmware-before/acpi'
-source=capture_source if capture_source.exists()else OUT/'saved-acpi'
-work=ROOT/'build/gm6-healthy-acpi';work.mkdir(exist_ok=True)
+HERE=Path(__file__).resolve().parent
+OUT=ROOT/'out/gm6ir0c-logs4-20261021'/('acpi-'+uuid.uuid4().hex);OUT.mkdir(parents=True,exist_ok=False)
+capture_source=ROOT/'research/gm6ir0c-logs4-20261021/logs_GM6IR0C/dumps/dump-20261021-175302-0/firmware-before/acpi'
+source=capture_source if capture_source.exists()else HERE/'saved-acpi'
+work=OUT/'work';work.mkdir()
 sha=lambda b:hashlib.sha256(b).hexdigest()
 tables={};observed=[]
 for p in source.glob('*.aml'):

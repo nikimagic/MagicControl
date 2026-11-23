@@ -1,5 +1,8 @@
 """ROM4 cross-image saved-file audit. No application, OEM or hardware execution."""
 from pathlib import Path
+import sys as _resolver_sys
+_resolver_sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'ec-platform-catalogue-20261023'))
+from relocated_evidence import read_verified
 import hashlib
 import json
 import sys
@@ -7,7 +10,7 @@ import sys
 OUT = Path(__file__).resolve().parent
 ROOT = OUT.parents[1]
 CAT = ROOT / 'research/ec-platform-catalogue-20261023'
-sys.path.insert(0, str(ROOT / 'build/honor-analysis'))
+sys.path.insert(0, str(ROOT / '../Decompile/HONOR_HLYL-WXX9/honor-analysis'));sys.dont_write_bytecode=True
 from disasm51 import addresses, codeanalyzer, instructions
 
 def load(name):
@@ -16,7 +19,7 @@ def load(name):
 units = {u['sha256']: u for u in load('source-units.json') + load('additional-source-units.json')}
 blobs = {}
 for digest, unit in units.items():
-    data = Path(unit['path']).read_bytes()
+    data, _ = read_verified(unit['path'], unit['sha256'])
     if hashlib.sha256(data).hexdigest() != digest:
         raise RuntimeError('Different source: ' + unit['source_label'])
     blobs[digest] = data
@@ -28,8 +31,7 @@ for row in consumers:
         raise RuntimeError('Consumer byte mismatch: ' + row['id'])
 bios = load('reviewed-bios-consumer-index.json')['rows']
 for row in bios:
-    if hashlib.sha256(Path(row['module_file']).read_bytes()).hexdigest() != row['module_sha256']:
-        raise RuntimeError('BIOS module mismatch: ' + row['id'])
+    read_verified(row['module_file'], row['module_sha256'])
 oem = load('oem-source-scope-audit.json')
 for source in oem['sources']:
     file = Path(source['file'])

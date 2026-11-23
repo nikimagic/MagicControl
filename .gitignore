@@ -20,6 +20,13 @@ vcpkg_installed/
 /research/*
 !/research/INDEX.md
 !/research/test_util/
+# Shared source used by tracked research scripts; evidence remains local.
+!/research/ec-platform-catalogue-20261023/
+/research/ec-platform-catalogue-20261023/*
+!/research/ec-platform-catalogue-20261023/relocated_evidence.py
+!/research/firmware-reader-static-support/
+/research/firmware-reader-static-support/*
+!/research/firmware-reader-static-support/runtime.py
 /Users_logs/
 /Diagnostics/
 /Backups/

@@ -3,9 +3,10 @@ from pathlib import Path
 import hashlib,json,struct,re
 
 root=Path(__file__).resolve().parents[5]
-out=Path(__file__).resolve().parent
-binary=root/'build/research-gm6ir0c/samples/GCUService-active.exe'
-metadata=root/'build/research-hydroc16g2/battery-recovery/gm6-metadata.json'
+here=Path(__file__).resolve().parent
+out=root/'out'/here.relative_to(root);out.mkdir(parents=True,exist_ok=True)
+binary=root/'research/research-gm6ir0c/samples/GCUService-active.exe'
+metadata=root/'research/research-hydroc16g2/battery-recovery/gm6-metadata.json'
 b=binary.read_bytes()
 def u16(data,offset):return struct.unpack_from('<H',data,offset)[0]
 def u32(data,offset):return struct.unpack_from('<I',data,offset)[0]
@@ -28,11 +29,11 @@ tables=streams.get('#~',streams.get('#-'))[0];valid=struct.unpack_from('<Q',b,ta
 for table in range(64):
  if valid&(1<<table):counts[table]=u32(b,p);p+=4
 d=json.loads(metadata.read_text(encoding='utf-8-sig'));methods=d['methods'];fields=d['fields']
-names_path=out/'token-names.json';names=json.loads(names_path.read_text(encoding='utf-8-sig'))
+names_path=here/'token-names.json';names=json.loads(names_path.read_text(encoding='utf-8-sig'))
 def name(token):return names.get(str(token),f'0x{token:08X}')
 def owner(token):return name(token).split('::')[0]
 assert counts[6]==len(methods);assert counts[4]==len(fields)
-opcodes={r['code']:r for r in json.loads((out/'cil-opcodes.json').read_text(encoding='utf-8-sig'))}
+opcodes={r['code']:r for r in json.loads((here/'cil-opcodes.json').read_text(encoding='utf-8-sig'))}
 sizes={'InlineNone':0,'ShortInlineBrTarget':1,'ShortInlineI':1,'ShortInlineVar':1,'InlineVar':2,
  'InlineBrTarget':4,'InlineField':4,'InlineI':4,'InlineMethod':4,'InlineSig':4,'InlineString':4,
  'InlineTok':4,'InlineType':4,'ShortInlineR':4,'InlineI8':8,'InlineR':8}
@@ -107,8 +108,8 @@ audit={'scope':'Offline exact saved managed OEM only; never loaded as an executa
   'Existing metadata names checked through saved decompilation; each method IL and RVA independently matched exact PE bytes; no token-byte substring search.']}
 (out/'cil-reference-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 inputs={
- 'new_binary_reference_audit':[binary,metadata,names_path,out/'cil-opcodes.json',root/'build/research-hydroc16g2/decompiler/bin/Debug/net10.0/Decompile.dll',
-  root/'build/research-hydroc16g2/decompiler/Program.cs',root/'build/research-hydroc16g2/decompiler/MetaNames.cs'],
+ 'new_binary_reference_audit':[binary,metadata,names_path,here/'cil-opcodes.json',root/'research/research-hydroc16g2/decompiler/bin/Debug/net10.0/Decompile.dll',
+  root/'research/research-hydroc16g2/decompiler/Program.cs',root/'research/research-hydroc16g2/decompiler/MetaNames.cs'],
  'prior_reports':[root/'research/devices/gm6ir0c/battery-healthy-20261021/README.md',root/'research/devices/gm6ir0c/percentage-search-20261021/REPORT.txt'],
  'source_excerpts':[]}
 selections={
@@ -127,10 +128,10 @@ selections={
  '../Decompile/GM6IR0C/Control_Center/020003F0-MyControlCenter.MyFan.MyFanManager_RamFan1p5.cs':[(2295,2317),(2859,2874)],
  '../Decompile/GM6IR0C/Control_Center/02000331-MyControlCenter.PowerModeEvent.cs':[(26,73)],
  '../Decompile/GM6IR0C/Control_Center/02000099-Workaround.WKD_CriticalBatterySetting.cs':[(1,44)],
- 'build/research-gm6ir0c/decompiled-companion/Companion.Core/PowerCommands.cs':[(13,44)],
- 'build/research-gm6ir0c/decompiled-companion/Companion/AppController.cs':[(787,800),(1302,1318)],
- 'build/research-gm6ir0c/decompiled-companion/Companion.Ui.Pages.Power.Strings.resx':[(40,75)],
- 'build/research-gm6ir0c/battery-ui-resources/resources.pri.xml':[(2950,2965),(2982,3005),(3014,3036)],
+ 'research/research-gm6ir0c/decompiled-companion/Companion.Core/PowerCommands.cs':[(13,44)],
+ 'research/research-gm6ir0c/decompiled-companion/Companion/AppController.cs':[(787,800),(1302,1318)],
+ 'research/research-gm6ir0c/decompiled-companion/Companion.Ui.Pages.Power.Strings.resx':[(40,75)],
+ 'research/research-gm6ir0c/battery-ui-resources/resources.pri.xml':[(2950,2965),(2982,3005),(3014,3036)],
  'src/platform/windows/NativeBatteryWindows.cpp':[(195,245),(282,298)],
  'src/gui/windows/SettingsPage.cpp':[(1467,1484)]}
 excerpts=[]

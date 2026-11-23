@@ -1,8 +1,11 @@
 """Inspect original FPT19 file only. Never execute the imported PE or SYS."""
 from pathlib import Path
 import bisect,hashlib,json,re,struct,sys
-root=Path(__file__).resolve().parents[2];out=Path(__file__).resolve().parent
-source=root.parent/'analysis/bios-reader-ultra-20261025/Intel-FPT-19.0.5.1948/FPTW64.exe'
+root=Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(root/'research/firmware-reader-static-support'))
+from runtime import new_run,publish_selection
+out=new_run(root,'fpt19-inspection')
+source=root/'src/platform/windows/runtime/IntelFpt19/FPTW64.exe'
 b=source.read_bytes();sha=hashlib.sha256(b).hexdigest()
 assert sha=='88491119862830235854cd29b9857de21870ac4dc16f74544b1a665f64d62807'
 sys.path.insert(0,str(root.parent.parent/'mechrevo/.tools/pydeps'))
@@ -47,4 +50,5 @@ result=dict(sha256=sha,hardware_executed=False,strings=strings,refs=refs)
 (out/'static-evidence.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 selected=sorted(set(int(r['function_rva'],16) for r in refs if r['function_rva']!='0x0'))
 (out/'selected-functions.txt').write_text(','.join(f'{x:x}' for x in selected)+',3c2b0,3c330,3c3ec\n')
-print(json.dumps(dict(strings=[s['text'] for s in strings if 'WNP' in s['text'] or '.sys' in s['text']],refs=refs),ensure_ascii=False,indent=2))
+publish_selection(out)
+print(json.dumps(dict(output=str(out),strings=[s['text'] for s in strings if 'WNP' in s['text'] or '.sys' in s['text']],refs=refs),ensure_ascii=False,indent=2))

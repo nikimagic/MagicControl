@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,json,sys
 ROOT=Path(__file__).resolve().parents[2];OUT=Path(__file__).resolve().parent
-sys.path.insert(0,str(ROOT/'build/honor-analysis'))
+sys.path.insert(0,str(ROOT/'../Decompile/HONOR_HLYL-WXX9/honor-analysis'));sys.dont_write_bytecode=True
 from disasm51 import addresses,codeanalyzer,instructions
 census=json.loads((ROOT/'research/battery-logger-comparison-20261026/census.json').read_text(encoding='utf8'))
 specs={'WUJIE':[(2,0xbb34,0xbbf0),(2,0xb5c0,0xb710),(2,0xc000,0xc0d0),(2,0xd626,0xd644),(2,0xd7fa,0xd805),(2,0xdc00,0xdc14),(2,0xdc80,0xdcb0),(2,0xdd0e,0xdd16),(0,0x6fe4,0x6ffa),(2,0x86a0,0x8708),(0,0x2630,0x2680),(2,0xe450,0xe4a8),(2,0xb47b,0xb4c0),(2,0xb7bf,0xb800)],

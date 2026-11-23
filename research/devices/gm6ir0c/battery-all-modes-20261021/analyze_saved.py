@@ -1,8 +1,9 @@
 """Saved archives/ASL only. Does not import or run product or hardware code."""
 from pathlib import Path
-import hashlib,json,zipfile,re,collections
-OUT=Path(__file__).resolve().parent
-ROOT=OUT.parents[3]
+import hashlib,json,zipfile,re,collections,uuid
+HERE=Path(__file__).resolve().parent
+ROOT=HERE.parents[3]
+OUT=ROOT/'out/gm6-battery-all-modes-20261021'/('analyze-'+uuid.uuid4().hex);OUT.mkdir(parents=True,exist_ok=False)
 ARCHIVES=Path(r'C:\Users\admin\Downloads\Telegram Desktop')
 sha=lambda b:hashlib.sha256(b).hexdigest()
 result={'scope':'Saved GM6 ZIP/RAM/log/ASL only; no device I/O or product execution','archives':[],'ram':[],'raw_snapshots':[],'context_records':[],'settings':[]}
@@ -47,7 +48,7 @@ summary={kind:dict(collections.Counter(str(x['native_mask30'])for x in result[ki
 result['summary']=summary
 result['unique_ram_sha256']=len({x['sha256']for x in result['ram']})
 asl=[];excerpts=[]
-for path in sorted((ROOT/'build/gm6-healthy-acpi').glob('*.dsl')):
+for path in sorted((ROOT/'../Decompile/GM6IR0C/GM6_ACPI_Healthy_20261021').glob('*.dsl')):
  content=path.read_text(encoding='utf-8',errors='replace');lines=content.splitlines()
  tokens={t:[i+1 for i,line in enumerate(lines)if re.search(r'\b'+re.escape(t)+r'\b',line)]for t in ('CGLM','_BMC','_BMD','_BTH','_BTP','ISDB','4c2067e3-887d-475c-9720-4af1d3ed602e')}
  asl.append({'path':str(path.relative_to(ROOT)),'sha256':sha(path.read_bytes()),'tokens':tokens})

@@ -1,8 +1,8 @@
 """Read extracted saved BIOS sections only. Never executes firmware/capsule."""
 from pathlib import Path
 import hashlib,json,re,uuid,struct
-root=Path(__file__).resolve().parents[5];out=Path(__file__).resolve().parent
-dump=root/'build/g9.bin.dump';bios=root/'build/gm6-battery-firmware-20261021/BIOS-MRO09-from-UCP.bin'
+root=Path(__file__).resolve().parents[5];out=root/'out'/Path(__file__).resolve().parent.relative_to(root)/('inventory-'+uuid.uuid4().hex);out.mkdir(parents=True,exist_ok=False)
+dump=root/'research/g9.bin.dump';bios=root/'research/gm6-battery-firmware-20261021/BIOS-MRO09-from-UCP.bin'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 patterns={n:bytes.fromhex(h) for n,h in {'MMIO_FE410000':'000041fe','MMIO_7A6':'a60741fe','MMIO_7B9':'b90741fe','MMIO_7D0':'d00741fe',
  'offset7A6_u32':'a6070000','offset7B9_u32':'b9070000','offset7D0_u32':'d0070000'}.items()}
@@ -25,7 +25,7 @@ for m in re.finditer(b'DSDT',b):
  table=b[off:off+length];signatures.append({'offset':off,'length':length,'sha256':hashlib.sha256(table).hexdigest(),
   'checksum_valid':sum(table)%256==0,'header_hex':table[:36].hex(),'oem_id':table[10:16].decode('ascii',errors='replace'),'oem_table_id':table[16:24].decode('ascii',errors='replace')})
 comparisons=[]
-for p in [root/'build/research-gm6ir0c/samples/DSDT.aml',*sorted((root/'research/devices/gm6ir0c/battery-healthy-20261021/saved-acpi').glob('DSDT*'))]:
+for p in [root/'research/research-gm6ir0c/samples/DSDT.aml',*sorted((root/'research/devices/gm6ir0c/battery-healthy-20261021/saved-acpi').glob('DSDT*'))]:
  if not p.exists():continue
  saved=p.read_bytes();offsets=[m.start() for m in re.finditer(re.escape(saved),b)]
  diffs=[i for i,(a,z) in enumerate(zip(saved,b)) if a!=z];ranges=[]

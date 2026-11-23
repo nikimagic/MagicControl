@@ -1,6 +1,6 @@
 from pathlib import Path
-import json,collections,re
-root=Path('build/gm6ir0c-logs4-20261021/logs_GM6IR0C');out=Path('research/gm6ir0c-logs4-20261021');report={'sessions':[],'dumps':[]}
+import json,collections,re,uuid
+root=Path('research/gm6ir0c-logs4-20261021/logs_GM6IR0C');out=Path('out/gm6ir0c-logs4-20261021')/('inspect-'+uuid.uuid4().hex);out.mkdir(parents=True,exist_ok=False);report={'sessions':[],'dumps':[]}
 for p in root.glob('MagicControl-*.jsonl'):
  rows=[json.loads(x)for x in p.read_text(encoding='utf-8-sig').splitlines()];counts=collections.Counter(r.get('channel')for r in rows);gm=collections.Counter(str(r.get('message',''))for r in rows if r.get('channel')=='gm6ir0c');errors=collections.Counter(str(r.get('message',''))for r in rows if any(s in str(r.get('message','')).lower()for s in('error','failed','ошиб','unavailable','not confirmed')))
  report['sessions'].append({'file':p.name,'rows':len(rows),'first':rows[0].get('utc'),'last':rows[-1].get('utc'),'channels':dict(counts),'gm6_messages':{k:v for k,v in gm.items()if not k.startswith('mode=')},'error_message_examples_top20':dict(errors.most_common(20))})

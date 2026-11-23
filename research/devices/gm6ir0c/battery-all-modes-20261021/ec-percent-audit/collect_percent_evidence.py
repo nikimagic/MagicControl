@@ -1,15 +1,16 @@
 """Collect byte evidence from existing EC images. No firmware execution or hardware I/O.
 
 Run with the bundled Python: python -X utf8 collect_percent_evidence.py
-Only evidence.json in this research directory is written.
+New evidence.json is written to an isolated run directory under out.
 """
 from pathlib import Path
 import hashlib
 import json
+import uuid
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[4]
-BUILD = ROOT / 'build/gm6-battery-firmware-20261021'
+BUILD = ROOT / 'research/gm6-battery-firmware-20261021'
 IMAGES = {
     'v111': ('EC-MRO09-candidate.bin', '5059e6cb58addec21ad7fd5693f4c082230fbd8c7692fb07799c90adabae5c4c'),
     'v112': ('EC-MRO10-v1.12.bin', '5659c8217e9d93d3fd6fe278756872d7c5adbd15a0687d35705e2df4bb5c05dd'),
@@ -112,6 +113,8 @@ result = {
         'sections': '5.1.1 ChargingCurrent (0x14), 5.1.2 ChargingVoltage (0x15)',
         'application_limit': 'Interface units/command meaning, not an exact charger IC identification'},
 }
-out = HERE / 'evidence.json'
+outdir = ROOT / 'out/gm6-battery-firmware-20261021' / ('percent-evidence-' + uuid.uuid4().hex)
+outdir.mkdir(parents=True, exist_ok=False)
+out = outdir / 'evidence.json'
 out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 print(f'Static evidence written: {out}; {len(ranges)} byte ranges')

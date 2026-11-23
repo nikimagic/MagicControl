@@ -6,8 +6,8 @@ from pathlib import Path
 import hashlib,json,struct,uuid,subprocess
 ROOT=Path(__file__).resolve().parents[5]
 BASE=Path(__file__).resolve().parent.parent
-SOURCE=BASE/'firmware-sources/GMxIR7xN105MRO09_CAP.exe.bin'
-WORK=ROOT/'build/gm6-battery-firmware-20261021/reproduce-ucp';WORK.mkdir(parents=True,exist_ok=True)
+SOURCE=ROOT/'research/gm6-battery-firmware-20261021/GMxIR7xN105MRO09_CAP.exe'
+WORK=ROOT/'out/gm6-battery-firmware-20261021'/('reproduce-ucp-'+uuid.uuid4().hex);WORK.mkdir(parents=True,exist_ok=False)
 data=SOURCE.read_bytes();sha=lambda b:hashlib.sha256(b).hexdigest()
 assert sha(data)=='927efdc56ed3b1b434be86ef3d8d6c40318695817b89ca455a0230a7e264dc1a'
 pe=struct.unpack_from('<I',data,0x3c)[0];count=struct.unpack_from('<H',data,pe+6)[0];size=struct.unpack_from('<H',data,pe+20)[0];opt=pe+24
@@ -35,7 +35,7 @@ n=((72+24+len(sec)+4095)//4096)*4096
 header=bytearray(b'\0'*16+uuid.UUID('8c8ce578-8a3d-4f1c-9935-896185c32dd3').bytes_le+struct.pack('<Q',n)+b'_FVH'+struct.pack('<I',0x0004feff)+struct.pack('<HHHBB',72,0,0,0,2)+struct.pack('<IIII',n//4096,4096,0,0))
 struct.pack_into('<H',header,50,(-sum(struct.unpack('<36H',header)))&65535)
 wrapper=WORK/'synthetic-wrapper.fv';wrapper.write_bytes(header+file+sec+b'\xff'*(n-72-24-len(sec)))
-parser=ROOT/'build/honor-analysis/uefiextract/UEFIExtract.exe'
+parser=ROOT/'../Decompile/HONOR_HLYL-WXX9/honor-analysis/uefiextract/UEFIExtract.exe'
 result=subprocess.run([str(parser),str(wrapper),'all'],capture_output=True,text=True,errors='replace')
 (WORK/'parser.log').write_text(result.stdout+result.stderr,encoding='utf-8');assert result.returncode==0
 hits=[p for p in Path(str(wrapper)+'.dump').rglob('body.bin')if p.stat().st_size==orig]

@@ -1,5 +1,8 @@
 from pathlib import Path
-import subprocess,json,zipfile,collections
+import subprocess,json,zipfile,collections,uuid
+PROJECT=Path(__file__).resolve().parents[4]
+RUN=PROJECT/'out'/('saved-firmware-inventory-'+uuid.uuid4().hex)
+RUN.mkdir(parents=True,exist_ok=False)
 roots=[Path(r'C:\Users\admin\Documents\mechrevo_dsh'),Path(r'C:\Users\admin\Documents\mechrevo')]
 names=subprocess.check_output(['rg','--files','--hidden','--no-ignore','-g','!**/.git/**','-g','!**/node_modules/**',*[str(p)for p in roots]],text=True,encoding='utf-8').splitlines()
 exts={'.bin','.rom','.fd','.cap','.dump','.spi','.img','.hex','.dat'}
@@ -25,7 +28,7 @@ for p in Path(r'C:\Users\admin\Downloads\Telegram Desktop').glob('*.zip'):
   profiles=sorted({line for _,text in reports for line in text.splitlines()if line.startswith(('Профиль:','Плата:','Версия:'))})
   archives.append({'path':str(p),'entries':len(z.infolist()),'binary_members':binary,'profiles':profiles})
 out={'roots':[str(p)for p in roots],'binary_counts':dict(counts),'large_binary_files':large,'gm6_large_binary_files':gm6,'archives':archives}
-Path('build/saved-firmware-inventory.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8')
+(RUN/'saved-firmware-inventory.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8')
 print('counts',dict(counts),'large',len(large),'gm6_large',len(gm6))
 print('GM6 binaries >=64KiB',json.dumps(gm6,ensure_ascii=False))
 for a in archives:print('ARCHIVE',Path(a['path']).name,a['entries'],a['profiles'],'EC files',[(x['member'],x['bytes'])for x in a['binary_members']if Path(x['member']).name in ('ec.bin','ec-after.bin')], 'large_non_acpi',[(x['member'],x['bytes'])for x in a['binary_members']if x['bytes']>=65536 and '/acpi/'not in x['member'].lower()])

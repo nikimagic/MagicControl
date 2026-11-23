@@ -69,7 +69,7 @@ Huawei найден virtbus. HwOs2Ec не найден ни среди служ�
 ## 2. Декомпиляция точных OEM-бинарников
 
 Ghidra12.1.4: WmiUtil432 функции, HardwareHal1988, HwDriverAdapter1363,
-MateBookService2690. Экспорт PE и журналы находятся в `build/honor-oem-analysis`.
+MateBookService2690. Экспорт PE и журналы находятся в `../Decompile/HONOR_HLYL-WXX9/honor-oem-analysis`.
 Это автоматически восстановленный C-псевдокод, не оригинальные исходники:
 типы/сигнатуры некоторых внутренних функций восстановлены неточно.
 Ключевые29 фрагментов сохранены в `ec-oem-analysis/decompiled`.

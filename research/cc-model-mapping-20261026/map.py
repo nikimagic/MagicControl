@@ -2,6 +2,9 @@
 from pathlib import Path
 import json,re,hashlib,collections,sys,csv
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1];CAT=ROOT/'research/ec-platform-catalogue-20261023';BASE=ROOT/'research/cc-laptop-catalogue-20261026'
+sys.path.insert(0,str(CAT))
+from relocated_evidence import NESTED_OEM,read_verified,new_run_dir
+RUN=new_run_dir('cc-model-map')
 obs=json.loads((HERE/'observations.json').read_text(encoding='utf8'));fw=json.loads((HERE/'firmware-links.json').read_text(encoding='utf8'))
 base=json.loads((BASE/'catalogue-rows.json').read_text(encoding='utf8'))
 rows=base['rows'];headers=base['headers']+['Сопоставленные платы','Основание сопоставления','Готовность подключения','Каких данных не хватает']
@@ -25,25 +28,25 @@ def table(raw):
 templates=[]
 for r in fw['section_hits']:
  if 'AB56DC60' not in r['section']:continue
- raw=Path(r['section']).read_bytes();assert sha(raw)==r['sha256']
+ raw,_=read_verified(r['section'],r['sha256'])
  t=table(raw);assert t.get('board')
  templates.append(dict(r,identity=t,scope='SMBIOS Types0/1/2 decoded from saved firmware default table; not a live machine'))
 # Fixed version publisher: CLR A; MOV DPTR,table; MOVC A,@A+DPTR;
 # MOV DPTR,0454; MOVX @DPTR,A. Preserve the raw byte, not a guessed version.
 for u in fw['units']:
  if u['kind']!='EC':continue
- raw=Path(u['path']).read_bytes();publish=[]
+ raw,_=read_verified(u['path'],u['sha256']);publish=[]
  for m in re.finditer(rb'\xe4\x90(..)\x93\x90\x04\x54\xf0',raw,re.S):
   bank=m.start()//0x8000-1;addr=int.from_bytes(m[1],'big');offset=addr if addr<0x8000 else bank*0x8000+addr
   if bank not in (0,1,2) or offset>=len(raw):continue
   publish.append(dict(code_store_file_offset=m.start(),bank=bank,table_CODE=addr,table_file_offset=offset,raw_454=raw[offset],scope='Exact selected bank mapping and MOVC/MOVX byte sequence; full startup reachability/SMBIOS version conversion not asserted'))
  u['version_publishers']=publish
 # Independent CIL evidence from the exact service present in GM6PX7X's report.
-data=ROOT/'build/nested-oem-references/7578-recovered-data'
+data=NESTED_OEM/'7578-recovered-data'
 recovery=json.loads((data/'analysis-assembly-recovery.json').read_text(encoding='utf8'))
-assert sha(Path(recovery['original']).read_bytes())==recovery['original_sha256']
-assert sha((data/recovery['analysis_copy']).read_bytes())==recovery['analysis_sha256']
-sys.path.insert(0,str(CAT));from cil_data_reader import decode_cil
+read_verified(recovery['original'],recovery['original_sha256'])
+read_verified(data/recovery['analysis_copy'],recovery['analysis_sha256'])
+from cil_data_reader import decode_cil
 meta=json.loads((data/'metadata.json').read_text(encoding='utf8'));names=json.loads((data/'token-names.json').read_text(encoding='utf8'))
 ops={x['code']:x for x in json.loads((ROOT/'research/devices/gm6ir0c/battery-all-modes-20261021/oem-audit/cil-opcodes.json').read_text(encoding='utf8'))}
 cil=[]
@@ -177,7 +180,7 @@ assert len(templates)==6
 assert {b:sorted({x['name']for x in m['BIOS_codec']})for b,m in boardmaps.items()}=={'L16':['ID6'],'HYDROC-16':['IDY'],'GM5HG0A':['IDA'],'GM6IR0C':['IDC'],'WUJIE Series-X5SP4NAG':['IDG']}
 assert not obs['errors']
 result=dict(headers=headers,rows=rows,counts=dict(collections.Counter(x['Вид записи']for x in rows)))
-(HERE/'catalogue-rows.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf8')
+(RUN/'catalogue-rows.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf8')
 evidence=dict(scope='Offline static mapping; no writes, target code, driver, application or hardware executed',observed_boards=boardmaps,firmware_SMBIOS_templates=templates,EC_version_publishers=[x for x in fw['units']if x['kind']=='EC'],routing_sources=sources,GM6PX7X_exact_service=dict(original_sha256=recovery['original_sha256'],methods=cil),additional_template_boards=[t['identity']['board']for t in templates if t['identity']['board']not in byreport and t['identity']['board']not in byboard],limitations=['CC registry ProjectID is not a direct read of740','No universal meaning7C3 from CustomizeTarget/BIOS enum','ROM771/772 used in extended project logic are not ROM770','Templates contain placeholders and do not prove which variant boots','No old Project1..24 family uniquely bound to a modern board merely by a numeric enum match'])
-(HERE/'mapping-evidence.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf8')
+(RUN/'mapping-evidence.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf8')
 print('CSV rows',len(rows),'columns',len(headers),'observed BIOS families',[(b,sorted({x['name']for x in m['BIOS_codec']}))for b,m in boardmaps.items()],'additional firmware boards',evidence['additional_template_boards'])

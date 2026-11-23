@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,json,re,sys
 ROOT=Path(__file__).resolve().parents[2];OUT=Path(__file__).resolve().parent
-sys.path.insert(0,str(ROOT/'build/honor-analysis'))
+sys.path.insert(0,str(ROOT/'../Decompile/HONOR_HLYL-WXX9/honor-analysis'));sys.dont_write_bytecode=True
 from disasm51 import addresses,codeanalyzer,instructions
 census=json.loads((ROOT/'research/battery-logger-comparison-20261026/census.json').read_text(encoding='utf8'))
 images=[];listing=[]

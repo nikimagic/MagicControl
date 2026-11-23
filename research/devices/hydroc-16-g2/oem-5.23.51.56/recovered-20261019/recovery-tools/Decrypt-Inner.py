@@ -5,8 +5,12 @@ from pathlib import Path
 import json,struct,re,subprocess,hashlib
 import argparse
 _project=next(p for p in Path(__file__).resolve().parents if (p/'AGENTS.md').is_file() and (p/'src').is_dir())
-_parser=argparse.ArgumentParser(description=__doc__);_parser.add_argument('--directory',type=Path,default=_project/'build/research-hydroc16g2/exact-reproduction');_parser.add_argument('--decompiler',type=Path,default=_project/'build/research-hydroc16g2/decompiler/bin/Debug/net10.0/Decompile.exe');_args=_parser.parse_args()
-r=_args.directory.resolve();tool=_args.decompiler.resolve();source=r/'GCUService.exact-jit-decrypted.analysis-only.dll';b=source.read_bytes();out=bytearray(b);layout=json.loads((r/'exact-jit-decryption.json').read_text())
+_parser=argparse.ArgumentParser(description=__doc__);_parser.add_argument('--directory',type=Path,default=_project/'out/research-hydroc16g2/exact-reproduction');_parser.add_argument('--decompiler',type=Path,default=_project/'research/research-hydroc16g2/decompiler/bin/Debug/net10.0/Decompile.exe');_args=_parser.parse_args()
+r=_args.directory.resolve();r.mkdir(parents=True,exist_ok=True);tool=_args.decompiler.resolve()
+historical=_project/'research/research-hydroc16g2/exact-reproduction'
+use_historical=r==(_project/'out/research-hydroc16g2/exact-reproduction').resolve()
+input_path=lambda name:(r/name) if (r/name).is_file() or not use_historical else (historical/name)
+source=input_path('GCUService.exact-jit-decrypted.analysis-only.dll');b=source.read_bytes();out=bytearray(b);layout=json.loads(input_path('exact-jit-decryption.json').read_text())
 assert hashlib.sha256(b).hexdigest()==layout['output_sha256']
 tokens=[]
 for _record in layout['entries']:

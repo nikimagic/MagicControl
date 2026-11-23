@@ -2,7 +2,7 @@
 from pathlib import Path
 import re,json,sys,hashlib,collections
 OUT=Path(__file__).resolve().parent;ROOT=OUT.parents[1]
-sys.path.insert(0,str(ROOT/'build/honor-analysis'))
+sys.path.insert(0,str(ROOT/'../Decompile/HONOR_HLYL-WXX9/honor-analysis'));sys.dont_write_bytecode=True
 from disasm51 import addresses,codeanalyzer,instructions
 source=ROOT/'research/wujie-full-bios-20261024/wujie-embedded-ec-core-candidate-128KiB.bin'
 raw=source.read_bytes();digest=hashlib.sha256(raw).hexdigest()

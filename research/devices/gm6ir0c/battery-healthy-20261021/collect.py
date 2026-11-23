@@ -1,29 +1,32 @@
 """Offline GM6 Healthy call-chain evidence. No OEM loading, device or registry APIs."""
 from pathlib import Path
-import hashlib,json,re,zipfile,collections,datetime
+import hashlib,json,re,zipfile,collections,datetime,os
 ROOT=Path(__file__).resolve().parents[4]
-OUT=Path(__file__).resolve().parent
+HERE=Path(__file__).resolve().parent
+OUT=ROOT/'out'/HERE.relative_to(ROOT);OUT.mkdir(parents=True,exist_ok=True)
+SUMMARY_OUT=ROOT/'out/research/gm6ir0c-logs5-20261021';SUMMARY_OUT.mkdir(parents=True,exist_ok=True)
+ACTIVE=ROOT.parent/'Decompile/GM6IR0C/Control_Center'
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
-base=ROOT/'build/research-gm6ir0c'
+base=ROOT/'research/research-gm6ir0c'
 sources={
  'active_service':base/'samples/GCUService-active.exe',
  'driver':base/'samples/UWACPIDriver.sys',
  'dsdt_aml':base/'samples/DSDT.aml','dsdt_asl':base/'samples/DSDT.dsl',
- 'service_entry':base/'all-active/02000341-MyControlCenter.App.cs',
- 'policy':base/'all-active/020001C6-GCUService.MySystem.BatteryProtection2.cs',
- 'battery_timer':base/'all-active/020001B8-GCUService.MySystem.BatteryPercentManger.cs',
- 'ec_wrapper':base/'all-active/020000EC-MyECIO.MyEcCtrl.cs',
- 'transport':base/'all-active/020000EA-MyECIO.AcpiCtrl.cs',
- 'nvram_writer':base/'all-active/0200023A-MyControlCenter.NvramVariable.cs',
+ 'service_entry':ACTIVE/'02000341-MyControlCenter.App.cs',
+ 'policy':ACTIVE/'020001C6-GCUService.MySystem.BatteryProtection2.cs',
+ 'battery_timer':ACTIVE/'020001B8-GCUService.MySystem.BatteryPercentManger.cs',
+ 'ec_wrapper':ACTIVE/'020000EC-MyECIO.MyEcCtrl.cs',
+ 'transport':ACTIVE/'020000EA-MyECIO.AcpiCtrl.cs',
+ 'nvram_writer':ACTIVE/'0200023A-MyControlCenter.NvramVariable.cs',
  'companion_command':base/'decompiled-companion/Companion.Core/PowerCommands.cs',
  'companion_ui':base/'decompiled-companion/Companion.Ui.Pages.Power/PowerPage.xaml.cs',
  'oem_ui_resources':base/'battery-ui-resources/resources.pri.xml',
- 'driver_disassembly':ROOT/'build/gm6-healthy-driver-original.asm',
+ 'driver_disassembly':ROOT/'research/build-evidence-20261107/gm6-firmware-asm/gm6-healthy-driver-original.asm',
  'current_percentage_writer':ROOT/'src/platform/windows/NativeBatteryWindows.cpp',
- 'saved_uefi_variable':OUT/'UniWillVariable.bin',
+ 'saved_uefi_variable':HERE/'UniWillVariable.bin',
 }
 evidence={'scope':'Static source/PE/ASL and saved log files only. No application/OEM/driver/EC/SMBus/registry execution or tests.',
- 'sources':{k:{'path':str(p.relative_to(ROOT)).replace('\\','/'),'bytes':p.stat().st_size,'sha256':sha(p)}for k,p in sources.items()},
+ 'sources':{k:{'path':Path(os.path.relpath(p, ROOT)).as_posix(),'bytes':p.stat().st_size,'sha256':sha(p)}for k,p in sources.items()},
  'host_chain':['Companion Stationary -> PowerCommands.SetBatteryMode -> MQTT BatteryProtection/Control Action HEALTHYMODE',
  'App.Receive -> BatteryProtection2.Receive -> HealthProtectionStatus=2 persisted in OEM registry -> SetHealthProtectionLow',
  'fresh read7A6; clear bit4 and set bit5, preserve all other bits',
@@ -42,7 +45,7 @@ policy=sources['policy'].read_text(encoding='utf-8-sig')
 evidence['percentage_method_references']={}
 for name in ('SetBatteryChargingLimit_Up','SetBatteryChargingLimit_Down','LoadBatteryLimitationDefault'):
  hits=[]
- for p in (base/'all-active').glob('*.cs'):
+ for p in ACTIVE.glob('*.cs'):
   for line,text in enumerate(p.read_text(encoding='utf-8-sig').splitlines(),1):
    if re.search(r'\b'+name+r'\s*\(',text):hits.append({'file':p.name,'line':line,'text':text.strip()})
  evidence['percentage_method_references'][name]=hits
@@ -58,13 +61,13 @@ with zipfile.ZipFile(base/'Mechrevo-Research-GM6IR0C-20261017-215647.zip')as z:
  evidence['original_saved_policy']={'member':member,'member_sha256':hashlib.sha256(raw).hexdigest(),'entries':found}
  evidence['original_firmware_payload_names']=[i.filename for i in z.infolist()if Path(i.filename).suffix.lower()in ('.rom','.fd','.cap')]
 dumps=[]
-for p in (ROOT/'build/gm6ir0c-logs4-20261021/logs_GM6IR0C').rglob('ec.bin'):
- b=p.read_bytes();dumps.append({'path':str(p.relative_to(ROOT)).replace('\\','/'),'sha256':sha(p),
+for p in (ROOT/'research/gm6ir0c-logs4-20261021/logs_GM6IR0C').rglob('ec.bin'):
+ b=p.read_bytes();dumps.append({'path':Path(os.path.relpath(p, ROOT)).as_posix(),'sha256':sha(p),
  'raw':{f'{a:03X}':b[a]for a in (0x741,0x7A6,0x7B9,0x7D0)},'mode':(b[0x7A6]>>4)&3})
 evidence['saved_ram_contexts']=dumps
 (OUT/'source-excerpts.json').write_text(json.dumps({
  'scope':'Short static source excerpts, accompanied by full input hashes; never executed.',
- 'excerpts':[{'source':str(sources[key].relative_to(ROOT)).replace('\\','/'),'start_line':start,'end_line':end,
+ 'excerpts':[{'source':Path(os.path.relpath(sources[key], ROOT)).as_posix(),'start_line':start,'end_line':end,
  'text':'\n'.join(sources[key].read_text(encoding='utf-8-sig').splitlines()[start-1:end])}
  for key,start,end in [('policy',149,184),('policy',244,251),('policy',282,313),('policy',374,411),
  ('battery_timer',19,27),('battery_timer',54,65),('transport',207,225),('transport',376,390),
@@ -72,7 +75,7 @@ evidence['saved_ram_contexts']=dumps
  ('service_entry',411,420),('service_entry',579,588)]]},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 (OUT/'evidence.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 
-logs=ROOT/'build/gm6ir0c-logs5-20261021/logs_GM6IR0C'
+logs=ROOT/'research/gm6ir0c-logs5-20261021/logs_GM6IR0C'
 read=lambda p:[json.loads(x)for x in p.read_text(encoding='utf-8-sig').splitlines()if x.strip()]
 main=read(logs/'MagicControl-1.jsonl');battery=read(logs/'battery-1.jsonl')
 def msk(t):return datetime.datetime.fromisoformat(t.replace('Z','+00:00')).astimezone(datetime.timezone(datetime.timedelta(hours=3))).isoformat()
@@ -92,6 +95,6 @@ summary={'archive':json.loads((ROOT/'research/gm6ir0c-logs5-20261021/archive-man
  'same_session':main[0]['session']==battery[0]['session'],'same_slot':main[0]['slot']==battery[0]['slot'],
  'battery_channels':dict(collections.Counter(r['channel']for r in battery)),'register_snapshots':snapshots,'commands':commands,
  'conclusion':'Percentage85/80 configured; native mode stays Performance throughout snapshots. Charging resumes at99% and returns100%; Healthy was not selected. CPU nonzero overrides retained until explicit later commands; physical Intel PL enforcement remains unmeasured.'}
-(ROOT/'research/gm6ir0c-logs5-20261021/evidence.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+(SUMMARY_OUT/'evidence.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 print(json.dumps({'source_hashes':len(sources),'original_saved_policy':found,'original_firmware_payloads':len(evidence['original_firmware_payload_names']),
  'logs5_main':len(main),'logs5_battery':len(battery),'same_session':summary['same_session'],'raw_snapshots':len(snapshots),'raw_policy_values':sorted({s['raw']['7A6']for s in snapshots if '7A6'in s['raw']})},ensure_ascii=False))

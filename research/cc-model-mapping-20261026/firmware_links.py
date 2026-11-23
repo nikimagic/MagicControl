@@ -1,7 +1,11 @@
 """Read saved firmware data only. Exact matches are evidence, not compatibility."""
 from pathlib import Path
+import sys as _resolver_sys
+_resolver_sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'ec-platform-catalogue-20261023'))
+from relocated_evidence import read_verified,resolve_recorded,new_run_dir
 import json,re,hashlib,collections
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1];CAT=ROOT/'research/ec-platform-catalogue-20261023'
+RUN=new_run_dir('cc-model-firmware-links')
 units=json.loads((CAT/'source-units.json').read_text(encoding='utf8'))
 profiles=json.loads((CAT/'charge-project-coverage.json').read_text(encoding='utf8'))['profiles']
 targets={p['board'] for p in profiles}|{p['label'] for p in profiles if len(p['label'])>8}
@@ -9,7 +13,7 @@ targets|={'GM6IR0C','GM5HG0A','GM6PX7X','GM6BG0X','GM6IX9B','X5SP4NAG','HYDROC-1
 patterns=[(t,enc,t.encode(enc))for t in sorted(targets)for enc in ('ascii','utf-16-le') if t.isascii()]
 rows=[]
 for u in units:
- raw=Path(u['path']).read_bytes();assert hashlib.sha256(raw).hexdigest()==u['sha256']
+ raw,_=read_verified(u['path'],u['sha256'])
  hits=[]
  for target,enc,needle in patterns:
   at=raw.lower().find(needle.lower())
@@ -26,7 +30,7 @@ for u in units:
 cohort=json.loads((CAT/'canonical-bios-dsdt-inventory.json').read_text(encoding='utf8'))['cohort']
 sections=[];cache={}
 for unit in cohort:
- for p in Path(unit['dump_folder']).rglob('*body.bin'):
+ for p in resolve_recorded(unit['dump_folder']).rglob('*body.bin'):
   raw=p.read_bytes();h=hashlib.sha256(raw).hexdigest()
   if h not in cache:
    hh=[]
@@ -36,7 +40,7 @@ for unit in cohort:
    cache[h]=hh
   if cache[h]:sections.append({'container_unit':unit['unit'],'container_source':unit['source'],'section':str(p),'sha256':h,'matches':cache[h]})
 result={'scope':'Saved canonical units and selected decompressed body.bin; exact text matches, not automatic runtime/template selection or compatibility','units':rows,'section_hits':sections,'unique_sections_scanned':len(cache),'hardware_execution':False}
-(HERE/'firmware-links.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf8')
+with (RUN/'firmware-links.json').open('x',encoding='utf8')as f:f.write(json.dumps(result,ensure_ascii=False,indent=2))
 print('units',len(rows),'unique sections',len(cache),'section occurrences with identity strings',len(sections))
 for r in rows:
  if r['exact_identity_string_hits'] or r['literal_write_patterns']:print(r['source'],[x['target']for x in r['exact_identity_string_hits']],r['literal_write_patterns'])

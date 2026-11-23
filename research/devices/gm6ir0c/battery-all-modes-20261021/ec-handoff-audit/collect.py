@@ -1,8 +1,11 @@
 """Saved-image and saved-log evidence only. No hardware APIs, app or firmware execution."""
 from pathlib import Path
-import hashlib,json,re
-root=Path(__file__).resolve().parents[5];out=Path(__file__).resolve().parent
-w=root/'build/gm6-battery-firmware-20261021';path=w/'EC-MRO10-v1.12.bin';b=path.read_bytes();sha=lambda raw:hashlib.sha256(raw).hexdigest()
+import hashlib,json,re,uuid
+root=Path(__file__).resolve().parents[5]
+run=root/'out/gm6-battery-firmware-20261021'/('ec-handoff-'+uuid.uuid4().hex)
+out=run/'ec-handoff-audit';out.mkdir(parents=True,exist_ok=False)
+(run/'bios-audit').mkdir()
+w=root/'research/gm6-battery-firmware-20261021';path=w/'EC-MRO10-v1.12.bin';b=path.read_bytes();sha=lambda raw:hashlib.sha256(raw).hexdigest()
 assert sha(b)=='5659c8217e9d93d3fd6fe278756872d7c5adbd15a0687d35705e2df4bb5c05dd'
 old=(w/'EC-MRO09-candidate.bin').read_bytes()
 def at(logical,bank):return logical if logical<0x8000 else 0x8000+bank*0x8000+(logical-0x8000)
@@ -45,10 +48,10 @@ for name in ['backup.fd','bios.bin','new.fd']:
  p=w/'mro10-static'/name;raw=p.read_bytes();offset=raw.find(b);assert offset>=0 and raw.find(b,offset+1)<0
  spis.append({'path':str(p.relative_to(root)),'bytes':len(raw),'sha256':sha(raw),'EC_offset':offset,'EC_bytes':len(b),'EC_sha256':sha(raw[offset:offset+len(b)])})
 sig=[]
-for name in ['m10-fid-body.bin','m10-sgn-body.bin','m10-smbios-body.bin']:
- p=root/'build'/name/'body.bin';raw=p.read_bytes();sig.append({'path':str(p.relative_to(root)),'bytes':len(raw),'sha256':sha(raw),'hex':raw.hex(),
+for name,folder in [('m10-fid-body.bin','MRO10_FID'),('m10-sgn-body.bin','MRO10_SGN'),('m10-smbios-body.bin','MRO10_SMBIOS')]:
+ p=root/'../Decompile/GM6IR0C'/folder/'body.bin';raw=p.read_bytes();sig.append({'path':str(p.relative_to(root)),'bytes':len(raw),'sha256':sha(raw),'hex':raw.hex(),
   'strings':[{'offset':m.start(),'text':m.group().decode('ascii')}for m in re.finditer(rb'[\x20-\x7e]{5,}',raw)]})
-dump=root/'build/gm6ir0c-logs4-20261021/logs_GM6IR0C/dumps/dump-20261021-175302-0';raw=(dump/'ec.bin').read_bytes();valid=(dump/'ec-valid.bin').read_bytes()
+dump=root/'research/gm6ir0c-logs4-20261021/logs_GM6IR0C/dumps/dump-20261021-175302-0';raw=(dump/'ec.bin').read_bytes();valid=(dump/'ec-valid.bin').read_bytes()
 selected={}
 for address,width in [(0x454,1),(0x740,1),(0x491,1),(0x30e,2),(0x31a,2),(0x520,2),(0x522,2),(0x7c3,1),(0x770,1)]:
  assert all(valid[address:address+width]);data=raw[address:address+width]

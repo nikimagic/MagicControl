@@ -53,6 +53,8 @@ build/   export-ignore
 
 # Preserve extracted OEM evidence (INF/catalog hashes and obfuscated metadata).
 /research/devices/hydroc-16-g2/oem-5.23.51.56/** -text
+# Preserve vendor CRLF scripts byte-for-byte while checking other whitespace.
+/research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019/recovery-tools/*.py whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 
 # Prepared packages must retain the bytes recorded in package-manifest.json.
 /GitHub_Releases/MagicControl-0.1.67-*/** -text

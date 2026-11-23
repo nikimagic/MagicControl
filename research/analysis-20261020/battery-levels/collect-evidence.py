@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-OUT = Path(__file__).resolve().parent
+OUT = ROOT / "out" / Path(__file__).resolve().parent.relative_to(ROOT); OUT.mkdir(parents=True, exist_ok=True)
 GM = ROOT / "../Decompile/GM6IR0C/Control_Center"
 HY = ROOT / "research/devices/hydroc-16-g2/oem-5.23.51.56/recovered-20261019"
 
@@ -72,15 +72,15 @@ for source in sorted(GM.glob("*.cs")):
 audit_path = HY / "audit.json"
 audit = json.loads(audit_path.read_text(encoding="utf-8-sig"))
 ui = {
-    "gm6": resources(ROOT / "build/research-gm6ir0c/battery-ui-resources/resources.pri.xml"),
-    "hydroc": resources(ROOT / "build/research-hydroc16g2/battery-ui-resources/GamingCenter3_Cross.UWP_5.23.51.56_x64-resources.pri.xml"),
+    "gm6": resources(ROOT / "research/research-gm6ir0c/battery-ui-resources/resources.pri.xml"),
+    "hydroc": resources(ROOT / "research/research-hydroc16g2/battery-ui-resources/GamingCenter3_Cross.UWP_5.23.51.56_x64-resources.pri.xml"),
 }
 pins = [
-    ROOT / "build/research-gm6ir0c/samples/GCUService-active.exe",
-    ROOT / "build/research-gm6ir0c/battery-ui-resources/resources.pri",
-    ROOT / "build/research-gm6ir0c/battery-ui-resources/AppxManifest.xml",
-    ROOT / "build/research-hydroc16g2/installer/app/AiStoneService/MyControlCenter/GCUService.exe",
-    ROOT / "build/research-hydroc16g2/battery-ui-resources/GamingCenter3_Cross.UWP_5.23.51.56_x64-resources.pri",
+    ROOT / "research/research-gm6ir0c/samples/GCUService-active.exe",
+    ROOT / "research/research-gm6ir0c/battery-ui-resources/resources.pri",
+    ROOT / "research/research-gm6ir0c/battery-ui-resources/AppxManifest.xml",
+    ROOT / "research/research-hydroc16g2/installer/app/AiStoneService/MyControlCenter/GCUService.exe",
+    ROOT / "research/research-hydroc16g2/battery-ui-resources/GamingCenter3_Cross.UWP_5.23.51.56_x64-resources.pri",
 ]
 evidence = {
     "date": "2026-10-20", "method": "static offline source/resource inspection",

@@ -1,5 +1,8 @@
 """Compare saved AMD/Intel captures and reference images; no hardware or subprocess."""
 from pathlib import Path
+import sys as _resolver_sys
+_resolver_sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'ec-platform-catalogue-20261023'))
+from relocated_evidence import read_verified
 import hashlib,json,re,struct,uuid,zipfile
 ROOT=Path(__file__).resolve().parents[2];OUT=Path(__file__).resolve().parent
 sha=lambda b:hashlib.sha256(b).hexdigest()
@@ -23,7 +26,7 @@ report={'intel':{'archive_member':prefix+'pass1.partial.bin','bytes':len(intel),
 units=json.loads((ROOT/'research/ec-platform-catalogue-20261023/source-units.json').read_text(encoding='utf-8'))
 for u in units:
     if u.get('sha256') not in ['2039277e2adfc54ec11983fd5822dcc070648b41217fe86b57a3f5779f2f7722','ac379a0bfbf9aa079e92d4e386b4f80eafbbe72f3f23b66a8d1f8c0ce53a5e12']:continue
-    raw=Path(u['path']).read_bytes()
+    raw,_=read_verified(u['path'],u['sha256'])
     if sha(raw)!=u['sha256']:raise ValueError('Reference bytes changed')
     frba=((struct.unpack_from('<I',raw,20)[0]>>16)&255)*16;regions=[]
     for i,name in enumerate(['Descriptor','BIOS','ME','GbE','PlatformData']):
@@ -38,7 +41,7 @@ for u in units:
     same=sum(x==y for x,y in zip(intel,bios))
     report['intel']['references'].append({'source':u['path'],'sha256':sha(raw),'bytes':len(raw),'descriptor_regions':regions,'bios_region_sha256':sha(bios),'equal_bytes':same,'equal_fraction':same/len(intel),'identical_4k_blocks':sum(intel[i:i+4096]==bios[i:i+4096] for i in range(0,len(intel),4096)),'total_4k_blocks':len(intel)//4096,'differing_4k_spans':[[hex(x),hex(y+4095)] for x,y in bad],'reset_vector_16_bytes_identical':intel[-16:]==bios[-16:]})
 ec=next(u for u in units if u.get('id')=='EC:5059e6cb58ad')
-ecbytes=Path(ec['path']).read_bytes();found=intel.find(ecbytes)
+ecbytes,_=read_verified(ec['path'],ec['sha256']);found=intel.find(ecbytes)
 report['intel']['embedded_ec_update_image']={'reference_sha256':sha(ecbytes),'bytes':len(ecbytes),'found_at_bios_offset':hex(found) if found>=0 else None,'live_ec_flash_dump':False}
 amd=ROOT/'MagicControl/windows/logs_WUJIE_Series-X5SP4NAG/bios-dumps/bios-20261024-193321-0'
 a=(amd/'bios.bin').read_bytes();v=(amd/'bios-verify.bin').read_bytes()

@@ -4,14 +4,16 @@ import hashlib
 import json
 import shutil
 import subprocess
+import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
-OUT = Path(__file__).resolve().parent
 state = json.loads((ROOT / 'build/product-build.json').read_text(encoding='utf-8-sig'))
 assert state['status'] == 'complete'
 assert all(state['platforms'][p]['status'] == 'verified' for p in ('windows', 'linux'))
 version = state['version']
-dest = ROOT / 'build/owner-delivery' / f'MagicControl-{version}-windows-x64-portable'
+OUT = ROOT / 'out/owner-delivery' / ('run-' + uuid.uuid4().hex)
+OUT.mkdir(parents=True, exist_ok=False)
+dest = OUT / f'MagicControl-{version}-windows-x64-portable'
 assert not dest.exists(), f'Refusing to overwrite {dest}'
 cmake = Path(r'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe')
 binary = ROOT / 'build/windows/bin/Release/MagicControl.exe'

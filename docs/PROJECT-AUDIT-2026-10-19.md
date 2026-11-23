@@ -348,13 +348,15 @@ GPU hot-unplug и многосеансового gate. Аппаратные сц
 
 ## Файлы ревизии
 
-- `build/audit-20261019/source-index.json` — инвентарь текстовых файлов.
-- `build/audit-20261019/source-anchors.json` — привязки замечаний к исходникам.
-- `build/audit-20261019/runtime-inventory.json` — SHA256/подписи/размеры runtime.
-- `build/audit-20261019/log-summary.json` — сводка нового архива.
-- `build/audit-20261019/logs/` — локальная рабочая копия присланных журналов.
+- `research/build-evidence-20261107/audit-batch/AUDIT/audit-20261019/source-index.json` — инвентарь текстовых файлов.
+- `research/build-evidence-20261107/audit-batch/AUDIT/audit-20261019/source-anchors.json` — привязки замечаний к исходникам.
+- `research/build-evidence-20261107/audit-batch/AUDIT/audit-20261019/runtime-inventory.json` — SHA256/подписи/размеры runtime.
+- `research/build-evidence-20261107/audit-batch/AUDIT/audit-20261019/log-summary.json` — сводка нового архива.
+- `research/build-evidence-20261107/audit-batch/AUDIT/audit-20261019/logs/` — локальная рабочая копия присланных журналов.
 
-Личные журналы и инструменты анализа остаются в игнорируемом build-каталоге.
+Личные журналы и материалы анализа физически перенесены из `build` в
+локальный игнорируемый каталог `research/build-evidence-20261107/audit-batch`;
+их манифест `FILES-before.csv` сохраняет исходные имена и хеши.
 Существующие исходники приложения, настройки и подготовленные архивы этой
 ревизией не изменялись.
 
@@ -395,7 +397,7 @@ ScrollModel, ползунок, колесо и GTK scroller не заменял�
 - windows: `C:\Users\admin\Documents\mechrevo_dsh\MagicControl\MagicControl\windows\MagicControl.exe`, SHA256 `31F4D34969CD1BE1B461F19E4D023120BC6EE5EEB1B2A027B49FD711425A9F44`.
 - linux: `C:\Users\admin\Documents\mechrevo_dsh\MagicControl\MagicControl\linux\MagicControl`, SHA256 `C469F1716AABE9563BF75A9F9E521825867F50759644FF42B381D9698FA1938B`.
 
-Подробная локальная сводка: `build/audit-fixes/completion.json`.
+Подробная локальная сводка: `research/build-evidence-20261107/audit-batch/AUDIT/audit-fixes/completion.json`.
 
 ## Повторная проверка A01 —20.10.2026, исходники0.1.83
 

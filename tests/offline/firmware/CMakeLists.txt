@@ -130,6 +130,9 @@ else()
 endif()
 add_test(NAME firmware_nvidia_contract COMMAND nvflash_contract_offline_tests)
 add_test(NAME firmware_nvidia_state COMMAND nvflash_state_offline_tests)
+add_test(NAME firmware_reader_research_paths
+    COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_LIST_DIR}/test_reader_static_runtime.py")
+set_tests_properties(firmware_reader_research_paths PROPERTIES LABELS "offline;firmware;research" TIMEOUT 30)
 add_test(NAME firmware_nvidia_collector COMMAND nvidia_collector_offline_tests "${CMAKE_CURRENT_BINARY_DIR}/nvidia-captures")
 add_test(NAME firmware_nvidia_gm6_saved_rom
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_LIST_DIR}/test_gm6_vbios_file.py"

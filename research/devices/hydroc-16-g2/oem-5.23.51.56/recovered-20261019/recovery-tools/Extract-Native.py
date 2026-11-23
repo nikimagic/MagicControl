@@ -3,8 +3,8 @@ import struct,json,hashlib
 import argparse
 _project=next(p for p in Path(__file__).resolve().parents if (p/'AGENTS.md').is_file() and (p/'src').is_dir())
 _parser=argparse.ArgumentParser(description=__doc__)
-_parser.add_argument('--input',type=Path,default=_project/'build/research-hydroc16g2/installer/app/AiStoneService/MyControlCenter/GCUService.exe')
-_parser.add_argument('--output',type=Path,default=_project/'build/research-hydroc16g2/exact-reproduction')
+_parser.add_argument('--input',type=Path,default=_project/'research/research-hydroc16g2/installer/app/AiStoneService/MyControlCenter/GCUService.exe')
+_parser.add_argument('--output',type=Path,default=_project/'out/research-hydroc16g2/exact-reproduction')
 _args=_parser.parse_args();r=_args.output.resolve();r.mkdir(parents=True,exist_ok=True);src=_args.input.resolve()
 
 def rc4(key,data):

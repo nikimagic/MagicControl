@@ -1,8 +1,8 @@
 from pathlib import Path,PurePosixPath
-import hashlib,json,zipfile,stat
-source=Path(r'C:\Users\admin\Downloads\Telegram Desktop\logs_GM6IR0C (5).zip')
-dest=Path('build/gm6ir0c-logs5-20261021').resolve()
-out=Path('research/gm6ir0c-logs5-20261021');out.mkdir(parents=True,exist_ok=True)
+import hashlib,json,zipfile,stat,uuid
+source=Path('Users_logs/logs_GM6IR0C (5).zip')
+dest=(Path('out/gm6ir0c-logs5-20261021')/('extract-'+uuid.uuid4().hex)).resolve();dest.mkdir(parents=True,exist_ok=False)
+out=dest
 digest=lambda b:hashlib.sha256(b).hexdigest()
 manifest={'archive':source.name,'sha256':digest(source.read_bytes()),'bytes':source.stat().st_size,'files':[]}
 with zipfile.ZipFile(source)as z:

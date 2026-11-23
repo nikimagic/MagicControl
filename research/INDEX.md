@@ -1,14 +1,17 @@
 # Индекс исследований
 
-Срез непосредственных каталогов на 06.11.2026. Каждая ссылка ведёт к существующей папке;
-категории в этом файле — рубрики индекса, физический перенос они не изображают.
+Срез каталогов на 06.11.2026 с дополнениями о последующих переносах. Каждая ссылка
+ведёт к существующей папке; отмеченные ссылки Decompile находятся вне research.
 Исследовательские логи, дампы и настройки хранятся локально; их наличие в индексе
 не означает аппаратного подтверждения или пригодности для записи в устройство.
 
-## GM6 (30)
+## GM6 (37)
 
 - [Ревизия чтения VBIOS и EEPROM, 23.11.2026](gm6-vbios-audit-20261123.md)
 - [Исходники GitHub: программные считыватели NVIDIA ROM](gm6-vbios-github-readers-20261123.md)
+- [b23 — сохранённые BIOS и распаковки](b23/) · [карта прежних путей](ec-platform-catalogue-20261023/B23-UB23-RELOCATION.md)
+- [g9.bin.dump — плоская распаковка BIOS MRO09](g9.bin.dump/) · [карта переноса](ec-platform-catalogue-20261023/G9-RELOCATION.md)
+- [gm6-battery-firmware-20261021 — сохранённые BIOS/EC и исследования](gm6-battery-firmware-20261021/)
 - [gm6-current-idle-20261022](gm6-current-idle-20261022/)
 - [gm6-custom-presets-20261022](gm6-custom-presets-20261022/)
 - [gm6-diagnostic-decode-20261022](gm6-diagnostic-decode-20261022/)
@@ -23,6 +26,7 @@
 - [gm6-yuri-bios-decompile-20261106](gm6-yuri-bios-decompile-20261106/)
 - [gm6-yuri-log22-20261106](gm6-yuri-log22-20261106/)
 - [gm6-yuri-oem-decompile-20261106](gm6-yuri-oem-decompile-20261106/)
+- [gm6ir0c — ранние разборы в Decompile](../../Decompile/GM6IR0C/Ранние_разборы/)
 - [gm6ir0c-logs10-20261022](gm6ir0c-logs10-20261022/)
 - [gm6ir0c-logs11-20261023](gm6ir0c-logs11-20261023/)
 - [gm6ir0c-logs12-20261024](gm6ir0c-logs12-20261024/)
@@ -39,6 +43,9 @@
 - [gm6ir0c-logs8-20261022](gm6ir0c-logs8-20261022/)
 - [gm6ir0c-logs9-20261022](gm6ir0c-logs9-20261022/)
 - [intel-gm6-full-spi-20261025](intel-gm6-full-spi-20261025/)
+- [m124 — статические копии MRO10 и распаковки](m124/)
+- [ub23 — сохранённый BIOS и распаковки](ub23/)
+- [research-gm6ir0c — сохранённые OEM-материалы](research-gm6ir0c/)
 
 ## Wujie (29)
 
@@ -63,12 +70,12 @@
 - [wujie-live-charge-20261022](wujie-live-charge-20261022/)
 - [wujie-live-ec-flash-20261106](wujie-live-ec-flash-20261106/)
 - [wujie-lower-native-20261031](wujie-lower-native-20261031/)
-- [wujie-memory-temperature-20261025](wujie-memory-temperature-20261025/)
+- [wujie-memory-temperature-20261025](wujie-memory-temperature-20261025/) · [сохранённый проект Ghidra в Decompile](../../Decompile/WUJIE_X5SP4NAG/Memory_Sensor_Ghidra_20261025/)
 - [wujie-native-idle-20261021](wujie-native-idle-20261021/)
 - [wujie-pci-npu-20261029](wujie-pci-npu-20261029/)
 - [wujie-portable-longrun-20261105](wujie-portable-longrun-20261105/)
 - [wujie-priority-live-20261031](wujie-priority-live-20261031/)
-- [wujie-spi-reader-20261024](wujie-spi-reader-20261024/)
+- [wujie-spi-reader-20261024](wujie-spi-reader-20261024/) · [сохранённое извлечение XY14PTL](../../Control_Center/MECHREVO_XY14PTL/Source_Extraction_5.57.1.2/) (не утверждение совместимости с Wujie)
 - [wujie-users-logs-20261024](wujie-users-logs-20261024/)
 - [wujie-wake-backlight-20261030](wujie-wake-backlight-20261030/)
 
@@ -84,7 +91,7 @@
 - [honor-manual-native-20261101](honor-manual-native-20261101/)
 - [honor-update-20261027](honor-update-20261027/)
 
-## Lenovo / Legion (7)
+## Lenovo / Legion (9)
 
 - [it5507-legion-nmf081-20261101](it5507-legion-nmf081-20261101/)
 - [legion-gamingfeature-full-20261101](legion-gamingfeature-full-20261101/)
@@ -92,7 +99,9 @@
 - [lenovo-fan-shutdown-20261102](lenovo-fan-shutdown-20261102/)
 - [lenovo-log5-ec-20261102](lenovo-log5-ec-20261102/)
 - [lenovo-native-cc-20261102](lenovo-native-cc-20261102/)
+- [lenovo-instrument-330-draft-20261103 — сохранённый черновик](lenovo-instrument-330-draft-20261103/)
 - [llt-full-20261102](llt-full-20261102/)
+- [llt-native-ghidra — сохранённые Ghidra-проекты](llt-native-ghidra/)
 
 ## Minisforum / HPBSD (3)
 
@@ -106,12 +115,13 @@
 - [gm5hg0a-logs3-20261022](gm5hg0a-logs3-20261022/)
 - [gm5hg0a-logs4-20261022](gm5hg0a-logs4-20261022/)
 
-## HYDROC (4)
+## HYDROC (5)
 
 - [hydroc-audit-20261024](hydroc-audit-20261024/)
 - [hydroc-hid-dump-20261024](hydroc-hid-dump-20261024/)
 - [hydroc-integration-20261024](hydroc-integration-20261024/)
 - [hydroc-lpp-core-20261024](hydroc-lpp-core-20261024/)
+- [research-hydroc16g2 — сохранённые OEM-материалы](research-hydroc16g2/)
 
 ## Machenike (8)
 
@@ -124,7 +134,7 @@
 - [l16-new-20261022](l16-new-20261022/)
 - [new-l16-20261022](new-l16-20261022/)
 
-## BIOS, EC и прошивки (32)
+## BIOS, EC и прошивки (33)
 
 - [afulnx-search](afulnx-search/)
 - [battery-restart-firmware-search-20261022](battery-restart-firmware-search-20261022/)
@@ -133,6 +143,7 @@
 - [bios-region-fix](bios-region-fix/)
 - [bios-unlock-package-20261024](bios-unlock-package-20261024/)
 - [ec-platform-catalogue-20261023](ec-platform-catalogue-20261023/)
+- [ecp23 — сохранённые образы и разборы](ecp23/) · [карта прежних путей](ec-platform-catalogue-20261023/ECP23-RELOCATION.md)
 - [ec-policy-caption-20261023](ec-policy-caption-20261023/)
 - [firmware-validator-tests-20261025](firmware-validator-tests-20261025/)
 - [fpt-integration-20261025](fpt-integration-20261025/)
@@ -173,7 +184,7 @@
 - [sets-fans-cutover-20261030](sets-fans-cutover-20261030/)
 - [wmi-smu-resume-20261024](wmi-smu-resume-20261024/)
 
-## Батарея и зарядка (16)
+## Батарея и зарядка (19)
 
 - [battery-button-labels-20261026](battery-button-labels-20261026/)
 - [battery-card-modes-20261026](battery-card-modes-20261026/)
@@ -189,12 +200,16 @@
 - [battery-restart90-20261022](battery-restart90-20261022/)
 - [battery-single-path-20261101](battery-single-path-20261101/)
 - [battery-volts-display-20261026](battery-volts-display-20261026/)
-- [charging-hold-followup-20261023](charging-hold-followup-20261023/)
+- [charging-hold-followup-20261023](charging-hold-followup-20261023/) · [декомпил NUCtool в Decompile](../../Decompile/NUCTOOL_Charge_20261023/) · [карта переноса](charging-hold-followup-20261023/RELOCATION-20261107.md)
 - [platform7-charge-check-20261022](platform7-charge-check-20261022/)
+- [wujie-charge-analysis-20261021-1147 — сохранённые снимки и отчёты](wujie-charge-analysis-20261021-1147/)
+- [wujie-charge-analysis-20261021-1220 — сохранённые снимки и отчёты](wujie-charge-analysis-20261021-1220/)
+- [wujie-discharge5-20261021 — сохранённые журналы и события](wujie-discharge5-20261021/) · [карта переноса](analysis-20261021/wujie-discharge5/RELOCATION-20261107.md)
 
-## Клавиатура и подсветка (11)
+## Клавиатура и подсветка (12)
 
 - [backlight-default-driver-20261021](backlight-default-driver-20261021/)
+- [backlight-driver-20261021 — дизассемблирование драйверов](backlight-driver-20261021/)
 - [copilot-key-20261027](copilot-key-20261027/)
 - [copilot-native-independent-20261030](copilot-native-independent-20261030/)
 - [info-keys-revision-20261030](info-keys-revision-20261030/)
@@ -212,13 +227,14 @@
 - [telemetry-inventory-0.1.408-20261030](telemetry-inventory-0.1.408-20261030/)
 - [telemetry-pause-20261106](telemetry-pause-20261106/)
 
-## Интерфейс, сборка и обновления (11)
+## Интерфейс, сборка и обновления (12)
 
 - [info-operation-window-20261025](info-operation-window-20261025/)
 - [local-update-20261023](local-update-20261023/)
 - [navigation-package-20261031](navigation-package-20261031/)
 - [package-repair-20261106](package-repair-20261106/)
 - [release-199-20261025](release-199-20261025/)
+- [review-harness-20261013 — материалы ревизии](review-harness-20261013/)
 - [release-204-20261025](release-204-20261025/)
 - [release-checksum-audit](release-checksum-audit/)
 - [releases](releases/)
@@ -226,10 +242,11 @@
 - [update-null-backup-20261102](update-null-backup-20261102/)
 - [windows-full-spi-20261024](windows-full-spi-20261024/)
 
-## Текущая инвентаризация (13)
+## Текущая инвентаризация (14)
 
 - [audit-20261022-multi-model](audit-20261022-multi-model/)
 - [audits](audits/)
+- [build-evidence-20261107 — сохранённые материалы из build](build-evidence-20261107/)
 - [catalog-20261106](catalog-20261106/)
 - [cc-laptop-catalogue-20261026](cc-laptop-catalogue-20261026/)
 - [core-architecture-audit-20261030](core-architecture-audit-20261030/)
@@ -300,3 +317,5 @@
 - [test_util](test_util/)
 - [ui](ui/)
 - [users-logs-review-20261023](users-logs-review-20261023/)
+
+- [wujie-sc-event-20261117 — Sc/APP, OEM/EC/ACPI и пользовательские повороты](wujie-sc-event-20261117/)

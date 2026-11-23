@@ -71,7 +71,7 @@ DSDT и не заявление, что все patches выполнены одн
 
 Полные hex/method hashes — [identity-evidence.json](identity-evidence.json).
 Новый AML дополнительно разобран iasl20251212, exit0,
-`build/gm6-bios-dsdt/firmware.dsl`. AML не выполнялся. Следовательно известные
+`../Decompile/GM6IR0C/BIOS_DSDT/firmware.dsl`. AML не выполнялся. Следовательно известные
 ISDB/cycle capacity remap и CGLM→BatteryState bit3 подтверждаются здесь теми же
 байтами, а не только похожим названием платы.
 
@@ -195,6 +195,7 @@ evaluation, аппаратные тесты или сборки MagicControl. Н
 AML method bytes, signature identity, live-inventory selected rows иECversion
 инициализатор, сохраняет хэши/выдержки. `ExportGm6Bios.java` — Ghidra post-script
 только статического экспорта. Логи parser passes:
-`build/gm6-bios-service-ghidra.log`, `build/gm6-bios-other-ghidra.log`,
-`build/gm6-bios-dsdt/iasl-output.txt`. Java/Ghidra user directories перенесены
+`research/build-evidence-20261107/build-root-logs/gm6-bios-service-ghidra.log`,
+`research/build-evidence-20261107/build-root-logs/gm6-bios-other-ghidra.log`,
+`../Decompile/GM6IR0C/BIOS_DSDT/iasl-output.txt`. Java/Ghidra user directories перенесены
 в ignoredbuild, глобальные настройки и бинарные модули пользователя не менялись.

@@ -105,7 +105,9 @@ ResourceCatalog получаетfrequency(MHz) иdata_rate(MT/s) с времен
 и неподтверждённыеCPU пока не поставляют этот показатель. В живом чтении
 Wujie подтвержденыP0=2800,P1=2400,P2=1000MHz и изменениеDBG_MISC.low3.
 Источники: CoreFreq20de51c amd_reg.h AMD_17_UMC_DEBUG_MISC/AMD_ZEN_UMC_CFG_MISC;
-ZenStates-Core Ddr5Timings.ReadRatio. Результат пробы: build/memory-umc-probe-result.txt.
+ZenStates-Core Ddr5Timings.ReadRatio. Результат пробы сохранён в
+`research/build-evidence-20261107/build-root-text/memory-umc-probe-result.txt`
+(прежний путь `build/memory-umc-probe-result.txt`).
 
 ## PawnIO: общая телеметрия устройств, 02.11.2026
 

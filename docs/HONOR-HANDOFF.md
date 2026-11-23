@@ -24,7 +24,7 @@ FAN/SMU/HWMI/подсветка/зарядка имеют отдельные gua
 ## Историческое состояние —18.10.2026
 
 - Honor: aniki@192.168.10.112, LAPTOP-8837V73M, HLYL-WXX9-PCB/BIOS1.09.
-  SSH key build/ssh-honor/magiccontrol_ed25519; не печатать содержимое.
+  SSH key `C:/Users/admin/Documents/SSH_Key/magiccontrol_ed25519`; не печатать содержимое.
 - Windows/Linux working portable0.1.37 собраны общим Build-All, обе версии и
   SHA256 совпали с build/product-build.json. GitHub_Releases не обновлялся.
 - По прямой просьбе пользователя0.1.37 запущена на Honor, PID28712/session1.
@@ -97,6 +97,12 @@ GitHub nikimagic/MagicControl содержит только документац
 - Passive polling Linux не отключает поле ввода таймаута и не сбрасывает фокус.
 - Tools/Package-Releases.py --portable-root build/honor-portable позволяет собрать
   архивы без замены работающего Windows portable EXE.
+  Старые staging-бинарники Windows 0.1.23 и Linux 0.1.24 удалены при очистке
+  07.11.2026; перед применением этого примера нужно заново подготовить обе
+  платформы из актуальной общей сборки. Записи версий и SHA-256 сохранены в
+  `research/workspace-audit-20261106/inventory/removed-obsolete-honor-portable-20261107.csv`.
+  Оставшиеся notices и старые runtime-файлы физически перенесены в
+  `research/build-evidence-20261107/release-archive/HONOR/honor-portable-0.1.23-24`.
 - Контрольный исходник IOCTL — build/release-compliance/PawnIO.Modules-0.2.11;
   экспорт read/write_smu_register и MP1 range3B10xxx подтверждены именно в0.2.11.
 - Исходники можно перенести приватно; публичный GitHub по-прежнему binary-only.

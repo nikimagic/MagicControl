@@ -1,14 +1,15 @@
 """Compare saved files only. Requires UEFIExtract all output for the two prefixes.
 
-The scratch inputs/output live in build/gm6-nvar-comparison. No firmware APIs,
+Saved scratch inputs live in Decompile; new comparison outputs go to out. No firmware APIs,
 drivers or hardware executables are used. Variable payloads are not published.
 """
 from pathlib import Path
-import collections, hashlib, json, re, zipfile
+import collections, hashlib, json, re, zipfile, uuid
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = Path(__file__).resolve().parent
-SCRATCH = ROOT / 'build/gm6-nvar-comparison'
+OUT = ROOT / 'out/gm6ir0c-logs15-20261024' / ('nvram-' + uuid.uuid4().hex)
+OUT.mkdir(parents=True, exist_ok=False)
+SCRATCH = ROOT / '../Decompile/GM6IR0C/GM6_NVAR_Comparison_20261024'
 sha = lambda b: hashlib.sha256(b).hexdigest()
 
 def fields(path):
@@ -94,7 +95,7 @@ for difference in uni['differences']:
     assert field['size'] == 1
     difference['oem_structure_field'] = field['name']
 stock_full = (ROOT / 'research/ec-platform-catalogue-20261023/new-backup-20261023/backup.fd').read_bytes()
-patch_full = (ROOT / 'build/ub23/new.fd').read_bytes()
+patch_full = (ROOT / 'research/ub23/new.fd').read_bytes()
 with zipfile.ZipFile(ROOT / 'Users_logs/logs_GM6IR0C (15).zip') as archive:
     fresh = archive.read('logs_GM6IR0C/bios-dumps/bios-20261024-203144-0/pass1.partial.bin')
 stock, patched = stock_full[0x1000000:], patch_full[0x1000000:]

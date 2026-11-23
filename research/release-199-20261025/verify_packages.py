@@ -71,7 +71,7 @@ for os in ['windows','linux']:
     assert sha(private.read_bytes())==build['platforms'][os]['cli_sha256'].lower()
     receipt['personal_cli_preserved'].append({'platform':os,'version':version,'sha256':sha(private.read_bytes())})
 sums={line.split('  ',1)[1]:line.split('  ',1)[0] for line in (releases/'SHA256SUMS.txt').read_text(encoding='utf-8-sig').splitlines()}
-before={line.split('  ',1)[1]:line.split('  ',1)[0] for line in (root/'build/release199-baseline/SHA256SUMS.txt.worktree').read_text(encoding='utf-8-sig').splitlines()}
+before={line.split('  ',1)[1]:line.split('  ',1)[0] for line in (root/'research/release-199-20261025/baseline/SHA256SUMS.txt.worktree').read_text(encoding='utf-8-sig').splitlines()}
 assert all(sums[k]==v for k,v in before.items())
 assert all(sums[a['archive']]==a['sha256'] for a in receipt['assets'])
 (releases/f'SHA256SUMS-{version}.txt').write_text(''.join(a['sha256']+'  '+a['archive']+'\n' for a in receipt['assets']),encoding='utf-8')

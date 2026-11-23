@@ -118,7 +118,7 @@ Global APP presence: OEM при старте/возобновлении став
 Совместный namespace сначала дал AE_ALREADY_EXISTS: захвачены альтернативные
 определения. Поэтому каждая таблица разобрана отдельно,15/15 exit0.
 Результат и provenance: `saved-acpi-analysis.json`, воспроизведение
-`disassemble_saved_acpi.py`, полные DSL остаются в `build/gm6-healthy-acpi`.
+`disassemble_saved_acpi.py`, полные DSL сохранены в `Decompile/GM6IR0C/GM6_ACPI_Healthy_20261021`.
 Все15 исходных AML (856604байта) сохранены с исходными SHA в `saved-acpi/`,
 UniWillVariable180байт — рядом; существенные фрагменты host-кода —
 `source-excerpts.json`. Скрипт использует сохранённые AML, если build-копии нет.

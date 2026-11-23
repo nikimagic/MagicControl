@@ -1,10 +1,10 @@
 """Static identity/AML method comparison. No firmware execution or live firmware APIs."""
 from pathlib import Path
-import hashlib,json,re,struct
-root=Path(__file__).resolve().parents[5];out=Path(__file__).resolve().parent;dump=root/'build/g9.bin.dump'
+import hashlib,json,re,struct,uuid
+root=Path(__file__).resolve().parents[5];out=root/'out'/Path(__file__).resolve().parent.relative_to(root)/('identity-'+uuid.uuid4().hex);out.mkdir(parents=True,exist_ok=False);dump=root/'research/g9.bin.dump'
 sha=lambda b:hashlib.sha256(b).hexdigest()
 new=(dump/'Section_Raw_C118F50D-391D-45F4-B3D3-11BC931AA56D_body.bin').read_bytes()
-targets=[root/'build/research-gm6ir0c/samples/DSDT.aml',root/'research/devices/gm6ir0c/battery-healthy-20261021/saved-acpi/DSDT-1c2b99426121.aml']
+targets=[root/'research/research-gm6ir0c/samples/DSDT.aml',root/'research/devices/gm6ir0c/battery-healthy-20261021/saved-acpi/DSDT-1c2b99426121.aml']
 def methods(data):
  result=[]
  for pos in range(len(data)-8):
@@ -33,7 +33,7 @@ version={'candidate_ec_sha256':sha(ec),'init_sequence':sequence.hex(),'init_phys
  'major_shift6':ec[0x11ccc]>>6,'minor_mask3f':ec[0x11ccc]&63,
  'basis':'Unique initializer itself executes in selected bank1 window at logical84EC (physical104EC), no bank switch before MOVC9CCC; SmbiosBoard868 reads EC0454 and splits >>6/&3F;924 writes Type0offset16/17.',
  'limit':'Banked architecture mapping corroborates root audit. Not a byte-for-byte match to the live EC flash; no flash dump was taken.'}
-inventory=root/'build/gm6ir0c-logs4-20261021/logs_GM6IR0C/dumps/dump-20261021-175302-0/inventory.json'
+inventory=root/'research/gm6ir0c-logs4-20261021/logs_GM6IR0C/dumps/dump-20261021-175302-0/inventory.json'
 live=json.loads(inventory.read_text(encoding='utf-8-sig'));live_identity=[];stack=[('',live)]
 while stack:
  key,value=stack.pop()

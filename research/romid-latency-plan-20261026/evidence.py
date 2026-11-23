@@ -1,12 +1,12 @@
 """Static AML/driver/source review. No device handles or ACPI method execution."""
 from pathlib import Path
-import hashlib,json,re
-ROOT=Path(__file__).resolve().parents[2];OUT=Path(__file__).resolve().parent
+import hashlib,json,re,uuid
+ROOT=Path(__file__).resolve().parents[2];OUT=ROOT/'out'/Path(__file__).resolve().parent.relative_to(ROOT)/('run-'+uuid.uuid4().hex);OUT.mkdir(parents=True,exist_ok=False)
 inputs=[
  ('WUJIE_DSDT_AML',ROOT/'build/windows/ddr5-acpi/01_DSDT.dat'),
  ('WUJIE_DSDT_ASL',ROOT/'build/windows/ddr5-acpi/01_DSDT.dsl'),
- ('GM6_saved_DSDT_ASL',ROOT/'build/research-gm6ir0c/samples/DSDT.dsl'),
- ('GM6_audited_DSDT_ASL',ROOT/'build/gm6-healthy-acpi/DSDT-1c2b99426121.dsl'),
+ ('GM6_saved_DSDT_ASL',ROOT/'research/research-gm6ir0c/samples/DSDT.dsl'),
+ ('GM6_audited_DSDT_ASL',ROOT/'../Decompile/GM6IR0C/GM6_ACPI_Healthy_20261021/DSDT-1c2b99426121.dsl'),
  ('driver_10_reference',ROOT/'src/platform/windows/runtime/Uniwill/UWACPIDriver.sys'),
  ('driver_installed_file_only',Path('C:/Windows/System32/drivers/UWACPIDriver.sys')),
  ('driver_bindings',ROOT/'research/wujie-full-bios-20261024/driver-width-review/COMPARISON.json'),

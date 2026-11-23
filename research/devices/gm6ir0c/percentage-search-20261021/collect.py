@@ -3,19 +3,21 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import uuid
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[3]
+OUT = REPO / 'out' / HERE.relative_to(REPO) / ('run-' + uuid.uuid4().hex); OUT.mkdir(parents=True, exist_ok=False)
 REF = REPO.parent / 'Reference_Projects'
 OLD = Path(r'C:\Users\admin\Documents\mechrevo')
 OEM = REPO / '../Decompile/GM6IR0C/Control_Center'
-HYDRO = REPO / 'build/battery-temperature-20261020/hydrocontrol/HydroControl-fc4024ce'
+HYDRO = REPO / '../Reference_Projects/Battery_Temperature_20261020/hydrocontrol/HydroControl-fc4024ce'
 
 entries = [
     ('linux saved snapshot', OLD/'Research/Uniwill-Pulsation-20261014/uniwill-acpi.c', [(1869,1878),(1995,2019),(2121,2147),(2424,2435),(2547,2558),(2679,2713),(3348,3356)]),
     ('linux newly pinned upstream', HERE/'sources/linux-uniwill-acpi.c', [(1995,2019),(2121,2147),(2679,2713),(3348,3356)]),
-    ('DKMS independent fork', REPO/'build/battery-temperature-20261020/uniwill-laptop-dkms-main/uniwill-acpi.c', [(2632,2660),(2686,2704),(3057,3072),(3126,3139),(3195,3252)]),
-    ('Tuxedo native profiles', REPO/'build/battery-temperature-20261020/tuxedo-drivers-main/src/uniwill_keyboard.h', [(708,770)]),
+    ('DKMS independent fork', REPO/'../Reference_Projects/Battery_Temperature_20261020/uniwill-laptop-dkms-main/uniwill-acpi.c', [(2632,2660),(2686,2704),(3057,3072),(3126,3139),(3195,3252)]),
+    ('Tuxedo native profiles', REPO/'../Reference_Projects/Battery_Temperature_20261020/tuxedo-drivers-main/src/uniwill_keyboard.h', [(708,770)]),
     ('Luma real backend', REF/'LumaDesk/repository/src/core/hal/windows.rs', [(442,493)]),
     ('Luma simulation backend', REF/'LumaDesk/repository/src/core/hal/mock.rs', [(210,230)]),
     ('Luma verification scope', REF/'LumaDesk/repository/scripts/verify-controls.py', [(125,132)]),
@@ -35,7 +37,7 @@ entries = [
     ('OEM QC setter', OEM/'02000254-MyControlCenter.MyFanManager_QC.cs', [(548,561),(867,889),(1808,1832)]),
     ('OEM selected protection', OEM/'020001C6-GCUService.MySystem.BatteryProtection2.cs', [(140,178),(278,373)]),
     ('OEM missing UEFI byte dispatch', OEM/'0200023A-MyControlCenter.NvramVariable.cs', [(313,369)]),
-    ('exact GM6 AML fields/BST', REPO/'build/research-gm6ir0c/samples/DSDT.dsl', [(134395,134412),(135385,135412)]),
+    ('exact GM6 AML fields/BST', REPO/'research/research-gm6ir0c/samples/DSDT.dsl', [(134395,134412),(135385,135412)]),
     ('Hydro script declaration and caveats', HYDRO/'charge_path_probe.py', [(1,30),(290,324)]),
     ('Hydro raw stop60 capture', HYDRO/'threshold60-stopped.json', [(1,82)]),
     ('Hydro bank correction', HYDRO/'ec_disasm.py', [(25,43),(85,96)]),
@@ -81,5 +83,5 @@ observed={'upper_raw':stop['0x07B9'],'reached_bit7':bool(stop['0x07B9']&0x80),
 
 result={'date':'2026-10-21','method':'Readonly source/hash/metadata analysis. No investigated executable, hardware call, tests, build, settings or production mutation.',
         'repositories':repos,'files':files,'bounded_oem_searches':searches,'nuctool_binary':binary_meta,'hydro_stop_capture':observed}
-(HERE/'evidence.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+(OUT/'evidence.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 print(f'{len(files)} source entries; {len(searches)} bounded searches; binary not executed')

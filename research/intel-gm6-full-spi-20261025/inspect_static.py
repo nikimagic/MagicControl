@@ -2,8 +2,10 @@
 from pathlib import Path
 import bisect, collections, hashlib, json, re, struct, sys, zipfile
 ROOT = Path(__file__).resolve().parents[2]
-OUT = Path(__file__).resolve().parent
-SCRATCH = ROOT / 'build/fpt-static-20261025'
+sys.path.insert(0,str(ROOT/'research/firmware-reader-static-support'))
+from runtime import new_run,publish_selection
+OUT = new_run(ROOT,'fpt-inspection')
+SCRATCH = OUT / 'scratch'
 SCRATCH.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT.parent.parent / 'mechrevo/.tools/pydeps'))
 from capstone import Cs, CS_ARCH_X86, CS_MODE_64
@@ -78,7 +80,7 @@ assert embedded.startswith(b'MZ')
 (SCRATCH / 'embedded-driver.bin').write_bytes(embedded)
 images = []
 for name, path in [('stock', ROOT/'research/ec-platform-catalogue-20261023/new-backup-20261023/backup.fd'),
-                   ('patched', ROOT/'build/ub23/new.fd')]:
+                   ('patched', ROOT/'research/ub23/new.fd')]:
     data = path.read_bytes()
     assert data[16:20] == bytes.fromhex('5aa5f00f')
     flmap0, flmap1, flmap2 = struct.unpack_from('<III', data, 20)
@@ -142,7 +144,8 @@ result = dict(static_only=True, hardware_executed=False, path=str(file), bytes=l
 (OUT/'fpt-strings.txt').write_text('\n'.join(s['raw']+' '+str(s['va'])+' '+s['text'] for s in strings)+'\n', encoding='utf-8')
 selected = sorted(set(int(r['function_rva'], 16) for r in refs if r['function_rva']!='0x0'))
 (OUT/'selected-functions.txt').write_text(','.join(f'{x:x}' for x in selected)+'\n', encoding='utf-8')
-print(json.dumps(dict(sha256=sha(b), functions=len(functions), relevant_strings=len(interesting), code_refs=len(refs),
+publish_selection(OUT)
+print(json.dumps(dict(output=str(OUT),sha256=sha(b), functions=len(functions), relevant_strings=len(interesting), code_refs=len(refs),
                      selected_functions=[hex(x) for x in selected], pci_hits=pci_hits,
                      host_flmstr1=[i['masters'][0] for i in images],
                      enabled_regions=[[r for r in i['regions'] if r['enabled']] for i in images],

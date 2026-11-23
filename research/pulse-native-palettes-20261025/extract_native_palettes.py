@@ -5,8 +5,8 @@ import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = Path(__file__).resolve().parent
-sources = [ROOT / 'build/research-gm6ir0c/battery-ui-resources/resources.pri']
+OUT = ROOT / 'out' / Path(__file__).resolve().parent.relative_to(ROOT); OUT.mkdir(parents=True, exist_ok=True)
+sources = [ROOT / 'research/research-gm6ir0c/battery-ui-resources/resources.pri']
 sources += list((ROOT / 'research/devices/gm5hg0a/oem-5.52.49.6/nested').rglob('resources.pri'))
 sources += list((ROOT / 'research/new-l16-20261022/appx/CCU.WinUI').rglob('resources.pri'))
 evidence = []

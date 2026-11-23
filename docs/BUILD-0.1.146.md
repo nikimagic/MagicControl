@@ -13,8 +13,10 @@ The unfiltered2026 product page is therefore unsuitable for this machine.
 
 URL: https://www.mechrevo.com/cn/downloads?category=VGMSYq&serial=rwvS4q&display_product=VKlSN7&author=90
 
-Saved official API responses: build/mechrevo-web/gm5-exact-drivers.json,
-wing-options.json and gm5-product169.json. No BIOS updater is enabled.
+Saved official API responses: `research/build-evidence-20261107/audit-batch/OTHER/mechrevo-web/gm5-exact-drivers.json`,
+`wing-options.json` and `gm5-product169.json` in the same directory. These were
+physically moved from `build/mechrevo-web`; file hashes are recorded in the
+batch's `FILES-before.csv`. No BIOS updater is enabled.
 Other board branches remain unchanged. No EC writes or hardware tests.
 
 Build: common Release Windows/Linux via Tools/Build-All.ps1; stage and verify

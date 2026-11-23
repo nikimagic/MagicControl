@@ -10,6 +10,7 @@ import struct
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[4]
+OUT = REPO / 'out' / HERE.relative_to(REPO); OUT.mkdir(parents=True, exist_ok=True)
 TOOL = Path(r'C:\Users\admin\Documents\mechrevo\Research\BIOS_OTA_Full\tools\extract_static.py')
 ARCHIVE = Path(r'C:\Users\admin\Downloads\Telegram Desktop\ControlCenterX-Logs-20261017-215646.zip')
 
@@ -21,13 +22,13 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 def save(name, value):
-    (HERE/name).write_text(json.dumps(value, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    (OUT/name).write_text(json.dumps(value, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 
-ota_path = REPO/'build/research-gm6ir0c/samples/BIOS_OTA-active.exe'
+ota_path = REPO/'research/research-gm6ir0c/samples/BIOS_OTA-active.exe'
 data = ota_path.read_bytes()
 pe = parser.PE(data)
-resources = parser.resources(pe, HERE/'ota-resources')
-assets = parser.compressed(pe, HERE/'ota-compressed')
+resources = parser.resources(pe, OUT/'ota-resources')
+assets = parser.compressed(pe, OUT/'ota-compressed')
 static = {'path': str(ota_path), 'bytes': len(data), 'sha256': sha(data),
           'resources': resources, 'compressed': assets, 'scope': 'Offline PE resource/zlib scan, not execution'}
 save('ota-static.json', static)
@@ -74,7 +75,7 @@ with ZipFile(ARCHIVE) as outer:
             else:
                 seen[digest]=entry.filename
                 helper=parser.PE(b)
-                dest=HERE/('uefi-'+digest[:12]); dest.mkdir(exist_ok=True)
+                dest=OUT/('uefi-'+digest[:12]); dest.mkdir(exist_ok=True)
                 row.update(resources=parser.resources(helper,dest/'resources'),
                            compressed_assets=parser.compressed(helper,dest/'compressed'), exports=helper.exports())
             helpers.append(row)
@@ -87,7 +88,7 @@ evidence={'date':'2026-10-21', 'target':'GM6IR0C, BIOS N.1.05MRO09, EC SMBIOS1.1
           'scope':'Offline inspected data only; no investigated executable, OEM API, device, test or build invoked',
           'parser':{'path':str(TOOL),'sha256':sha(TOOL.read_bytes())},
           'artifacts':[]}
-candidate = REPO/'build/gm6-battery-firmware-20261021/GMxIR7xN105MRO09_CAP.exe'
+candidate = REPO/'research/gm6-battery-firmware-20261021/GMxIR7xN105MRO09_CAP.exe'
 candidate_manifest = candidate.parent/'manifest.json'
 if candidate.is_file():
     candidate_data = candidate.read_bytes()
@@ -96,8 +97,8 @@ if candidate.is_file():
         'applicability':'Filename N105MRO09 and owner14650HX/4060 evidence; board and EC version require static payload verification'}
     if candidate_manifest.is_file():
         save('owner-mro09-manifest.json', json.loads(candidate_manifest.read_text(encoding='utf-8-sig')))
-for p in sorted(HERE.rglob('*')):
+for p in sorted(OUT.rglob('*')):
     if p.is_file() and p.name!='evidence.json':
-        b=p.read_bytes(); evidence['artifacts'].append({'path':str(p.relative_to(HERE)),'bytes':len(b),'sha256':sha(b)})
+        b=p.read_bytes(); evidence['artifacts'].append({'path':str(p.relative_to(OUT)),'bytes':len(b),'sha256':sha(b)})
 save('evidence.json',evidence)
 print('OTA and',len(helpers),'helper copies parsed; exact firmware image not established')
