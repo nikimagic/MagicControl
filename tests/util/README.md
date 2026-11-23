@@ -51,17 +51,15 @@ util/
 сохраняется автономный путь `util/logs/`. При прямом запуске EXE или
 Linux-бинарника можно выбрать другое место аргументом `--output`.
 
-Сохранённые до переноса данные находятся по следующей карте:
+Актуальные пути ниже. Первый столбец описывает материалы, а не пути для открытия:
 
-| Прежний путь в репозитории | Текущий путь |
+| Материалы | Текущий путь от корня проекта |
 |---|---|
-| `tests/test_util/` — исходники и файлы переносимой утилиты | `tests/util/` |
-| `tests/test_util/logs/` | `out/test_util/logs/` |
-| `tests/test_util/discovery/runs/` | `out/test_util/discovery/runs/` |
-| `tests/test_util/analysis/` — исходные программы и отслеживаемые отчёты | `research/test_util/analysis/` |
-| `tests/test_util/analysis/` — остальные сохранённые данные | `out/test_util/analysis/` |
-| `Tools/test_util/analysis/` — программы и отчёты промежуточной раскладки | `research/test_util/analysis/` |
-| `Tools/test_util/analysis/` — сырые результаты промежуточной раскладки | `out/test_util/analysis/` |
+| Исходники утилит | `tests/util/` |
+| Журналы SensorProbe | `out/test_util/logs/` |
+| Сохранённые прогоны discovery | `out/test_util/discovery/runs/` |
+| Скрипты анализа и отслеживаемые отчёты | `research/test_util/analysis/` |
+| Сохранённые входные данные анализа | `out/test_util/analysis/` |
 
 Имена файлов и содержимое журналов не изменялись. Локальные пофайловые SHA-256
 до и после переноса сохранены в
@@ -71,7 +69,8 @@ Linux-бинарника можно выбрать другое место ар�
 карта переименования утилиты — `test-util-rename-before.csv` и
 `test-util-rename-after.csv`; финальная карта — `analysis-final-move-before.csv`
 и `analysis-final-move-after.csv`.
-Новые результаты скриптов анализа записываются в `out/test_util/generated/`,
+Новые результаты скриптов анализа записываются в создаваемый при запуске
+каталог `out/test_util/generated/`,
 отдельно от сохранённых исходных данных. `out/` хранится локально; в Git могут
 входить `research/INDEX.md` и исходники/описания в `research/test_util/`.
 
