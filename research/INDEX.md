@@ -7,6 +7,8 @@
 
 ## GM6 (30)
 
+- [Ревизия чтения VBIOS и EEPROM, 23.11.2026](gm6-vbios-audit-20261123.md)
+- [Исходники GitHub: программные считыватели NVIDIA ROM](gm6-vbios-github-readers-20261123.md)
 - [gm6-current-idle-20261022](gm6-current-idle-20261022/)
 - [gm6-custom-presets-20261022](gm6-custom-presets-20261022/)
 - [gm6-diagnostic-decode-20261022](gm6-diagnostic-decode-20261022/)
