@@ -28,6 +28,7 @@ vcpkg_installed/
 /research/firmware-reader-static-support/*
 !/research/firmware-reader-static-support/runtime.py
 /Users_logs/
+*.before-*
 /Diagnostics/
 /Backups/
 *.log

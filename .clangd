@@ -1,0 +1,14 @@
+# Default analysis: Windows / MSVC.
+CompileFlags:
+  CompilationDatabase: build/clangd-msvc
+---
+# Linux platform and GTK sources, analyzed by Windows clangd using the WSL
+# GCC database projected into Windows-readable paths. Native WSL commands
+# remain in build/clangd-linux/compile_commands.json.
+If:
+  PathMatch:
+    - src/platform/linux/.*
+    - src/gui/linux/.*
+    - build/clangd-linux/.*
+CompileFlags:
+  CompilationDatabase: build/clangd-linux/windows-host
